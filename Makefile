@@ -11,6 +11,7 @@ INCLUDE_DIR = include
 BUILD_DIR = build
 TEST_DIR = tests
 EXAMPLE_DIR = examples
+SAMPLE_DIR = sample
 
 # Compiler settings
 CXX = g++
@@ -62,9 +63,26 @@ debug: $(LIB_TARGET)
 .PHONY: clean
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -rf $(BUILD_DIR)
-	@rm -f *.o
+	@if [ -d "$(BUILD_DIR)" ]; then \
+		echo "Removing build directory: $(BUILD_DIR)"; \
+		rm -rf $(BUILD_DIR); \
+	else \
+		echo "Build directory $(BUILD_DIR) does not exist"; \
+	fi
+	@rm -f *.o *.a *.so *.dylib
+	@find . -name "*.o" -delete 2>/dev/null || true
+	@find . -name "core" -delete 2>/dev/null || true
 	@echo "✅ Clean completed"
+
+# Deep clean - remove all generated files
+.PHONY: deep-clean
+deep-clean: clean
+	@echo "Performing deep clean..."
+	@rm -rf .vscode/settings.json.backup
+	@find . -name "*.tmp" -delete 2>/dev/null || true
+	@find . -name "*.log" -delete 2>/dev/null || true
+	@find . -name ".DS_Store" -delete 2>/dev/null || true
+	@echo "✅ Deep clean completed"
 
 # Format code using clang-format
 .PHONY: fmt
@@ -204,6 +222,35 @@ examples: $(LIB_TARGET)
 		echo "ℹ️  No examples directory found"; \
 	fi
 
+# Build samples (if sample directory exists)
+.PHONY: samples
+samples: $(LIB_TARGET)
+	@if [ -d "$(SAMPLE_DIR)" ]; then \
+		echo "Building samples..."; \
+		mkdir -p $(BUILD_DIR)/samples; \
+		for sample in $(SAMPLE_DIR)/*.cpp; do \
+			if [ -f "$$sample" ]; then \
+				name=$$(basename $$sample .cpp); \
+				echo "Building sample: $$name"; \
+				$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(CPP_FILES) -o $(BUILD_DIR)/samples/$$name; \
+				echo "Built sample: $$name"; \
+			fi; \
+		done; \
+		echo "✅ Samples built successfully"; \
+	else \
+		echo "ℹ️  No samples directory found"; \
+	fi
+
+# Build and run XOR sample
+.PHONY: xor
+xor: samples
+	@if [ -f "$(BUILD_DIR)/samples/xor" ]; then \
+		echo "Running XOR sample..."; \
+		$(BUILD_DIR)/samples/xor; \
+	else \
+		echo "❌ XOR sample not found"; \
+	fi
+
 # Show help
 .PHONY: help
 help:
@@ -213,6 +260,7 @@ help:
 	@echo "  all          - Build the library (default)"
 	@echo "  debug        - Build with debug flags"
 	@echo "  clean        - Remove build artifacts"
+	@echo "  deep-clean   - Remove all generated files"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  fmt          - Format code with clang-format"
@@ -227,6 +275,8 @@ help:
 	@echo "Testing:"
 	@echo "  test         - Build and run tests"
 	@echo "  examples     - Build example programs"
+	@echo "  samples      - Build sample programs"
+	@echo "  xor          - Build and run XOR sample"
 	@echo ""
 	@echo "Misc:"
 	@echo "  help         - Show this help message"
