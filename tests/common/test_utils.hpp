@@ -10,6 +10,7 @@
 #include <cassert>
 #include <cmath>
 #include <vector>
+#include <chrono>
 
 /**
  * @file test_utils.hpp
@@ -107,6 +108,12 @@ public:
      * @return Number of failed tests
      */
     int getFailedCount() const { return failed_count_; }
+    
+    /**
+     * @brief Get test execution time in milliseconds
+     * @return Execution time in milliseconds
+     */
+    double getExecutionTimeMs() const { return execution_time_ms_; }
 
 protected:
     /**
@@ -212,6 +219,7 @@ private:
     std::string name_;
     int passed_count_;
     int failed_count_;
+    double execution_time_ms_;
     
     /**
      * @brief Record assertion result

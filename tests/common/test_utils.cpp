@@ -1,8 +1,10 @@
 #include "test_utils.hpp"
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <sys/stat.h>
@@ -56,13 +58,17 @@ void OutputCapture::clear() {
 
 // TestCase implementation
 TestCase::TestCase(const std::string& name)
-    : name_(name), passed_count_(0), failed_count_(0) {}
+    : name_(name), passed_count_(0), failed_count_(0), execution_time_ms_(0.0) {
+}
 
 bool TestCase::run() {
   passed_count_ = 0;
   failed_count_ = 0;
 
   std::cout << "Running test: " << name_ << std::endl;
+
+  // Start timing
+  auto start_time = std::chrono::high_resolution_clock::now();
 
   try {
     // Capture output during test execution
@@ -84,13 +90,22 @@ bool TestCase::run() {
     return false;
   }
 
+  // End timing
+  auto end_time = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::microseconds>(
+      end_time - start_time);
+  execution_time_ms_ = duration.count() / 1000.0;
+
   if (failed_count_ == 0) {
     std::cout << "✅ " << name_ << " PASSED (" << passed_count_
-              << " assertions)" << std::endl;
+              << " assertions, " << std::fixed << std::setprecision(2)
+              << execution_time_ms_ << "ms)" << std::endl;
     return true;
   } else {
     std::cout << "❌ " << name_ << " FAILED (" << failed_count_ << " failed, "
-              << passed_count_ << " passed)" << std::endl;
+              << passed_count_ << " passed, " << std::fixed
+              << std::setprecision(2) << execution_time_ms_ << "ms)"
+              << std::endl;
     return false;
   }
 }

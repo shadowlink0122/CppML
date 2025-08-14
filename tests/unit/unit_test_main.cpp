@@ -5,6 +5,8 @@
 #include "MLLib/model/test_sequential.hpp"
 #include "MLLib/test_config.hpp"
 #include "MLLib/test_ndarray.hpp"
+#include <chrono>
+#include <iomanip>
 
 /**
  * @file unit_test_main.cpp
@@ -22,9 +24,13 @@ int main() {
   std::cout << "Test execution with output capture enabled" << std::endl;
   std::cout << std::endl;
 
+  // Start timing the entire test suite
+  auto suite_start_time = std::chrono::high_resolution_clock::now();
+
   bool all_tests_passed = true;
   int total_tests = 0;
   int passed_tests = 0;
+  double total_execution_time = 0.0;
 
   // Helper function to run test and update counters
   auto runTest = [&](std::unique_ptr<TestCase> test) {
@@ -32,6 +38,7 @@ int main() {
     bool result = test->run();
     if (result) passed_tests++;
     all_tests_passed &= result;
+    total_execution_time += test->getExecutionTimeMs();
   };
 
   // Config tests
@@ -76,16 +83,28 @@ int main() {
   // runTest(std::make_unique<ModelSaveLoadTest>());
   // runTest(std::make_unique<ModelParameterTest>());
   // runTest(std::make_unique<ModelIOErrorTest>());
-  // runTest(std::make_unique<ModelIOFileHandlingTest>());  // Print final
-  // summary
+  // runTest(std::make_unique<ModelIOFileHandlingTest>());
+
+  // Print final summary
   std::cout << "\n" << std::string(60, '=') << std::endl;
   std::cout << "FINAL TEST SUMMARY" << std::endl;
   std::cout << std::string(60, '=') << std::endl;
   std::cout << "Total individual tests: " << total_tests << std::endl;
   std::cout << "Passed tests: " << passed_tests << std::endl;
   std::cout << "Failed tests: " << (total_tests - passed_tests) << std::endl;
-  std::cout << std::endl;
 
+  // Calculate total suite execution time
+  auto suite_end_time = std::chrono::high_resolution_clock::now();
+  auto suite_duration = std::chrono::duration_cast<std::chrono::microseconds>(
+      suite_end_time - suite_start_time);
+  double suite_time_ms = suite_duration.count() / 1000.0;
+
+  std::cout << std::fixed << std::setprecision(2);
+  std::cout << "Total test execution time: " << total_execution_time << "ms"
+            << std::endl;
+  std::cout << "Total suite time (including overhead): " << suite_time_ms
+            << "ms" << std::endl;
+  std::cout << std::endl;
   if (all_tests_passed) {
     std::cout << "🎉 ALL UNIT TESTS PASSED! 🎉" << std::endl;
     std::cout << "MLLib is ready for production use." << std::endl;
