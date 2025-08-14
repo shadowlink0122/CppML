@@ -28,6 +28,12 @@ public:
   Sequential();
 
   /**
+   * @brief Constructor with device type
+   * @param device Device type for computation
+   */
+  Sequential(DeviceType device);
+
+  /**
    * @brief Destructor
    */
   ~Sequential();
@@ -37,6 +43,12 @@ public:
    * @param layer Pointer to layer (ownership transferred)
    */
   void add_layer(layer::BaseLayer* layer);
+
+  /**
+   * @brief Add a layer to the model (shared_ptr version)
+   * @param layer Shared pointer to layer
+   */
+  void add(std::shared_ptr<layer::BaseLayer> layer);
 
   /**
    * @brief Set device for computation
@@ -92,8 +104,30 @@ public:
    */
   size_t num_layers() const { return layers_.size(); }
 
+  /**
+   * @brief Get device type
+   * @return Current device type
+   */
+  DeviceType get_device() const { return device_; }
+
+  /**
+   * @brief Get layers (const access)
+   * @return Const reference to layers vector
+   */
+  const std::vector<std::shared_ptr<layer::BaseLayer>>& get_layers() const {
+    return layers_;
+  }
+
+  /**
+   * @brief Get layers (non-const access)
+   * @return Reference to layers vector
+   */
+  std::vector<std::shared_ptr<layer::BaseLayer>>& get_layers() {
+    return layers_;
+  }
+
 private:
-  std::vector<std::unique_ptr<layer::BaseLayer>> layers_;
+  std::vector<std::shared_ptr<layer::BaseLayer>> layers_;
   DeviceType device_;
 
   /**

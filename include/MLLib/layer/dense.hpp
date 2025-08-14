@@ -62,6 +62,36 @@ public:
   const NDArray& get_bias() const { return bias_; }
 
   /**
+   * @brief Set weights
+   * @param weights New weights matrix
+   */
+  void set_weights(const NDArray& weights) { weights_ = weights; }
+
+  /**
+   * @brief Set bias
+   * @param bias New bias vector
+   */
+  void set_biases(const NDArray& bias) { bias_ = bias; }
+
+  /**
+   * @brief Get whether bias is used
+   * @return True if bias is used
+   */
+  bool get_use_bias() const { return use_bias_; }
+
+  /**
+   * @brief Get input size
+   * @return Input size
+   */
+  size_t get_input_size() const { return input_size_; }
+
+  /**
+   * @brief Get output size
+   * @return Output size
+   */
+  size_t get_output_size() const { return output_size_; }
+
+  /**
    * @brief Get weight gradients
    * @return Reference to weight gradients
    */

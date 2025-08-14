@@ -8,12 +8,20 @@ namespace model {
 
 Sequential::Sequential() : device_(DeviceType::CPU) {}
 
+Sequential::Sequential(DeviceType device) : device_(device) {
+  Device::setDevice(device);
+}
+
 Sequential::~Sequential() {
   // Smart pointers will automatically clean up
 }
 
 void Sequential::add_layer(layer::BaseLayer* layer) {
   layers_.emplace_back(layer);
+}
+
+void Sequential::add(std::shared_ptr<layer::BaseLayer> layer) {
+  layers_.push_back(std::move(layer));
 }
 
 void Sequential::set_device(DeviceType device) {
