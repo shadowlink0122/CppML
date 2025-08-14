@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, feature/** ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  lint:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format clang-tidy cppcheck
+        
+    - name: Check code formatting
+      run: |
+        echo "🔍 Checking code format..."
+        make fmt-check
+        
+    - name: Run linting
+      run: |
+        echo "🧹 Running lint checks..."
+        make lint
+        
+    - name: Run static analysis
+      run: |
+        echo "🔬 Running static analysis..."
+        make check
+        
+    - name: Summary
+      if: success()
+      run: |
+        echo "✅ All code quality checks passed!"
+        echo "📋 Checks completed:"
+        echo "  - Code formatting ✅"
+        echo "  - Linting ✅" 
+        echo "  - Static analysis ✅"

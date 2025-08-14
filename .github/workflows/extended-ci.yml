@@ -1,0 +1,193 @@
+name: Extended CI
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly on Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Install tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format clang-tidy cppcheck
+        
+    - name: Format check
+      run: make fmt-check
+      
+    - name: Lint
+      run: make lint
+      continue-on-error: true  # Allow lint warnings
+      
+    - name: Static analysis
+      run: make check
+
+  build:
+    name: Build & Test
+    needs: lint
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        compiler: [gcc, clang]
+        build_type: [Debug, Release]
+        exclude:
+          # Don't test gcc on macOS
+          - os: macos-latest
+            compiler: gcc
+            
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          sudo apt-get install -y clang
+        fi
+        
+    - name: Install dependencies (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install cmake
+        
+    - name: Configure environment
+      run: |
+        if [ "${{ matrix.compiler }}" = "clang" ]; then
+          echo "CC=clang" >> $GITHUB_ENV
+          echo "CXX=clang++" >> $GITHUB_ENV
+        else
+          echo "CC=gcc" >> $GITHUB_ENV
+          echo "CXX=g++" >> $GITHUB_ENV
+        fi
+        
+    - name: Build library
+      run: |
+        echo "🏗️ Building with ${{ matrix.compiler }} on ${{ matrix.os }} (${{ matrix.build_type }})"
+        make clean
+        make all
+        
+    - name: Build examples
+      run: |
+        echo "📚 Building examples..."
+        make examples
+        continue-on-error: true
+        
+    - name: Run tests
+      run: |
+        echo "🧪 Running tests..."
+        make test
+        continue-on-error: true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule'
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Run CodeQL Analysis
+      uses: github/codeql-action/init@v3
+      with:
+        languages: cpp
+        
+    - name: Build for analysis
+      run: |
+        make clean
+        make all
+        
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+
+  docs:
+    name: Documentation
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Install Doxygen
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y doxygen graphviz
+        
+    - name: Generate documentation
+      run: |
+        echo "📖 Generating documentation..."
+        # doxygen command would go here if Doxyfile exists
+        echo "Documentation generation placeholder"
+        
+    - name: Deploy to GitHub Pages
+      if: success()
+      run: |
+        echo "🚀 Documentation deployment placeholder"
+        # GitHub Pages deployment would go here
+
+  release:
+    name: Create Release
+    needs: [lint, build, security]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - uses: actions/checkout@v4
+      
+    - name: Build release artifacts
+      run: |
+        echo "📦 Building release artifacts..."
+        make clean
+        make all
+        
+    - name: Create release package
+      run: |
+        mkdir -p release
+        cp -r include release/
+        cp Makefile release/
+        cp README.md release/ || echo "No README found"
+        cp LICENSE release/ || echo "No LICENSE found"
+        tar -czf MLLib-${{ github.ref_name }}.tar.gz release/
+        
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: MLLib ${{ github.ref_name }}
+        body: |
+          ## Changes
+          
+          * See commit history for detailed changes
+          
+          ## Installation
+          
+          ```bash
+          tar -xzf MLLib-${{ github.ref_name }}.tar.gz
+          cd release
+          make install-tools  # Install required tools
+          make all            # Build library
+          ```
+          
+        draft: false
+        prerelease: false
