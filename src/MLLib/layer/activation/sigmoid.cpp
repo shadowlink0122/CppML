@@ -1,5 +1,6 @@
 #include "../../../../include/MLLib/layer/activation/sigmoid.hpp"
 #include <cmath>
+#include <stdexcept>
 
 namespace MLLib {
 namespace layer {
@@ -8,6 +9,7 @@ namespace activation {
 NDArray Sigmoid::forward(const NDArray& input) {
   // Cache input for backward pass
   last_input_ = input;
+  forward_called_ = true;
 
   NDArray output(input.shape());
 
@@ -23,6 +25,14 @@ NDArray Sigmoid::forward(const NDArray& input) {
 }
 
 NDArray Sigmoid::backward(const NDArray& grad_output) {
+  if (!forward_called_) {
+    throw std::runtime_error("backward() called without forward()");
+  }
+
+  if (grad_output.shape() != last_input_.shape()) {
+    throw std::invalid_argument("Gradient output shape must match input shape");
+  }
+
   NDArray grad_input(grad_output.shape());
 
   for (size_t i = 0; i < grad_output.size(); ++i) {

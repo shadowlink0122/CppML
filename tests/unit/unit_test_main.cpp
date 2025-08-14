@@ -70,13 +70,14 @@ int main() {
   std::cout << "\n--- Sequential Model Tests ---" << std::endl;
   runTest(std::make_unique<SequentialModelTests>());
 
-    // Model I/O tests (temporarily disabled)
-    // std::cout << "\n--- Model I/O Tests ---" << std::endl;
-    // runTest(std::make_unique<ModelFormatTest>());
-    // runTest(std::make_unique<ModelSaveLoadTest>());
-    // runTest(std::make_unique<ModelParameterTest>());
-    // runTest(std::make_unique<ModelIOErrorTest>());
-    // runTest(std::make_unique<ModelIOFileHandlingTest>());  // Print final summary
+  // Model I/O tests (temporarily disabled)
+  // std::cout << "\n--- Model I/O Tests ---" << std::endl;
+  // runTest(std::make_unique<ModelFormatTest>());
+  // runTest(std::make_unique<ModelSaveLoadTest>());
+  // runTest(std::make_unique<ModelParameterTest>());
+  // runTest(std::make_unique<ModelIOErrorTest>());
+  // runTest(std::make_unique<ModelIOFileHandlingTest>());  // Print final
+  // summary
   std::cout << "\n" << std::string(60, '=') << std::endl;
   std::cout << "FINAL TEST SUMMARY" << std::endl;
   std::cout << std::string(60, '=') << std::endl;

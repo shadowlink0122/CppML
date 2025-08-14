@@ -18,6 +18,11 @@ namespace activation {
 class Activation : public BaseLayer {
 public:
   /**
+   * @brief Constructor
+   */
+  Activation() : forward_called_(false) {}
+
+  /**
    * @brief Virtual destructor
    */
   virtual ~Activation() = default;
@@ -29,7 +34,8 @@ public:
   std::vector<NDArray*> get_parameters() override { return {}; }
 
 protected:
-  NDArray last_input_;  ///< Cache input for backward pass
+  NDArray last_input_;   ///< Cache input for backward pass
+  bool forward_called_;  ///< Flag to track if forward has been called
 };
 
 }  // namespace activation
