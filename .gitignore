@@ -4,6 +4,11 @@
 # Build directory
 build/
 
+# Training output directories
+samples/training_xor/
+samples/training_format_test/
+**/training_*
+
 # IDE and editor files
 .vscode/settings.json.backup
 *.swp
