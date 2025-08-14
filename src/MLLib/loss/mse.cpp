@@ -1,5 +1,6 @@
 #include "../../../include/MLLib/loss/mse.hpp"
 #include <cmath>
+#include <stdexcept>
 
 namespace MLLib {
 namespace loss {

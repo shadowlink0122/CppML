@@ -99,12 +99,38 @@ jobs:
         gcc --version
         make --version
         
+    - name: Verify source structure
+      run: |
+        echo "📁 Verifying project structure..."
+        ls -la
+        echo "Source directory contents:"
+        find src -type f -name "*.cpp" 2>/dev/null || echo "No .cpp files found"
+        find include -type f -name "*.hpp" 2>/dev/null || echo "No .hpp files found"
+        echo "Makefile check:"
+        head -20 Makefile
+        
     - name: Test library build
       run: |
         echo "🏗️ Testing library build..."
-        make clean
+        make clean || echo "Clean completed"
+        echo "Starting build process..."
+        make -d 2>&1 | head -50 || echo "Build started"
         make
         echo "✅ Library build successful"
+        
+    - name: Verify build output
+      run: |
+        echo "🔍 Verifying build artifacts..."
+        ls -la build/ || echo "Build directory not found"
+        if [ -f "build/libMLLib.a" ]; then
+          echo "✅ Library file created successfully"
+          file build/libMLLib.a
+          ls -la build/libMLLib.a
+        else
+          echo "❌ Library file not found"
+          find . -name "*.a" 2>/dev/null || echo "No .a files found anywhere"
+          exit 1
+        fi
 
   unit-tests:
     name: 🧪 Unit Tests

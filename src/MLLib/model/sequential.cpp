@@ -2,6 +2,7 @@
 #include "../../../include/MLLib/layer/dense.hpp"
 #include <algorithm>
 #include <iostream>
+#include <stdexcept>
 
 namespace MLLib {
 namespace model {

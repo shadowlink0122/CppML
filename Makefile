@@ -44,13 +44,18 @@ $(BUILD_DIR):
 # Build static library
 $(LIB_TARGET): $(BUILD_DIR)
 	@echo "Building $(PROJECT_NAME) library..."
+	@echo "Source files found: $(CPP_FILES)"
+	@echo "Header files found: $(HPP_FILES)"
 	@if [ -n "$(CPP_FILES)" ]; then \
 		echo "Compiling source files..."; \
-		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(CPP_FILES); then \
+		echo "Compiler: $(CXX)"; \
+		echo "Flags: $(CXXFLAGS) $(INCLUDE_FLAGS)"; \
+		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(CPP_FILES) 2>&1; then \
 			echo "Creating static library..."; \
-			if ar rcs $(LIB_TARGET) *.o; then \
+			if ar rcs $(LIB_TARGET) *.o 2>&1; then \
 				rm -f *.o; \
 				echo "✅ Library built successfully: $(LIB_TARGET)"; \
+				ls -la $(LIB_TARGET); \
 			else \
 				echo "❌ Failed to create static library"; \
 				rm -f *.o; \
@@ -64,6 +69,7 @@ $(LIB_TARGET): $(BUILD_DIR)
 	else \
 		echo "ℹ️  No source files found, creating header-only library marker"; \
 		touch $(LIB_TARGET); \
+		echo "✅ Header-only library marker created: $(LIB_TARGET)"; \
 	fi
 
 # Build with debug flags

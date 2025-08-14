@@ -1,4 +1,5 @@
 #include "../../../include/MLLib/optimizer/sgd.hpp"
+#include <stdexcept>
 
 namespace MLLib {
 namespace optimizer {
