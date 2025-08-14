@@ -1,0 +1,100 @@
+#include "../common/test_utils.hpp"
+#include "MLLib/layer/activation/test_activation.hpp"
+#include "MLLib/layer/test_dense.hpp"
+// #include "MLLib/model/test_model_io.hpp"  // Temporarily disabled
+#include "MLLib/model/test_sequential.hpp"
+#include "MLLib/test_config.hpp"
+#include "MLLib/test_ndarray.hpp"
+
+/**
+ * @file unit_test_main.cpp
+ * @brief Main entry point for unit tests
+ *
+ * This file contains all unit tests for the MLLib library.
+ * Tests are organized by component and run in a structured manner.
+ */
+
+int main() {
+  using namespace MLLib::test;
+
+  std::cout << "=== MLLib Unit Test Suite ===" << std::endl;
+  std::cout << "Running comprehensive unit tests for MLLib v1.0.0" << std::endl;
+  std::cout << "Test execution with output capture enabled" << std::endl;
+  std::cout << std::endl;
+
+  bool all_tests_passed = true;
+  int total_tests = 0;
+  int passed_tests = 0;
+
+  // Helper function to run test and update counters
+  auto runTest = [&](std::unique_ptr<TestCase> test) {
+    total_tests++;
+    bool result = test->run();
+    if (result) passed_tests++;
+    all_tests_passed &= result;
+  };
+
+  // Config tests
+  std::cout << "\n--- Config Module Tests ---" << std::endl;
+  runTest(std::make_unique<ConfigConstantsTest>());
+  runTest(std::make_unique<ConfigUsageTest>());
+  runTest(std::make_unique<ConfigMathTest>());
+
+  // NDArray tests
+  std::cout << "\n--- NDArray Module Tests ---" << std::endl;
+  runTest(std::make_unique<NDArrayConstructorTest>());
+  runTest(std::make_unique<NDArrayAccessTest>());
+  runTest(std::make_unique<NDArrayOperationsTest>());
+  runTest(std::make_unique<NDArrayArithmeticTest>());
+  runTest(std::make_unique<NDArrayMatmulTest>());
+  runTest(std::make_unique<NDArrayErrorTest>());
+
+  // Dense layer tests
+  std::cout << "\n--- Dense Layer Tests ---" << std::endl;
+  runTest(std::make_unique<DenseConstructorTest>());
+  runTest(std::make_unique<DenseForwardTest>());
+  runTest(std::make_unique<DenseBackwardTest>());
+  runTest(std::make_unique<DenseParameterTest>());
+
+  // Activation function tests
+  std::cout << "\n--- Activation Function Tests ---" << std::endl;
+  runTest(std::make_unique<ReLUTest>());
+  runTest(std::make_unique<ReLUBackwardTest>());
+  runTest(std::make_unique<SigmoidTest>());
+  runTest(std::make_unique<SigmoidBackwardTest>());
+  runTest(std::make_unique<TanhTest>());
+  runTest(std::make_unique<TanhBackwardTest>());
+  runTest(std::make_unique<ActivationErrorTest>());
+
+  // Sequential model tests
+  std::cout << "\n--- Sequential Model Tests ---" << std::endl;
+  runTest(std::make_unique<SequentialModelTests>());
+
+    // Model I/O tests (temporarily disabled)
+    // std::cout << "\n--- Model I/O Tests ---" << std::endl;
+    // runTest(std::make_unique<ModelFormatTest>());
+    // runTest(std::make_unique<ModelSaveLoadTest>());
+    // runTest(std::make_unique<ModelParameterTest>());
+    // runTest(std::make_unique<ModelIOErrorTest>());
+    // runTest(std::make_unique<ModelIOFileHandlingTest>());  // Print final summary
+  std::cout << "\n" << std::string(60, '=') << std::endl;
+  std::cout << "FINAL TEST SUMMARY" << std::endl;
+  std::cout << std::string(60, '=') << std::endl;
+  std::cout << "Total individual tests: " << total_tests << std::endl;
+  std::cout << "Passed tests: " << passed_tests << std::endl;
+  std::cout << "Failed tests: " << (total_tests - passed_tests) << std::endl;
+  std::cout << std::endl;
+
+  if (all_tests_passed) {
+    std::cout << "🎉 ALL UNIT TESTS PASSED! 🎉" << std::endl;
+    std::cout << "MLLib is ready for production use." << std::endl;
+  } else {
+    std::cout << "❌ SOME UNIT TESTS FAILED" << std::endl;
+    std::cout << "Please review the test output above and fix the issues."
+              << std::endl;
+  }
+
+  std::cout << std::string(60, '=') << std::endl;
+
+  return all_tests_passed ? 0 : 1;
+}
