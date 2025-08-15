@@ -1,6 +1,7 @@
 #include "../../include/MLLib.hpp"
 #include "../common/test_utils.hpp"
 #include "MLLib/test_basic_integration.hpp"
+#include "gpu_integration_test.cpp"  // Include GPU integration tests
 
 // Hierarchical integration tests
 #include "MLLib/backend/test_backend_integration.hpp"
@@ -499,6 +500,18 @@ int main() {
         std::make_unique<GPUCrossDeviceIntegrationTest>());
 
     bool suite_result = gpu_backend_suite.runAll();
+    all_tests_passed &= suite_result;
+  }
+
+  // New Multi-GPU Integration Tests
+  {
+    TestSuite multi_gpu_suite("Multi-GPU Integration Tests");
+    multi_gpu_suite.addTest(std::make_unique<BasicGPUOperationsTest>());
+    multi_gpu_suite.addTest(std::make_unique<GPUVendorDetectionTest>());
+    multi_gpu_suite.addTest(std::make_unique<GPUPerformanceTest>());
+    multi_gpu_suite.addTest(std::make_unique<GPUStabilityTest>());
+
+    bool suite_result = multi_gpu_suite.runAll();
     all_tests_passed &= suite_result;
   }
 

@@ -12,6 +12,7 @@
 // Forward declarations for test functions
 int run_unit_tests();
 int run_integration_tests();
+int run_gpu_integration_tests();  // GPU integration test declaration
 
 int main(int argc, char* argv[]) {
   printf("=== MLLib Test Suite Runner ===\n");
@@ -116,6 +117,22 @@ int run_unit_tests() {
  */
 int run_integration_tests() {
   printf("Executing integration tests...\n");
+
+  // Run main integration tests
+  int main_result = system("./tests/integration/integration_test_main");
+
+  // Run GPU-specific integration tests
+  int gpu_result = run_gpu_integration_tests();
+
+  if (main_result != 0) {
+    printf("Main integration tests failed with exit code: %d\n", main_result);
+    return main_result;
+  }
+
+  if (gpu_result != 0) {
+    printf("GPU integration tests failed with exit code: %d\n", gpu_result);
+    return gpu_result;
+  }
 
   // Integration tests would test the complete workflow
   // including model training, saving, loading, and prediction

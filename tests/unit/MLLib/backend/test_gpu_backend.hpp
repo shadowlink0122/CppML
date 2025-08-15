@@ -10,6 +10,7 @@
 #include "../../../../include/MLLib/model/sequential.hpp"
 #include "../../../../include/MLLib/ndarray.hpp"
 #include "../../../common/test_utils.hpp"
+#include "test_multi_gpu.hpp"  // Include new multi-GPU tests
 #include <iostream>
 #include <vector>
 
