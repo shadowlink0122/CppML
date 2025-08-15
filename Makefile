@@ -11,6 +11,7 @@ INCLUDE_DIR = include
 BUILD_DIR = build
 TEST_DIR = tests
 EXAMPLE_DIR = examples
+SAMPLE_DIR = samples
 
 # Compiler settings
 CXX = g++
@@ -43,14 +44,32 @@ $(BUILD_DIR):
 # Build static library
 $(LIB_TARGET): $(BUILD_DIR)
 	@echo "Building $(PROJECT_NAME) library..."
+	@echo "Source files found: $(CPP_FILES)"
+	@echo "Header files found: $(HPP_FILES)"
 	@if [ -n "$(CPP_FILES)" ]; then \
-		$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(CPP_FILES); \
-		ar rcs $(LIB_TARGET) *.o; \
-		rm -f *.o; \
-		echo "✅ Library built successfully: $(LIB_TARGET)"; \
+		echo "Compiling source files..."; \
+		echo "Compiler: $(CXX)"; \
+		echo "Flags: $(CXXFLAGS) $(INCLUDE_FLAGS)"; \
+		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(CPP_FILES) 2>&1; then \
+			echo "Creating static library..."; \
+			if ar rcs $(LIB_TARGET) *.o 2>&1; then \
+				rm -f *.o; \
+				echo "✅ Library built successfully: $(LIB_TARGET)"; \
+				ls -la $(LIB_TARGET); \
+			else \
+				echo "❌ Failed to create static library"; \
+				rm -f *.o; \
+				exit 1; \
+			fi; \
+		else \
+			echo "❌ Compilation failed"; \
+			rm -f *.o; \
+			exit 1; \
+		fi; \
 	else \
 		echo "ℹ️  No source files found, creating header-only library marker"; \
 		touch $(LIB_TARGET); \
+		echo "✅ Header-only library marker created: $(LIB_TARGET)"; \
 	fi
 
 # Build with debug flags
@@ -62,9 +81,37 @@ debug: $(LIB_TARGET)
 .PHONY: clean
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -rf $(BUILD_DIR)
-	@rm -f *.o
+	@if [ -d "$(BUILD_DIR)" ]; then \
+		echo "Removing build directory: $(BUILD_DIR)"; \
+		rm -rf $(BUILD_DIR); \
+	else \
+		echo "Build directory $(BUILD_DIR) does not exist"; \
+	fi
+	@rm -f *.o *.a *.so *.dylib
+	@find . -name "*.o" -delete 2>/dev/null || true
+	@find . -name "core" -delete 2>/dev/null || true
+	@echo "Removing training output directories..."
+	@for dir in samples/training_*; do \
+		if [ -d "$$dir" ]; then \
+			echo "Removing training directory: $$dir"; \
+			rm -rf "$$dir"; \
+		fi; \
+	done
+	@echo "Removing test temporary files..."
+	@find . -name "mllib_test_*" -delete 2>/dev/null || true
 	@echo "✅ Clean completed"
+
+# Deep clean - remove all generated files
+.PHONY: deep-clean
+deep-clean: clean
+	@echo "Performing deep clean..."
+	@rm -rf .vscode/settings.json.backup
+	@find . -name "*.tmp" -delete 2>/dev/null || true
+	@find . -name "*.log" -delete 2>/dev/null || true
+	@find . -name ".DS_Store" -delete 2>/dev/null || true
+	@echo "Removing any remaining training directories..."
+	@find . -type d -name "training_*" -exec rm -rf {} + 2>/dev/null || true
+	@echo "✅ Deep clean completed"
 
 # Format code using clang-format
 .PHONY: fmt
@@ -174,16 +221,104 @@ install-tools:
 		echo "  - cppcheck: for static analysis"; \
 	fi
 
-# Run tests (if test directory exists)
+# Run all tests (unit + integration)
 .PHONY: test
-test: $(LIB_TARGET)
-	@if [ -d "$(TEST_DIR)" ] && [ -n "$(TEST_FILES)" ]; then \
-		echo "Building and running tests..."; \
-		$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $(TEST_FILES) -L$(BUILD_DIR) -l$(PROJECT_NAME) -o $(BUILD_DIR)/test_runner; \
-		$(BUILD_DIR)/test_runner; \
-		echo "✅ Tests completed"; \
+test: unit-test integration-test
+	@echo "✅ All tests completed successfully"
+
+# Run unit tests only
+.PHONY: unit-test
+unit-test: $(LIB_TARGET)
+	@echo "Building and running unit tests..."
+	@mkdir -p $(BUILD_DIR)/tests
+	@if [ -f "$(TEST_DIR)/unit/unit_test_main.cpp" ]; then \
+		echo "Compiling unit test framework..."; \
+		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
+		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES $(CPP_FILES) -o $(BUILD_DIR)/tests/unit_tests; then \
+			echo "Running unit tests..."; \
+			if $(BUILD_DIR)/tests/unit_tests; then \
+				echo "✅ Unit tests passed"; \
+			else \
+				echo "❌ Unit tests failed"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "❌ Failed to build unit tests"; \
+			exit 1; \
+		fi; \
 	else \
-		echo "ℹ️  No tests found in $(TEST_DIR)"; \
+		echo "ℹ️  Unit tests not found"; \
+	fi
+
+# Run simple integration tests
+.PHONY: simple-integration-test
+simple-integration-test: $(LIB_TARGET)
+	@echo "Building and running simple integration tests..."
+	@echo "Compiling simple integration test..."
+	@$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -I$(TEST_DIR) -o $(BUILD_DIR)/simple_integration_test \
+		tests/integration/simple_integration_test.cpp -L$(BUILD_DIR) -lMLLib $(LDFLAGS) 2>&1 | tee $(BUILD_DIR)/simple_integration_compile.log; \
+	if [ $$? -eq 0 ]; then \
+		echo "✅ Simple integration tests compiled successfully"; \
+		echo "Running simple integration tests..."; \
+		$(BUILD_DIR)/simple_integration_test; \
+		if [ $$? -eq 0 ]; then \
+			echo "✅ Simple integration tests completed successfully"; \
+		else \
+			echo "❌ Simple integration tests failed"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Failed to build simple integration tests"; \
+		echo "Compilation errors:"; \
+		cat $(BUILD_DIR)/simple_integration_compile.log; \
+		exit 1; \
+	fi
+
+# Run integration tests only
+.PHONY: integration-test
+integration-test: $(LIB_TARGET)
+	@echo "Building and running integration tests..."
+	@mkdir -p $(BUILD_DIR)/tests
+	@if [ -f "$(TEST_DIR)/integration/integration_test_main.cpp" ]; then \
+		echo "Compiling integration test framework..."; \
+		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
+		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(CPP_FILES) -o $(BUILD_DIR)/tests/integration_tests; then \
+			echo "Running integration tests..."; \
+			if $(BUILD_DIR)/tests/integration_tests; then \
+				echo "✅ Integration tests passed"; \
+			else \
+				echo "❌ Integration tests failed"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "❌ Failed to build integration tests"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "ℹ️  Integration tests not found"; \
+	fi
+
+# Run comprehensive test runner
+.PHONY: test-all
+test-all: $(LIB_TARGET)
+	@echo "Building comprehensive test runner..."
+	@mkdir -p $(BUILD_DIR)/tests
+	@if [ -f "$(TEST_DIR)/test_main.cpp" ]; then \
+		echo "Compiling test runner..."; \
+		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $(TEST_DIR)/test_main.cpp -o $(BUILD_DIR)/tests/test_runner; then \
+			echo "Running comprehensive test suite..."; \
+			if $(BUILD_DIR)/tests/test_runner; then \
+				echo "✅ All tests completed successfully"; \
+			else \
+				echo "❌ Some tests failed"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "❌ Failed to build test runner"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "ℹ️  Test runner not found"; \
 	fi
 
 # Build examples (if examples directory exists)
@@ -192,16 +327,99 @@ examples: $(LIB_TARGET)
 	@if [ -d "$(EXAMPLE_DIR)" ]; then \
 		echo "Building examples..."; \
 		mkdir -p $(BUILD_DIR)/examples; \
+		EXAMPLE_SUCCESS=true; \
 		for example in $(EXAMPLE_DIR)/*.cpp; do \
 			if [ -f "$$example" ]; then \
 				name=$$(basename $$example .cpp); \
-				$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$example -L$(BUILD_DIR) -l$(PROJECT_NAME) -o $(BUILD_DIR)/examples/$$name; \
-				echo "Built example: $$name"; \
+				echo "Building example: $$name"; \
+				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$example -L$(BUILD_DIR) -l$(PROJECT_NAME) -o $(BUILD_DIR)/examples/$$name; then \
+					echo "✓ Built example: $$name"; \
+				else \
+					echo "❌ Failed to build example: $$name"; \
+					EXAMPLE_SUCCESS=false; \
+				fi; \
 			fi; \
 		done; \
-		echo "✅ Examples built successfully"; \
+		if [ "$$EXAMPLE_SUCCESS" = "true" ]; then \
+			echo "✅ Examples built successfully"; \
+		else \
+			echo "❌ Some examples failed to build"; \
+			exit 1; \
+		fi; \
 	else \
 		echo "ℹ️  No examples directory found"; \
+	fi
+
+# Build samples (if sample directory exists)
+.PHONY: samples
+samples: $(LIB_TARGET)
+	@if [ -d "$(SAMPLE_DIR)" ]; then \
+		echo "Building samples..."; \
+		mkdir -p $(BUILD_DIR)/samples; \
+		SAMPLE_SUCCESS=true; \
+		for sample in $(SAMPLE_DIR)/*.cpp; do \
+			if [ -f "$$sample" ]; then \
+				name=$$(basename $$sample .cpp); \
+				echo "Building sample: $$name"; \
+				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(CPP_FILES) -o $(BUILD_DIR)/samples/$$name; then \
+					echo "✓ Built sample: $$name"; \
+				else \
+					echo "❌ Failed to build sample: $$name"; \
+					SAMPLE_SUCCESS=false; \
+				fi; \
+			fi; \
+		done; \
+		if [ "$$SAMPLE_SUCCESS" = "true" ]; then \
+			echo "✅ Samples built successfully"; \
+		else \
+			echo "❌ Some samples failed to build"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "ℹ️  No samples directory found"; \
+	fi
+	@if [ -d "samples" ]; then \
+		echo "Building additional samples..."; \
+		mkdir -p $(BUILD_DIR)/samples; \
+		ADDITIONAL_SUCCESS=true; \
+		for sample in samples/*.cpp; do \
+			if [ -f "$$sample" ]; then \
+				name=$$(basename $$sample .cpp); \
+				echo "Building sample: $$name"; \
+				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(CPP_FILES) -o $(BUILD_DIR)/samples/$$name; then \
+					echo "✓ Built sample: $$name"; \
+				else \
+					echo "❌ Failed to build sample: $$name"; \
+					ADDITIONAL_SUCCESS=false; \
+				fi; \
+			fi; \
+		done; \
+		if [ "$$ADDITIONAL_SUCCESS" = "true" ]; then \
+			echo "✅ Additional samples built successfully"; \
+		else \
+			echo "❌ Some additional samples failed to build"; \
+			exit 1; \
+		fi; \
+	fi
+
+# Build and run XOR sample
+.PHONY: xor
+xor: samples
+	@if [ -f "$(BUILD_DIR)/samples/xor" ]; then \
+		echo "Running XOR sample..."; \
+		$(BUILD_DIR)/samples/xor; \
+	else \
+		echo "❌ XOR sample not found"; \
+	fi
+
+# Build and run Model I/O test
+.PHONY: model-format-test
+model-format-test: samples
+	@if [ -f "$(BUILD_DIR)/samples/model_format_test" ]; then \
+		echo "Running Model Format test..."; \
+		$(BUILD_DIR)/samples/model_format_test; \
+	else \
+		echo "❌ Model Format test not found"; \
 	fi
 
 # Show help
@@ -212,7 +430,14 @@ help:
 	@echo "Building:"
 	@echo "  all          - Build the library (default)"
 	@echo "  debug        - Build with debug flags"
-	@echo "  clean        - Remove build artifacts"
+	@echo "  clean        - Remove build artifacts, training outputs, and test files"
+	@echo "  deep-clean   - Remove all generated files including nested training dirs"
+	@echo ""
+	@echo "Testing:"
+	@echo "  test         - Run all tests (unit + integration)"
+	@echo "  unit-test    - Run unit tests only"
+	@echo "  integration-test - Run integration tests only"
+	@echo "  test-all     - Run comprehensive test runner"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  fmt          - Format code with clang-format"
@@ -224,9 +449,11 @@ help:
 	@echo "Tools:"
 	@echo "  install-tools - Install required formatting/linting tools"
 	@echo ""
-	@echo "Testing:"
-	@echo "  test         - Build and run tests"
+	@echo "Examples & Samples:"
 	@echo "  examples     - Build example programs"
+	@echo "  samples      - Build sample programs"
+	@echo "  xor          - Build and run XOR sample"
+	@echo "  model-format-test - Build and run Model Format test"
 	@echo ""
 	@echo "Misc:"
 	@echo "  help         - Show this help message"

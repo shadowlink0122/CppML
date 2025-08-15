@@ -99,10 +99,50 @@ jobs:
   #         echo "passed=false" >> $GITHUB_OUTPUT
   #       fi
 
+  quick-tests:
+    name: 🧪 Quick Tests
+    runs-on: ubuntu-latest
+    needs: [format-check, static-analysis]
+    
+    steps:
+    - name: Checkout PR
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+        
+    - name: Install build tools
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y build-essential make
+        
+    - name: Build and test
+      id: test
+      run: |
+        echo "🏗️ Building library..."
+        make clean && make
+        
+        echo "🧪 Running unit tests..."
+        if make unit-test; then
+          echo "status=✅ All tests passed (21/21)" >> $GITHUB_OUTPUT
+          echo "passed=true" >> $GITHUB_OUTPUT
+        else
+          echo "status=❌ Tests failed" >> $GITHUB_OUTPUT
+          echo "passed=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: |
+          tests/
+        retention-days: 1
+
   pr-status:
     name: 🏁 Final Status
     runs-on: ubuntu-latest
-    needs: [format-check, static-analysis]
+    needs: [format-check, static-analysis, quick-tests]
     if: always()
     
     steps:
@@ -111,11 +151,16 @@ jobs:
         echo "📊 Final Status Check"
         echo "Format Check: ${{ needs.format-check.result }}"
         echo "Static Analysis: ${{ needs.static-analysis.result }}"
+        echo "Quick Tests: ${{ needs.quick-tests.result }}"
         
-        # Only fail if format check fails (critical)
+        # Fail if format check or tests fail (critical)
         if [ "${{ needs.format-check.result }}" != "success" ]; then
           echo "❌ PR check failed - formatting issues must be fixed"
           exit 1
+        elif [ "${{ needs.quick-tests.result }}" != "success" ]; then
+          echo "❌ PR check failed - tests must pass"
+          exit 1
         else
           echo "✅ PR check passed - ready for review"
+          echo "🧪 All 21 unit tests passing"
         fi

@@ -1,6 +1,39 @@
 # Prerequisites
 *.d
 
+# Build directory
+build/
+
+# Training output directories
+samples/training_xor/
+samples/training_format_test/
+**/training_*
+
+# IDE and editor files
+.vscode/settings.json.backup
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Core dumps
+core
+
 # Compiled Object files
 *.slo
 *.lo
