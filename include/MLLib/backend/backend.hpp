@@ -91,9 +91,16 @@ private:
   static void cpu_fill(NDArray& array, double value);
   static void cpu_copy(const NDArray& src, NDArray& dst);
 
-  // Future GPU implementations
-  // static void gpu_matmul(...);
-  // etc.
+  // GPU-specific implementations
+  static void gpu_matmul(const NDArray& a, const NDArray& b, NDArray& result);
+  static void gpu_add(const NDArray& a, const NDArray& b, NDArray& result);
+  static void gpu_subtract(const NDArray& a, const NDArray& b, NDArray& result);
+  static void gpu_multiply(const NDArray& a, const NDArray& b, NDArray& result);
+  static void gpu_add_scalar(const NDArray& a, double scalar, NDArray& result);
+  static void gpu_multiply_scalar(const NDArray& a, double scalar,
+                                  NDArray& result);
+  static void gpu_fill(NDArray& array, double value);
+  static void gpu_copy(const NDArray& src, NDArray& dst);
 };
 
 }  // namespace backend
