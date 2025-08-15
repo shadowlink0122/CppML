@@ -3,12 +3,21 @@
 
 # Check for CUDA installation
 NVCC := $(shell which nvcc 2>/dev/null)
-CUDA_HOME := $(shell dirname $(shell dirname $(NVCC)) 2>/dev/null)
+ifneq ($(NVCC),)
+    CUDA_HOME := $(shell dirname $(shell dirname $(NVCC)) 2>/dev/null)
+else
+    CUDA_HOME := 
+endif
 
 # CUDA compiler and flags
 NVCC_FLAGS = -std=c++17 -O2 --compiler-options -fPIC
-CUDA_INCLUDE = -I$(CUDA_HOME)/include
-CUDA_LIBS = -L$(CUDA_HOME)/lib64 -lcudart -lcublas
+ifneq ($(CUDA_HOME),)
+    CUDA_INCLUDE = -I$(CUDA_HOME)/include
+    CUDA_LIBS = -L$(CUDA_HOME)/lib64 -lcudart -lcublas
+else
+    CUDA_INCLUDE = 
+    CUDA_LIBS = 
+endif
 
 # CUDA source files
 CUDA_FILES = $(shell find $(SRC_DIR) -name "*.cu" 2>/dev/null || true)
@@ -17,6 +26,9 @@ CUDA_FILES = $(shell find $(SRC_DIR) -name "*.cu" 2>/dev/null || true)
 ifeq ($(NVCC),)
     CUDA_AVAILABLE = false
     CUDA_MESSAGE = "CUDA not found - building CPU-only version"
+else ifeq ($(CUDA_HOME),)
+    CUDA_AVAILABLE = false
+    CUDA_MESSAGE = "CUDA compiler found but CUDA_HOME not set - building CPU-only version"
 else
     CUDA_AVAILABLE = true
     CUDA_MESSAGE = "CUDA found at $(CUDA_HOME) - building with GPU support"

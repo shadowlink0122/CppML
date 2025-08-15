@@ -15,7 +15,7 @@ SAMPLE_DIR = samples
 # GPU vendor detection and flags
 ROCM_AVAILABLE := $(shell which rocm-smi 2>/dev/null && echo true || echo false)
 ONEAPI_AVAILABLE := $(shell which sycl-ls 2>/dev/null && echo true || echo false)
-METAL_AVAILABLE := $(shell [[ "$(shell uname)" = "Darwin" ]] && echo true || echo false)
+METAL_AVAILABLE := $(shell [ "$(shell uname)" = "Darwin" ] && echo true || echo false)
 
 # Include CUDA configuration
 include cuda.mk
@@ -68,7 +68,26 @@ ifeq ($(METAL_AVAILABLE),true)
     LDFLAGS += -framework Metal -framework Foundation
 endif
 
-# Allow disabling specific GPU support if needed
+# CI environment detection
+ifdef CI
+    # In CI, disable problematic features
+    METAL_AVAILABLE = false
+    MM_FILES = 
+    $(info CI mode detected - disabling Metal backend)
+endif
+
+# Also check for common CI environment variables
+ifneq ($(GITHUB_ACTIONS),)
+    METAL_AVAILABLE = false
+    MM_FILES = 
+    $(info GitHub Actions detected - disabling Metal backend)
+endif
+
+ifneq ($(GITLAB_CI),)
+    METAL_AVAILABLE = false
+    MM_FILES = 
+    $(info GitLab CI detected - disabling Metal backend)
+endif
 ifdef DISABLE_CUDA
     ifeq ($(DISABLE_CUDA),1)
         CXXFLAGS := $(filter-out -DWITH_CUDA,$(CXXFLAGS))
@@ -98,7 +117,12 @@ ifdef GPU_SIMULATION
     CXXFLAGS += -DGPU_SIMULATION_MODE
     CUDA_AVAILABLE = true
     CXXFLAGS += -DWITH_CUDA
+    # Use standard system includes for simulation
     INCLUDE_FLAGS += -I/usr/local/cuda/include
+    # Override Metal availability for simulation in CI
+    ifeq ($(shell uname),Linux)
+        METAL_AVAILABLE = false
+    endif
 endif
 
 # Find source files
@@ -116,6 +140,7 @@ ifeq ($(ONEAPI_AVAILABLE),true)
     CPP_FILES += src/MLLib/backend/gpu/oneapi_backend.cpp
 endif
 
+# Only include Metal backend on macOS
 ifeq ($(METAL_AVAILABLE),true)
     MM_FILES += src/MLLib/backend/gpu/metal_backend.mm
 endif
@@ -180,9 +205,11 @@ $(LIB_TARGET): $(BUILD_DIR)
 		echo "Compiling C++ files..."; \
 		$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(CPP_FILES); \
 	fi
-	@if [ -n "$(MM_FILES)" ]; then \
+	@if [ -n "$(MM_FILES)" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
 		echo "Compiling Objective-C++ files..."; \
 		$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(MM_FILES); \
+	elif [ -n "$(MM_FILES)" ]; then \
+		echo "Skipping Objective-C++ files (Metal not available)"; \
 	fi
 	@if [ "$(CUDA_AVAILABLE)" = "true" ] && [ -n "$(CUDA_FILES)" ]; then \
 		echo "Compiling CUDA files..."; \
@@ -529,7 +556,19 @@ model-format-test: samples
 		echo "❌ Model Format test not found"; \
 	fi
 
-# Show help
+# CI-specific build target
+.PHONY: ci-build
+ci-build: CI=1
+ci-build: GPU_SIMULATION=1
+ci-build: $(LIB_TARGET)
+	@echo "✅ CI build completed successfully"
+
+# CI-specific test target
+.PHONY: ci-test
+ci-test: CI=1
+ci-test: GPU_SIMULATION=1
+ci-test: unit-test simple-integration-test
+	@echo "✅ CI tests completed successfully"
 .PHONY: help
 help:
 	@echo "$(PROJECT_NAME) v$(VERSION) - Available targets:"
@@ -537,6 +576,7 @@ help:
 	@echo "Building:"
 	@echo "  all          - Build the library (default)"
 	@echo "  debug        - Build with debug flags"
+	@echo "  ci-build     - Build for CI environment (no Metal, GPU simulation)"
 	@echo "  clean        - Remove build artifacts, training outputs, and test files"
 	@echo "  deep-clean   - Remove all generated files including nested training dirs"
 	@echo ""
@@ -545,6 +585,7 @@ help:
 	@echo "  unit-test    - Run unit tests only"
 	@echo "  integration-test - Run integration tests only"
 	@echo "  test-all     - Run comprehensive test runner"
+	@echo "  ci-test      - Run tests in CI environment"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  fmt          - Format code with clang-format"
@@ -574,6 +615,8 @@ help:
 	@echo "Usage Examples:"
 	@echo "  make                     - Build with all GPU support"
 	@echo "  make DISABLE_CUDA=1      - Build without CUDA"
+	@echo "  make ci-build            - Build for CI (no Metal, GPU simulation)"
+	@echo "  make ci-test             - Run tests in CI environment"
 	@echo "  make samples             - Build all sample programs"
 	@echo "  make xor                 - Run XOR sample (auto GPU detection)"
 	@echo "  make test                - Run tests with full GPU support"
