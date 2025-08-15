@@ -47,7 +47,8 @@ public:
    * @param show_warnings Whether to show warning messages
    * @return true if device was set successfully, false if fallback occurred
    */
-  static bool setDeviceWithValidation(DeviceType device, bool show_warnings = true);
+  static bool setDeviceWithValidation(DeviceType device,
+                                      bool show_warnings = true);
 
   /**
    * @brief Get device type as string

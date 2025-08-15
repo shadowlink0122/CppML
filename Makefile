@@ -29,10 +29,50 @@ ifeq ($(CUDA_AVAILABLE),true)
     LDFLAGS += $(CUDA_LIBS)
 endif
 
+# Force CUDA support when WITH_CUDA=1 is specified, even without nvcc
+ifdef WITH_CUDA
+    ifeq ($(WITH_CUDA),1)
+        CXXFLAGS += -DWITH_CUDA
+        ifneq ($(CUDA_AVAILABLE),true)
+            # Mock CUDA includes when nvcc not available but WITH_CUDA=1
+            INCLUDE_FLAGS += -I/usr/local/cuda/include
+        endif
+    endif
+endif
+
+# Add GPU simulation flags if specified
+ifdef GPU_SIMULATION
+    CXXFLAGS += -DGPU_SIMULATION_MODE
+    CUDA_AVAILABLE = true
+    CXXFLAGS += -DWITH_CUDA
+    INCLUDE_FLAGS += -I/usr/local/cuda/include
+endif
+
 # Find source files
 CPP_FILES = $(shell find $(SRC_DIR) -name "*.cpp" 2>/dev/null || true)
 HPP_FILES = $(shell find $(INCLUDE_DIR) -name "*.hpp" 2>/dev/null || true)
 TEST_FILES = $(shell find $(TEST_DIR) -name "*.cpp" 2>/dev/null || true)
+
+# Add CUDA stub implementation when CUDA is not available but WITH_CUDA is requested
+ifeq ($(CUDA_AVAILABLE),false)
+    # Only add stub once, regardless of multiple conditions
+    NEED_CUDA_STUB := false
+    ifneq ($(WITH_CUDA),)
+        ifeq ($(WITH_CUDA),1)
+            NEED_CUDA_STUB := true
+        endif
+    endif
+    ifdef GPU_SIMULATION
+        NEED_CUDA_STUB := true
+    endif
+    
+    ifeq ($(NEED_CUDA_STUB),true)
+        CPP_FILES += src/MLLib/backend/gpu/cuda_kernels_stub.cpp
+    endif
+endif
+
+# Remove duplicates from CPP_FILES to prevent linker errors
+CPP_FILES := $(sort $(CPP_FILES))
 
 # Library target
 LIB_NAME = lib$(PROJECT_NAME).a
@@ -254,7 +294,12 @@ unit-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/unit/unit_test_main.cpp" ]; then \
 		echo "Compiling unit test framework..."; \
 		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
-		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES $(CPP_FILES) -o $(BUILD_DIR)/tests/unit_tests; then \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib"; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ] || [ "$(WITH_CUDA)" = "1" ] || [ -n "$(GPU_SIMULATION)" ]; then \
+			echo "Building with CUDA support for tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		fi; \
+		if $$COMPILE_CMD -o $(BUILD_DIR)/tests/unit_tests; then \
 			echo "Running unit tests..."; \
 			if $(BUILD_DIR)/tests/unit_tests; then \
 				echo "✅ Unit tests passed"; \
@@ -302,7 +347,12 @@ integration-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/integration/integration_test_main.cpp" ]; then \
 		echo "Compiling integration test framework..."; \
 		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
-		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(CPP_FILES) -o $(BUILD_DIR)/tests/integration_tests; then \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(CPP_FILES)"; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ] || [ "$(WITH_CUDA)" = "1" ] || [ -n "$(GPU_SIMULATION)" ]; then \
+			echo "Building with CUDA support for tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		fi; \
+		if $$COMPILE_CMD -o $(BUILD_DIR)/tests/integration_tests; then \
 			echo "Running integration tests..."; \
 			if $(BUILD_DIR)/tests/integration_tests; then \
 				echo "✅ Integration tests passed"; \

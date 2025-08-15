@@ -2,9 +2,11 @@
 
 [![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
+[![GPU CI](https://github.com/shadowlink0122/CppML/workflows/GPU%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/gpu-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
 [![Tests](https://img.shields.io/badge/tests-21%2F21_unit_tests-brightgreen.svg)](#-testing)
 [![Integration Tests](https://img.shields.io/badge/integration-3429%2F3429_assertions-brightgreen.svg)](#-testing)
+[![GPU Tests](https://img.shields.io/badge/GPU_tests-145_assertions-blue.svg)](#-gpu-support)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25_CI_success-brightgreen.svg)](#-testing)
 
 > **Languages**: [English](README.md) | [日本語](README_ja.md)
@@ -16,11 +18,13 @@ A modern C++17 machine learning library designed for neural network training and
 - **🧠 Neural Networks**: Sequential models with customizable architectures
 - **📊 Layers**: Dense (fully connected), ReLU, Sigmoid, Tanh activation functions  
 - **🎯 Training**: MSE loss function with SGD optimizer
-- **💾 Model I/O**: Save/load models in binary, JSON, and config formats
+- **� GPU Support**: CUDA acceleration with automatic CPU fallback
+- **�💾 Model I/O**: Save/load models in binary, JSON, and config formats
 - **📁 Auto Directory**: Automatic directory creation with `mkdir -p` functionality
 - **🔧 Type Safety**: Enum-based format specification for improved reliability
 - **⚡ Performance**: Optimized C++17 implementation with NDArray backend
 - **🧪 Testing**: Comprehensive unit (21/21) and integration tests (3429/3429 assertions)
+- **🖥️ GPU Testing**: 145 GPU-specific assertions with fallback validation
 - **🔄 Cross-platform**: Linux, macOS, Windows support
 - **📊 Benchmarking**: Real-time performance metrics and execution time tracking
 - **🎯 CI/CD Ready**: 100% test success rate for production deployments
@@ -235,7 +239,62 @@ make clean
 make install-tools
 ```
 
-## 📚 Documentation
+## � GPU Support
+
+MLLib provides comprehensive GPU acceleration with automatic CPU fallback:
+
+### Features
+
+- **🖥️ Automatic Detection**: GPU availability detection at runtime
+- **🔄 CPU Fallback**: Seamless CPU execution when GPU unavailable
+- **⚠️ User Warnings**: Informative messages about GPU status
+- **🧪 Full Testing**: 145 GPU assertions across unit and integration tests
+
+### GPU Build
+
+```bash
+# Build with CUDA support (auto-detected)
+make WITH_CUDA=1
+
+# GPU-specific testing
+make unit-test WITH_CUDA=1
+make integration-test WITH_CUDA=1
+
+# Check GPU status
+nvidia-smi
+nvcc --version
+```
+
+### Usage
+
+```cpp
+#include "MLLib.hpp"
+
+using namespace MLLib;
+
+// Create GPU device (falls back to CPU if unavailable)
+auto device = Device::create("gpu");
+
+if (device->is_available()) {
+    std::cout << "Using GPU: " << device->get_name() << std::endl;
+} else {
+    std::cout << "GPU unavailable, using CPU fallback" << std::endl;
+}
+
+// Models automatically use the best available device
+Sequential model;
+model.add_layer(std::make_shared<Dense>(784, 128));
+model.add_layer(std::make_shared<Dense>(128, 10));
+
+// Training works seamlessly on GPU or CPU
+// ... training code ...
+```
+
+### GPU CI Testing
+
+See [GPU CI Setup Guide](docs/GPU_CI_SETUP.md) for complete CI configuration.
+
+## �📚 Documentation
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
@@ -244,6 +303,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **🇯🇵 [日本語ドキュメント](docs/README_ja.md)** - 日本語での完全ガイド
 - **🇺🇸 [Model I/O Guide (English)](docs/MODEL_IO_en.md)** - Complete model serialization guide
 - **🇯🇵 [モデル I/O ガイド (日本語)](docs/MODEL_IO_ja.md)** - 日本語でのモデル保存・読み込み解説
+- **🇺🇸 [GPU CI Setup Guide (English)](docs/GPU_CI_SETUP_en.md)** - GPU testing environment configuration
+- **🇯🇵 [GPU CI 設定ガイド (日本語)](docs/GPU_CI_SETUP_ja.md)** - GPU テスト環境の設定方法
 - **🇺🇸 [Testing Guide (English)](docs/TESTING_en.md)** - Testing framework documentation
 - **🇯🇵 [テストガイド (日本語)](docs/TESTING_ja.md)** - テストフレームワークの説明
 

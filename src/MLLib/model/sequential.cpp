@@ -12,7 +12,8 @@ Sequential::Sequential() : device_(DeviceType::CPU) {}
 
 Sequential::Sequential(DeviceType device) : device_(device) {
   Device::setDeviceWithValidation(device, true);
-  device_ = Device::getCurrentDevice();  // Update to actual device (in case of fallback)
+  device_ = Device::getCurrentDevice();  // Update to actual device (in case of
+                                         // fallback)
 }
 
 Sequential::~Sequential() {

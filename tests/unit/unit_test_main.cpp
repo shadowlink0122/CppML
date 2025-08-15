@@ -2,10 +2,10 @@
 #include "MLLib/layer/activation/test_activation.hpp"
 #include "MLLib/layer/test_dense.hpp"
 // #include "MLLib/model/test_model_io.hpp"  // Temporarily disabled
+#include "MLLib/backend/test_gpu_backend.hpp"
 #include "MLLib/model/test_sequential.hpp"
 #include "MLLib/test_config.hpp"
 #include "MLLib/test_ndarray.hpp"
-#include "MLLib/backend/test_gpu_backend.hpp"
 #include <chrono>
 #include <iomanip>
 

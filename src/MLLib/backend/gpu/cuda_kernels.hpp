@@ -43,8 +43,8 @@ void cuda_get_memory_info(size_t* free_bytes, size_t* total_bytes);
  * @param n Number of columns in B and C
  * @param k Number of columns in A and rows in B
  */
-void cuda_matmul(const double* h_a, const double* h_b, double* h_c,
-                 int m, int n, int k);
+void cuda_matmul(const double* h_a, const double* h_b, double* h_c, int m,
+                 int n, int k);
 
 /**
  * @brief GPU element-wise addition
@@ -53,7 +53,8 @@ void cuda_matmul(const double* h_a, const double* h_b, double* h_c,
  * @param h_result Host pointer to result array
  * @param size Number of elements
  */
-void cuda_add(const double* h_a, const double* h_b, double* h_result, size_t size);
+void cuda_add(const double* h_a, const double* h_b, double* h_result,
+              size_t size);
 
 /**
  * @brief GPU element-wise subtraction
@@ -62,7 +63,8 @@ void cuda_add(const double* h_a, const double* h_b, double* h_result, size_t siz
  * @param h_result Host pointer to result array
  * @param size Number of elements
  */
-void cuda_subtract(const double* h_a, const double* h_b, double* h_result, size_t size);
+void cuda_subtract(const double* h_a, const double* h_b, double* h_result,
+                   size_t size);
 
 /**
  * @brief GPU element-wise multiplication
@@ -71,7 +73,8 @@ void cuda_subtract(const double* h_a, const double* h_b, double* h_result, size_
  * @param h_result Host pointer to result array
  * @param size Number of elements
  */
-void cuda_multiply(const double* h_a, const double* h_b, double* h_result, size_t size);
+void cuda_multiply(const double* h_a, const double* h_b, double* h_result,
+                   size_t size);
 
 /**
  * @brief GPU scalar addition
@@ -80,7 +83,8 @@ void cuda_multiply(const double* h_a, const double* h_b, double* h_result, size_
  * @param h_result Host pointer to result array
  * @param size Number of elements
  */
-void cuda_add_scalar(const double* h_a, double scalar, double* h_result, size_t size);
+void cuda_add_scalar(const double* h_a, double scalar, double* h_result,
+                     size_t size);
 
 /**
  * @brief GPU scalar multiplication
@@ -89,7 +93,8 @@ void cuda_add_scalar(const double* h_a, double scalar, double* h_result, size_t 
  * @param h_result Host pointer to result array
  * @param size Number of elements
  */
-void cuda_multiply_scalar(const double* h_a, double scalar, double* h_result, size_t size);
+void cuda_multiply_scalar(const double* h_a, double scalar, double* h_result,
+                          size_t size);
 
 /**
  * @brief GPU fill array with value

@@ -1,21 +1,27 @@
 {
   "C_Cpp.clang_format_style": "file",
   "C_Cpp.clang_format_fallbackStyle": "LLVM",
+  "C_Cpp.formatting": "clangFormat",
+  "C_Cpp.clang_format_sortIncludes": true,
   "editor.formatOnSave": true,
-  "editor.formatOnType": true,
+  "editor.formatOnType": false,
   "editor.formatOnPaste": true,
   "editor.defaultFormatter": "ms-vscode.cpptools",
   "[cpp]": {
     "editor.defaultFormatter": "ms-vscode.cpptools",
     "editor.formatOnSave": true,
     "editor.tabSize": 2,
-    "editor.insertSpaces": true
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.trimAutoWhitespace": true
   },
   "[c]": {
     "editor.defaultFormatter": "ms-vscode.cpptools",
     "editor.formatOnSave": true,
     "editor.tabSize": 2,
-    "editor.insertSpaces": true
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.trimAutoWhitespace": true
   },
   "files.associations": {
     "*.hpp": "cpp",
@@ -73,6 +79,6 @@
     "algorithm": "cpp"
 },
   "editor.rulers": [80],
-  "editor.wordWrap": "wordWrapColumn",
+  "editor.wordWrap": "off",
   "editor.wordWrapColumn": 80
 }

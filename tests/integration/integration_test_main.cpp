@@ -490,10 +490,13 @@ int main() {
   // GPU Backend integration tests
   {
     TestSuite gpu_backend_suite("GPU Backend Integration Tests");
-    gpu_backend_suite.addTest(std::make_unique<GPUCPUFallbackIntegrationTest>());
-    gpu_backend_suite.addTest(std::make_unique<GPUModelComplexityIntegrationTest>());
+    gpu_backend_suite.addTest(
+        std::make_unique<GPUCPUFallbackIntegrationTest>());
+    gpu_backend_suite.addTest(
+        std::make_unique<GPUModelComplexityIntegrationTest>());
     gpu_backend_suite.addTest(std::make_unique<GPUMemoryIntegrationTest>());
-    gpu_backend_suite.addTest(std::make_unique<GPUCrossDeviceIntegrationTest>());
+    gpu_backend_suite.addTest(
+        std::make_unique<GPUCrossDeviceIntegrationTest>());
 
     bool suite_result = gpu_backend_suite.runAll();
     all_tests_passed &= suite_result;
@@ -543,7 +546,7 @@ int main() {
 
     // Time utilities
     util_suite.addTest(std::make_unique<TrainingTimeIntegrationTest>());
-    util_suite.addTest(std::make_unique<PerformanceBenchmarkIntegrationTest>());
+    util_suite.addTest(std::make_unique<TimeBenchmarkIntegrationTest>());
     util_suite.addTest(std::make_unique<TimeoutHandlingIntegrationTest>());
     util_suite.addTest(std::make_unique<TimeBasedOperationsIntegrationTest>());
 

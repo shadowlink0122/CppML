@@ -10,7 +10,7 @@ int main() {
   // モデル構築
   MLLib::model::Sequential model;
   // デバイス指定（将来GPUにも対応可能）
-  model.set_device(MLLib::DeviceType::CPU);
+  model.set_device(MLLib::DeviceType::GPU);
   // レイヤー追加
   // 入力層: 2次元入力
   model.add_layer(new MLLib::layer::Dense(2, 4));

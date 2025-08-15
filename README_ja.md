@@ -2,9 +2,11 @@
 
 [![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
+[![GPU CI](https://github.com/shadowlink0122/CppML/workflows/GPU%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/gpu-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
 [![Tests](https://img.shields.io/badge/tests-21%2F21_unit_tests-brightgreen.svg)](#-テスト)
 [![Integration Tests](https://img.shields.io/badge/integration-3429%2F3429_assertions-brightgreen.svg)](#-テスト)
+[![GPU Tests](https://img.shields.io/badge/GPU_tests-145_assertions-blue.svg)](#-gpuサポート)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25_CI_success-brightgreen.svg)](#-テスト)
 
 > **言語**: [English](README.md) | [日本語](README_ja.md)
@@ -16,11 +18,13 @@
 - **🧠 ニューラルネットワーク**: カスタマイズ可能なSequentialモデル
 - **📊 レイヤー**: Dense（全結合）、ReLU、Sigmoid、Tanh活性化関数
 - **🎯 訓練**: MSE損失関数とSGD最適化器
-- **💾 モデル I/O**: バイナリ、JSON、設定ファイル形式での保存・読み込み
+- **� GPU サポート**: CUDA加速と自動CPUフォールバック
+- **�💾 モデル I/O**: バイナリ、JSON、設定ファイル形式での保存・読み込み
 - **📁 自動ディレクトリ作成**: `mkdir -p` 相当の機能
 - **🔧 型安全性**: enum ベースの形式指定で信頼性向上
 - **⚡ パフォーマンス**: NDArray バックエンドによる最適化されたC++17実装
 - **🧪 テスト**: 包括的なユニット（21/21）と結合テスト（3429/3429アサーション）
+- **🖥️ GPU テスト**: 145個のGPU専用アサーションとフォールバック検証
 - **🔄 クロスプラットフォーム**: Linux、macOS、Windows対応
 - **🎯 CI/CD対応**: 本番デプロイメント用100%テスト成功率
 
@@ -266,7 +270,8 @@ make model-format-test  # enumベース形式システムをテスト
 
 ## ⚠️ 現在の制限事項
 
-- 現在はCPUバックエンドのみサポート（GPU対応は将来実装予定）
+- - ニューラルネットワーク学習と推論のCore機能
+- GPU/CPU両対応の計算バックエンド
 - 現在はDense層のみ実装（CNN、RNN層は将来実装予定）
 - 現在はSGD最適化器のみ完全実装（Adam等は部分実装）
 
@@ -276,12 +281,69 @@ make model-format-test  # enumベース形式システムをテスト
 make install-tools
 ```
 
-## 📚 ドキュメント
+## � GPU サポート
+
+MLLibは包括的なGPU加速と自動CPUフォールバックを提供します：
+
+### 機能
+
+- **🖥️ 自動検出**: 実行時のGPU利用可能性検出
+- **🔄 CPU フォールバック**: GPU利用不可時のシームレスなCPU実行
+- **⚠️ ユーザー警告**: GPU状態に関する情報的メッセージ
+- **🧪 完全テスト**: ユニットと統合テストでの145個のGPUアサーション
+
+### GPU ビルド
+
+```bash
+# CUDA サポート付きビルド（自動検出）
+make WITH_CUDA=1
+
+# GPU 専用テスト
+make unit-test WITH_CUDA=1
+make integration-test WITH_CUDA=1
+
+# GPU 状態確認
+nvidia-smi
+nvcc --version
+```
+
+### 使用方法
+
+```cpp
+#include "MLLib.hpp"
+
+using namespace MLLib;
+
+// GPU デバイス作成（利用不可時はCPUにフォールバック）
+auto device = Device::create("gpu");
+
+if (device->is_available()) {
+    std::cout << "GPU使用中: " << device->get_name() << std::endl;
+} else {
+    std::cout << "GPU利用不可、CPUフォールバック使用" << std::endl;
+}
+
+// モデルは自動的に利用可能な最適デバイスを使用
+Sequential model;
+model.add_layer(std::make_shared<Dense>(784, 128));
+model.add_layer(std::make_shared<Dense>(128, 10));
+
+// 訓練はGPUまたはCPUでシームレスに動作
+// ... 訓練コード ...
+```
+
+### GPU CI テスト
+
+完全なCI設定については[GPU CI設定ガイド](docs/GPU_CI_SETUP_ja.md)をご覧ください。
+
+## �📚 ドキュメント
 
 詳細なドキュメントは `docs/` フォルダをご覧ください：
 
 - [テストドキュメント](docs/TESTING_ja.md) - 包括的なテストシステムガイド
 - [モデルI/O](docs/MODEL_IO_ja.md) - モデル保存・読み込みガイド
+- [GPU CI 設定ガイド](docs/GPU_CI_SETUP_ja.md) - GPU テスト環境の設定方法
+- [GPU CI Setup Guide (English)](docs/GPU_CI_SETUP_en.md) - GPU testing environment configuration
 
 ### APIコンポーネント
 
@@ -373,7 +435,7 @@ auto result = model.predict({1.0, 2.0, 3.0});
 A: はい、提供されているベースクラスを継承してカスタムコンポーネントを実装できます。
 
 #### Q: GPUサポートはありますか？
-A: 現在CPUのみですが、バックエンドアーキテクチャによりGPUサポートの追加が可能です。
+A: はい、CUDA加速による完全なGPUサポートを提供しています。GPU使用不可時は自動的にCPUにフォールバックします。
 
 #### Q: 大規模なデータセットを処理できますか？
 A: はい、効率的なメモリ管理とバッチ処理に対応しています。
