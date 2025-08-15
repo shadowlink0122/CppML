@@ -3,19 +3,19 @@
 #include "MLLib/test_basic_integration.hpp"
 
 // Hierarchical integration tests
-#include "MLLib/optimizer/test_optimizer_integration.hpp"
-#include "MLLib/loss/test_loss_integration.hpp"
 #include "MLLib/backend/test_backend_integration.hpp"
-#include "MLLib/layer/test_layer_integration.hpp"
+#include "MLLib/data/test_data_integration.hpp"
+#include "MLLib/device/test_device_integration.hpp"
 #include "MLLib/layer/activation/test_activation_integration.hpp"
-#include "MLLib/util/misc/test_misc_integration.hpp"
+#include "MLLib/layer/test_layer_integration.hpp"
+#include "MLLib/loss/test_loss_integration.hpp"
+#include "MLLib/optimizer/test_optimizer_integration.hpp"
 #include "MLLib/util/io/test_io_integration.hpp"
-#include "MLLib/util/time/test_time_integration.hpp"
+#include "MLLib/util/misc/test_misc_integration.hpp"
 #include "MLLib/util/number/test_number_integration.hpp"
 #include "MLLib/util/string/test_string_integration.hpp"
 #include "MLLib/util/system/test_system_integration.hpp"
-#include "MLLib/device/test_device_integration.hpp"
-#include "MLLib/data/test_data_integration.hpp"
+#include "MLLib/util/time/test_time_integration.hpp"
 
 #include <memory>
 #include <vector>
@@ -71,7 +71,8 @@ protected:
     bool training_completed = false;
     assertNoThrow(
         [&]() {
-          model->train(X, Y, loss, optimizer, nullptr, 10);  // Only 10 epochs for basic test
+          model->train(X, Y, loss, optimizer, nullptr,
+                       10);  // Only 10 epochs for basic test
           training_completed = true;
         },
         "XOR model should accept training without errors");
@@ -79,16 +80,19 @@ protected:
     assertTrue(training_completed, "Training should complete successfully");
 
     // Test that model can make predictions (regardless of accuracy)
-    assertNoThrow([&]() {
-      auto pred = model->predict(std::vector<double>{0.0, 0.0});
-      assertTrue(pred.size() == 1, "Prediction should have correct size");
-      assertTrue(pred[0] >= 0.0 && pred[0] <= 1.0, "Sigmoid output should be in [0,1]");
-    }, "Model should be able to make predictions");
+    assertNoThrow(
+        [&]() {
+          auto pred = model->predict(std::vector<double>{0.0, 0.0});
+          assertTrue(pred.size() == 1, "Prediction should have correct size");
+          assertTrue(pred[0] >= 0.0 && pred[0] <= 1.0,
+                     "Sigmoid output should be in [0,1]");
+        },
+        "Model should be able to make predictions");
   }
 };
 
 /**
- * @class XORLearningConvergenceTest  
+ * @class XORLearningConvergenceTest
  * @brief Test XOR learning convergence (separate test for learning quality)
  */
 class XORLearningConvergenceTest : public TestCase {
@@ -173,7 +177,7 @@ protected:
     // Test predictions from original model
     std::vector<double> original_pred =
         original_model->predict(std::vector<double>{0.5, 0.5, 0.5});
-    
+
     // Save model in different formats
     std::string temp_dir = createTempDirectory();
 
@@ -189,7 +193,8 @@ protected:
     auto loaded_binary = ModelIO::load_model(binary_path, ModelFormat::BINARY);
     assertNotNull(loaded_binary.get(), "Binary load should succeed");
 
-    std::vector<double> binary_pred = loaded_binary->predict(std::vector<double>{0.5, 0.5, 0.5});
+    std::vector<double> binary_pred =
+        loaded_binary->predict(std::vector<double>{0.5, 0.5, 0.5});
     assertVectorNear(original_pred, binary_pred, 1e-6,
                      "Binary format should preserve model predictions");
 
@@ -201,9 +206,13 @@ protected:
     auto loaded_json = ModelIO::load_model(json_path, ModelFormat::JSON);
     assertNotNull(loaded_json.get(), "JSON load should succeed");
 
-    std::vector<double> json_pred = loaded_json->predict(std::vector<double>{0.5, 0.5, 0.5});
-    assertVectorNear(original_pred, json_pred, 1e-6,
-                     "JSON format should preserve model predictions");    // Test config format (architecture only)
+    std::vector<double> json_pred =
+        loaded_json->predict(std::vector<double>{0.5, 0.5, 0.5});
+    assertVectorNear(
+        original_pred, json_pred, 1e-6,
+        "JSON format should preserve model predictions");  // Test config format
+                                                           // (architecture
+                                                           // only)
     assertTrue(ModelIO::save_config(*original_model, config_path),
                "Config save should succeed");
 
@@ -353,7 +362,8 @@ protected:
     assertNoThrow(
         [&]() {
           // Test single prediction instead of batch
-          std::vector<double> test_input = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0};
+          std::vector<double> test_input = {0.1, 0.2, 0.3, 0.4, 0.5,
+                                            0.6, 0.7, 0.8, 0.9, 1.0};
           auto prediction = model->predict(test_input);
           assertEqual(size_t(10), prediction.size(),
                       "Should handle single prediction");
@@ -379,7 +389,7 @@ int main() {
   {
     TestSuite xor_suite("XOR Model Tests");
     xor_suite.addTest(std::make_unique<BasicXORModelTest>());
-    
+
     bool suite_result = xor_suite.runAll();
     all_tests_passed &= suite_result;
   }
@@ -389,11 +399,14 @@ int main() {
     TestSuite learning_suite("Learning Convergence Tests");
     learning_suite.addTest(std::make_unique<XORLearningConvergenceTest>());
 
-    std::cout << "\nNote: Learning convergence tests may be non-deterministic" << std::endl;
+    std::cout << "\nNote: Learning convergence tests may be non-deterministic"
+              << std::endl;
     bool suite_result = learning_suite.runAll();
     // Don't require learning tests to pass for CI
     if (!suite_result) {
-      std::cout << "Warning: Learning tests failed (non-deterministic - not CI blocking)" << std::endl;
+      std::cout << "Warning: Learning tests failed (non-deterministic - not CI "
+                   "blocking)"
+                << std::endl;
     }
   }
 
@@ -411,7 +424,8 @@ int main() {
   // Multi-layer architecture test
   {
     TestSuite arch_suite("Multi-Layer Architecture");
-    // arch_suite.addTest(std::make_unique<MultiLayerIntegrationTest>());  // Temporarily disabled due to NDArray dimension issues
+    // arch_suite.addTest(std::make_unique<MultiLayerIntegrationTest>());  //
+    // Temporarily disabled due to NDArray dimension issues
 
     bool suite_result = arch_suite.runAll();
     all_tests_passed &= suite_result;
@@ -442,7 +456,8 @@ int main() {
     TestSuite optimizer_suite("Optimizer Integration Tests");
     optimizer_suite.addTest(std::make_unique<SGDOptimizerIntegrationTest>());
     optimizer_suite.addTest(std::make_unique<AdamOptimizerIntegrationTest>());
-    optimizer_suite.addTest(std::make_unique<OptimizerComparisonIntegrationTest>());
+    optimizer_suite.addTest(
+        std::make_unique<OptimizerComparisonIntegrationTest>());
 
     bool suite_result = optimizer_suite.runAll();
     all_tests_passed &= suite_result;
@@ -464,7 +479,8 @@ int main() {
     TestSuite backend_suite("Backend Integration Tests");
     backend_suite.addTest(std::make_unique<CPUBackendIntegrationTest>());
     backend_suite.addTest(std::make_unique<BackendMemoryIntegrationTest>());
-    backend_suite.addTest(std::make_unique<BackendPerformanceIntegrationTest>());
+    backend_suite.addTest(
+        std::make_unique<BackendPerformanceIntegrationTest>());
 
     bool suite_result = backend_suite.runAll();
     all_tests_passed &= suite_result;
@@ -486,9 +502,11 @@ int main() {
   {
     TestSuite activation_suite("Activation Integration Tests");
     activation_suite.addTest(std::make_unique<ReLUActivationIntegrationTest>());
-    activation_suite.addTest(std::make_unique<SigmoidActivationIntegrationTest>());
+    activation_suite.addTest(
+        std::make_unique<SigmoidActivationIntegrationTest>());
     activation_suite.addTest(std::make_unique<TanhActivationIntegrationTest>());
-    activation_suite.addTest(std::make_unique<MixedActivationIntegrationTest>());
+    activation_suite.addTest(
+        std::make_unique<MixedActivationIntegrationTest>());
 
     bool suite_result = activation_suite.runAll();
     all_tests_passed &= suite_result;
@@ -497,42 +515,47 @@ int main() {
   // Utility integration tests
   {
     TestSuite util_suite("Utility Integration Tests");
-    
+
     // Misc utilities
     util_suite.addTest(std::make_unique<MatrixUtilIntegrationTest>());
     util_suite.addTest(std::make_unique<RandomUtilIntegrationTest>());
     util_suite.addTest(std::make_unique<ValidationUtilIntegrationTest>());
     util_suite.addTest(std::make_unique<MiscUtilIntegrationTest>());
-    
+
     // I/O utilities
     util_suite.addTest(std::make_unique<ModelSaveLoadIOIntegrationTest>());
     util_suite.addTest(std::make_unique<DataImportExportIntegrationTest>());
     util_suite.addTest(std::make_unique<FileFormatIntegrationTest>());
     util_suite.addTest(std::make_unique<IOErrorRecoveryIntegrationTest>());
-    
+
     // Time utilities
     util_suite.addTest(std::make_unique<TrainingTimeIntegrationTest>());
     util_suite.addTest(std::make_unique<PerformanceBenchmarkIntegrationTest>());
     util_suite.addTest(std::make_unique<TimeoutHandlingIntegrationTest>());
     util_suite.addTest(std::make_unique<TimeBasedOperationsIntegrationTest>());
-    
+
     // Number utilities
     util_suite.addTest(std::make_unique<NumericalStabilityIntegrationTest>());
     util_suite.addTest(std::make_unique<TimeoutHandlingIntegrationTest>());
     // util_suite.addTest(std::make_unique<OverflowProtectionIntegrationTest>());
-    util_suite.addTest(std::make_unique<MathematicalOperationsIntegrationTest>());
-    
+    util_suite.addTest(
+        std::make_unique<MathematicalOperationsIntegrationTest>());
+
     // String utilities
-    util_suite.addTest(std::make_unique<ModelConfigurationStringIntegrationTest>());
-    util_suite.addTest(std::make_unique<ErrorMessageFormattingIntegrationTest>());
+    util_suite.addTest(
+        std::make_unique<ModelConfigurationStringIntegrationTest>());
+    util_suite.addTest(
+        std::make_unique<ErrorMessageFormattingIntegrationTest>());
     util_suite.addTest(std::make_unique<DataFormatConversionIntegrationTest>());
-    util_suite.addTest(std::make_unique<StringParameterHandlingIntegrationTest>());
-    
+    util_suite.addTest(
+        std::make_unique<StringParameterHandlingIntegrationTest>());
+
     // System utilities
     util_suite.addTest(std::make_unique<MemoryManagementIntegrationTest>());
     util_suite.addTest(std::make_unique<ResourceUsageIntegrationTest>());
     util_suite.addTest(std::make_unique<SystemErrorHandlingIntegrationTest>());
-    util_suite.addTest(std::make_unique<CrossPlatformCompatibilityIntegrationTest>());
+    util_suite.addTest(
+        std::make_unique<CrossPlatformCompatibilityIntegrationTest>());
 
     bool suite_result = util_suite.runAll();
     all_tests_passed &= suite_result;
@@ -556,7 +579,8 @@ int main() {
     data_suite.addTest(std::make_unique<DataLoadingIntegrationTest>());
     data_suite.addTest(std::make_unique<BatchProcessingIntegrationTest>());
     data_suite.addTest(std::make_unique<DataValidationIntegrationTest>());
-    data_suite.addTest(std::make_unique<DataFormatCompatibilityIntegrationTest>());
+    data_suite.addTest(
+        std::make_unique<DataFormatCompatibilityIntegrationTest>());
 
     bool suite_result = data_suite.runAll();
     all_tests_passed &= suite_result;
