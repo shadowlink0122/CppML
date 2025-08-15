@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 namespace MLLib {
-namespace backend {
+namespace Backend {
 
 // CPU matrix multiplication implementation
 void Backend::cpu_matmul(const NDArray& a, const NDArray& b, NDArray& result) {
@@ -150,5 +150,5 @@ void Backend::cpu_copy(const NDArray& src, NDArray& dst) {
   }
 }
 
-}  // namespace backend
+}  // namespace Backend
 }  // namespace MLLib

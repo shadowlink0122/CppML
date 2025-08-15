@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../../include/MLLib.hpp"
-#include "../../common/test_utils.hpp"
+#include "../../../../include/MLLib.hpp"
+#include "../../../common/test_utils.hpp"
 #include <fstream>
 #include <memory>
 
@@ -437,13 +437,13 @@ protected:
   };
 
   /**
-   * @class PerformanceBenchmarkIntegrationTest
+   * @class WorkflowPerformanceBenchmarkTest
    * @brief Benchmark performance in realistic scenarios
    */
-  class PerformanceBenchmarkIntegrationTest : public TestCase {
+  class WorkflowPerformanceBenchmarkTest : public TestCase {
   public:
-    PerformanceBenchmarkIntegrationTest()
-        : TestCase("PerformanceBenchmarkIntegrationTest") {}
+    WorkflowPerformanceBenchmarkTest()
+        : TestCase("WorkflowPerformanceBenchmarkTest") {}
 
   protected:
     void test() override {

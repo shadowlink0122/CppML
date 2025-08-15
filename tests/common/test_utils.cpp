@@ -136,8 +136,8 @@ void TestCase::assertNear(double expected, double actual, double tolerance,
     full_message += " - ";
   }
   full_message += "Expected: " + std::to_string(expected) +
-                  ", Actual: " + std::to_string(actual) +
-                  ", Tolerance: " + std::to_string(tolerance);
+      ", Actual: " + std::to_string(actual) +
+      ", Tolerance: " + std::to_string(tolerance);
   recordAssertion(condition, full_message);
 }
 
@@ -158,7 +158,7 @@ void TestCase::assertVectorNear(const std::vector<double>& expected,
     full_message += " - ";
   }
   full_message += "Vector near comparison failed with tolerance " +
-                  std::to_string(tolerance);
+      std::to_string(tolerance);
   recordAssertion(condition, full_message);
 }
 

@@ -2,6 +2,7 @@
 #include "MLLib/layer/activation/test_activation.hpp"
 #include "MLLib/layer/test_dense.hpp"
 // #include "MLLib/model/test_model_io.hpp"  // Temporarily disabled
+#include "MLLib/backend/test_gpu_backend.hpp"
 #include "MLLib/model/test_sequential.hpp"
 #include "MLLib/test_config.hpp"
 #include "MLLib/test_ndarray.hpp"
@@ -19,10 +20,10 @@
 int main() {
   using namespace MLLib::test;
 
-  std::cout << "=== MLLib Unit Test Suite ===" << std::endl;
-  std::cout << "Running comprehensive unit tests for MLLib v1.0.0" << std::endl;
-  std::cout << "Test execution with output capture enabled" << std::endl;
-  std::cout << std::endl;
+  printf("=== MLLib Unit Test Suite ===\n");
+  printf("Running comprehensive unit tests for MLLib v1.0.0\n");
+  printf("Test execution with output capture enabled\n");
+  printf("\n");
 
   // Start timing the entire test suite
   auto suite_start_time = std::chrono::high_resolution_clock::now();
@@ -77,6 +78,25 @@ int main() {
   std::cout << "\n--- Sequential Model Tests ---" << std::endl;
   runTest(std::make_unique<SequentialModelTests>());
 
+  // GPU backend tests
+  printf("\n--- GPU Backend Tests ---\n");
+  runTest(std::make_unique<GPUAvailabilityTest>());
+  runTest(std::make_unique<GPUDeviceValidationTest>());
+  runTest(std::make_unique<GPUBackendOperationsTest>());
+  runTest(std::make_unique<GPUArrayOperationsTest>());
+  runTest(std::make_unique<GPUModelTest>());
+  runTest(std::make_unique<GPUPerformanceTest>());
+
+  // Multi-GPU tests
+  printf("\n--- Multi-GPU Support Tests ---\n");
+  runTest(std::make_unique<MultiGPUDetectionTest>());
+  runTest(std::make_unique<GPUBackendTypesTest>());
+  runTest(std::make_unique<MultiGPUBackendOperationsTest>());
+  runTest(std::make_unique<GPUVendorPriorityTest>());
+  runTest(std::make_unique<GPUMemoryTest>());
+  runTest(std::make_unique<GPUErrorHandlingTest>());
+  runTest(std::make_unique<GPUCompilationTest>());
+
   // Model I/O tests (temporarily disabled)
   // std::cout << "\n--- Model I/O Tests ---" << std::endl;
   // runTest(std::make_unique<ModelFormatTest>());
@@ -86,12 +106,12 @@ int main() {
   // runTest(std::make_unique<ModelIOFileHandlingTest>());
 
   // Print final summary
-  std::cout << "\n" << std::string(60, '=') << std::endl;
-  std::cout << "FINAL TEST SUMMARY" << std::endl;
-  std::cout << std::string(60, '=') << std::endl;
-  std::cout << "Total individual tests: " << total_tests << std::endl;
-  std::cout << "Passed tests: " << passed_tests << std::endl;
-  std::cout << "Failed tests: " << (total_tests - passed_tests) << std::endl;
+  printf("\n============================================================\n");
+  printf("FINAL TEST SUMMARY\n");
+  printf("============================================================\n");
+  printf("Total individual tests: %d\n", total_tests);
+  printf("Passed tests: %d\n", passed_tests);
+  printf("Failed tests: %d\n", (total_tests - passed_tests));
 
   // Calculate total suite execution time
   auto suite_end_time = std::chrono::high_resolution_clock::now();
@@ -99,22 +119,18 @@ int main() {
       suite_end_time - suite_start_time);
   double suite_time_ms = suite_duration.count() / 1000.0;
 
-  std::cout << std::fixed << std::setprecision(2);
-  std::cout << "Total test execution time: " << total_execution_time << "ms"
-            << std::endl;
-  std::cout << "Total suite time (including overhead): " << suite_time_ms
-            << "ms" << std::endl;
-  std::cout << std::endl;
+  printf("Total test execution time: %.2fms\n", total_execution_time);
+  printf("Total suite time (including overhead): %.2fms\n", suite_time_ms);
+  printf("\n");
   if (all_tests_passed) {
-    std::cout << "🎉 ALL UNIT TESTS PASSED! 🎉" << std::endl;
-    std::cout << "MLLib is ready for production use." << std::endl;
+    printf("🎉 ALL UNIT TESTS PASSED! 🎉\n");
+    printf("MLLib is ready for production use.\n");
   } else {
-    std::cout << "❌ SOME UNIT TESTS FAILED" << std::endl;
-    std::cout << "Please review the test output above and fix the issues."
-              << std::endl;
+    printf("❌ SOME UNIT TESTS FAILED\n");
+    printf("Please review the test output above and fix the issues.\n");
   }
 
-  std::cout << std::string(60, '=') << std::endl;
+  printf("============================================================\n");
 
   return all_tests_passed ? 0 : 1;
 }

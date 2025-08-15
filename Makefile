@@ -10,8 +10,15 @@ SRC_DIR = src
 INCLUDE_DIR = include
 BUILD_DIR = build
 TEST_DIR = tests
-EXAMPLE_DIR = examples
 SAMPLE_DIR = samples
+
+# GPU vendor detection and flags
+ROCM_AVAILABLE := $(shell which rocm-smi 2>/dev/null && echo true || echo false)
+ONEAPI_AVAILABLE := $(shell which sycl-ls 2>/dev/null && echo true || echo false)
+METAL_AVAILABLE := $(shell [ "$(shell uname)" = "Darwin" ] && echo true || echo false)
+
+# Include CUDA configuration
+include cuda.mk
 
 # Compiler settings
 CXX = g++
@@ -19,10 +26,117 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -O2
 DEBUG_FLAGS = -g -DDEBUG
 INCLUDE_FLAGS = -I$(INCLUDE_DIR)
 
+# Enable all GPU support by default for library usage
+# Users can control GPU usage at runtime via device detection
+CXXFLAGS += -DWITH_CUDA -DWITH_ROCM -DWITH_ONEAPI -DWITH_METAL
+
+# Optional: Disable specific GPU backends at compile time
+ifdef DISABLE_CUDA
+    CXXFLAGS := $(filter-out -DWITH_CUDA,$(CXXFLAGS))
+endif
+
+ifdef DISABLE_ROCM
+    CXXFLAGS := $(filter-out -DWITH_ROCM,$(CXXFLAGS))
+endif
+
+ifdef DISABLE_ONEAPI
+    CXXFLAGS := $(filter-out -DWITH_ONEAPI,$(CXXFLAGS))
+endif
+
+ifdef DISABLE_METAL
+    CXXFLAGS := $(filter-out -DWITH_METAL,$(CXXFLAGS))
+endif
+
+# Add CUDA flags if available
+ifeq ($(CUDA_AVAILABLE),true)
+    INCLUDE_FLAGS += $(CUDA_INCLUDE)
+    LDFLAGS += $(CUDA_LIBS)
+else
+    # Add mock CUDA includes for stub implementation
+    INCLUDE_FLAGS += -I/usr/local/cuda/include
+endif
+
+# Add ROCm flags if available
+ifeq ($(ROCM_AVAILABLE),true)
+    INCLUDE_FLAGS += -I/opt/rocm/include
+    LDFLAGS += -L/opt/rocm/lib -lhipblas -lhip
+else
+    # Add mock ROCm includes for stub implementation
+    INCLUDE_FLAGS += -I/opt/rocm/include
+endif
+
+# Add oneAPI flags if available
+ifeq ($(ONEAPI_AVAILABLE),true)
+    ifndef ONEAPI_ROOT
+        ONEAPI_ROOT = /opt/intel/oneapi
+    endif
+    INCLUDE_FLAGS += -I$(ONEAPI_ROOT)/include
+    LDFLAGS += -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core
+else
+    # Add mock oneAPI includes for stub implementation
+    ifndef ONEAPI_ROOT
+        ONEAPI_ROOT = /opt/intel/oneapi
+    endif
+    INCLUDE_FLAGS += -I$(ONEAPI_ROOT)/include
+endif
+
+# Add Metal flags (always on macOS, mock on other platforms)
+ifeq ($(METAL_AVAILABLE),true)
+    LDFLAGS += -framework Metal -framework Foundation
+endif
+
+# CI environment detection - disable problematic features
+ifdef CI
+    METAL_AVAILABLE = false
+    MM_FILES = 
+    $(info CI mode detected - disabling Metal backend)
+endif
+
+ifneq ($(GITHUB_ACTIONS),)
+    METAL_AVAILABLE = false
+    MM_FILES = 
+    $(info GitHub Actions detected - disabling Metal backend)
+endif
+
+ifneq ($(GITLAB_CI),)
+    METAL_AVAILABLE = false
+    MM_FILES = 
+    $(info GitLab CI detected - disabling Metal backend)
+endif
+
 # Find source files
 CPP_FILES = $(shell find $(SRC_DIR) -name "*.cpp" 2>/dev/null || true)
+MM_FILES = $(shell find $(SRC_DIR) -name "*.mm" 2>/dev/null || true)
 HPP_FILES = $(shell find $(INCLUDE_DIR) -name "*.hpp" 2>/dev/null || true)
 TEST_FILES = $(shell find $(TEST_DIR) -name "*.cpp" 2>/dev/null || true)
+
+# Filter GPU backend files based on availability
+ifeq ($(ROCM_AVAILABLE),true)
+    CPP_FILES += src/MLLib/backend/gpu/rocm_backend.cpp
+endif
+
+ifeq ($(ONEAPI_AVAILABLE),true)
+    CPP_FILES += src/MLLib/backend/gpu/oneapi_backend.cpp
+endif
+
+# Only include Metal backend on macOS
+ifeq ($(METAL_AVAILABLE),true)
+    MM_FILES += src/MLLib/backend/gpu/metal_backend.mm
+endif
+
+# Add CUDA stub implementation when CUDA is not available but WITH_CUDA is enabled
+ifeq ($(CUDA_AVAILABLE),false)
+    ifneq ($(findstring -DWITH_CUDA,$(CXXFLAGS)),)
+        CPP_FILES += src/MLLib/backend/gpu/cuda_kernels_stub.cpp
+    endif
+endif
+
+# Remove duplicates from CPP_FILES to prevent linker errors
+CPP_FILES := $(sort $(CPP_FILES))
+MM_FILES := $(sort $(MM_FILES))
+
+# Combine all source files
+ALL_SOURCE_FILES = $(CPP_FILES) $(MM_FILES)
 
 # Library target
 LIB_NAME = lib$(PROJECT_NAME).a
@@ -32,6 +146,9 @@ LIB_TARGET = $(BUILD_DIR)/$(LIB_NAME)
 CLANG_FORMAT = clang-format
 CLANG_TIDY = clang-tidy
 CPPCHECK = cppcheck
+
+# Phony targets for main build, clean, test, and samples
+.PHONY: all clean debug test samples run-samples help install build-tools gpu-check
 
 # Default target
 .PHONY: all
@@ -44,33 +161,37 @@ $(BUILD_DIR):
 # Build static library
 $(LIB_TARGET): $(BUILD_DIR)
 	@echo "Building $(PROJECT_NAME) library..."
-	@echo "Source files found: $(CPP_FILES)"
-	@echo "Header files found: $(HPP_FILES)"
+	@echo $(CUDA_MESSAGE)
+	@echo "C++ source files found: $(words $(CPP_FILES)) files"
+	@echo "Objective-C++ source files found: $(words $(MM_FILES)) files"
+	@echo "CUDA files found: $(words $(CUDA_FILES)) files"
+	@echo "Header files found: $(words $(HPP_FILES)) files"
+	@echo "Compiling source files..."
+	@echo "Compiler: $(CXX)"
+	@echo "Flags: $(CXXFLAGS) $(INCLUDE_FLAGS)"
 	@if [ -n "$(CPP_FILES)" ]; then \
-		echo "Compiling source files..."; \
-		echo "Compiler: $(CXX)"; \
-		echo "Flags: $(CXXFLAGS) $(INCLUDE_FLAGS)"; \
-		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(CPP_FILES) 2>&1; then \
-			echo "Creating static library..."; \
-			if ar rcs $(LIB_TARGET) *.o 2>&1; then \
-				rm -f *.o; \
-				echo "✅ Library built successfully: $(LIB_TARGET)"; \
-				ls -la $(LIB_TARGET); \
-			else \
-				echo "❌ Failed to create static library"; \
-				rm -f *.o; \
-				exit 1; \
-			fi; \
-		else \
-			echo "❌ Compilation failed"; \
-			rm -f *.o; \
-			exit 1; \
-		fi; \
-	else \
-		echo "ℹ️  No source files found, creating header-only library marker"; \
-		touch $(LIB_TARGET); \
-		echo "✅ Header-only library marker created: $(LIB_TARGET)"; \
+		echo "Compiling C++ files..."; \
+		$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(CPP_FILES); \
 	fi
+	@if [ -n "$(MM_FILES)" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
+		echo "Compiling Objective-C++ files..."; \
+		$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(MM_FILES); \
+	elif [ -n "$(MM_FILES)" ]; then \
+		echo "Skipping Objective-C++ files (Metal not available)"; \
+	fi
+	@if [ "$(CUDA_AVAILABLE)" = "true" ] && [ -n "$(CUDA_FILES)" ]; then \
+		echo "Compiling CUDA files..."; \
+		for cu_file in $(CUDA_FILES); do \
+			obj_file=$$(basename $$cu_file .cu).o; \
+			echo "  nvcc $$cu_file -> $$obj_file"; \
+			$(NVCC) $(NVCC_FLAGS) $(INCLUDE_FLAGS) $(CUDA_INCLUDE) -c $$cu_file -o $$obj_file; \
+		done; \
+	fi
+	@echo "Creating static library..."
+	@ar rcs $(LIB_TARGET) *.o
+	@rm -f *.o
+	@echo "✅ Library built successfully: $(LIB_TARGET)"
+	@ls -la $(LIB_TARGET)
 
 # Build with debug flags
 .PHONY: debug
@@ -234,7 +355,12 @@ unit-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/unit/unit_test_main.cpp" ]; then \
 		echo "Compiling unit test framework..."; \
 		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
-		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES $(CPP_FILES) -o $(BUILD_DIR)/tests/unit_tests; then \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib"; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			echo "Building with CUDA support for tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		fi; \
+		if $$COMPILE_CMD -o $(BUILD_DIR)/tests/unit_tests; then \
 			echo "Running unit tests..."; \
 			if $(BUILD_DIR)/tests/unit_tests; then \
 				echo "✅ Unit tests passed"; \
@@ -282,7 +408,12 @@ integration-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/integration/integration_test_main.cpp" ]; then \
 		echo "Compiling integration test framework..."; \
 		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
-		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(CPP_FILES) -o $(BUILD_DIR)/tests/integration_tests; then \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(CPP_FILES)"; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			echo "Building with CUDA support for tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		fi; \
+		if $$COMPILE_CMD -o $(BUILD_DIR)/tests/integration_tests; then \
 			echo "Running integration tests..."; \
 			if $(BUILD_DIR)/tests/integration_tests; then \
 				echo "✅ Integration tests passed"; \
@@ -319,35 +450,6 @@ test-all: $(LIB_TARGET)
 		fi; \
 	else \
 		echo "ℹ️  Test runner not found"; \
-	fi
-
-# Build examples (if examples directory exists)
-.PHONY: examples
-examples: $(LIB_TARGET)
-	@if [ -d "$(EXAMPLE_DIR)" ]; then \
-		echo "Building examples..."; \
-		mkdir -p $(BUILD_DIR)/examples; \
-		EXAMPLE_SUCCESS=true; \
-		for example in $(EXAMPLE_DIR)/*.cpp; do \
-			if [ -f "$$example" ]; then \
-				name=$$(basename $$example .cpp); \
-				echo "Building example: $$name"; \
-				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$example -L$(BUILD_DIR) -l$(PROJECT_NAME) -o $(BUILD_DIR)/examples/$$name; then \
-					echo "✓ Built example: $$name"; \
-				else \
-					echo "❌ Failed to build example: $$name"; \
-					EXAMPLE_SUCCESS=false; \
-				fi; \
-			fi; \
-		done; \
-		if [ "$$EXAMPLE_SUCCESS" = "true" ]; then \
-			echo "✅ Examples built successfully"; \
-		else \
-			echo "❌ Some examples failed to build"; \
-			exit 1; \
-		fi; \
-	else \
-		echo "ℹ️  No examples directory found"; \
 	fi
 
 # Build samples (if sample directory exists)
@@ -402,6 +504,11 @@ samples: $(LIB_TARGET)
 		fi; \
 	fi
 
+# Examples alias for samples (for compatibility)
+.PHONY: examples
+examples: samples
+	@echo "✅ Examples built (alias for samples)"
+
 # Build and run XOR sample
 .PHONY: xor
 xor: samples
@@ -422,7 +529,17 @@ model-format-test: samples
 		echo "❌ Model Format test not found"; \
 	fi
 
-# Show help
+# CI-specific build target - builds CPU-only version with all stubs
+.PHONY: ci-build
+ci-build: 
+	@$(MAKE) CI=1 $(LIB_TARGET)
+	@echo "✅ CI build completed successfully"
+
+# CI-specific test target
+.PHONY: ci-test
+ci-test: 
+	@$(MAKE) CI=1 unit-test simple-integration-test
+	@echo "✅ CI tests completed successfully"
 .PHONY: help
 help:
 	@echo "$(PROJECT_NAME) v$(VERSION) - Available targets:"
@@ -430,6 +547,7 @@ help:
 	@echo "Building:"
 	@echo "  all          - Build the library (default)"
 	@echo "  debug        - Build with debug flags"
+	@echo "  ci-build     - Build for CI environment (no Metal, GPU simulation)"
 	@echo "  clean        - Remove build artifacts, training outputs, and test files"
 	@echo "  deep-clean   - Remove all generated files including nested training dirs"
 	@echo ""
@@ -438,6 +556,7 @@ help:
 	@echo "  unit-test    - Run unit tests only"
 	@echo "  integration-test - Run integration tests only"
 	@echo "  test-all     - Run comprehensive test runner"
+	@echo "  ci-test      - Run tests in CI environment"
 	@echo ""
 	@echo "Code Quality:"
 	@echo "  fmt          - Format code with clang-format"
@@ -449,11 +568,28 @@ help:
 	@echo "Tools:"
 	@echo "  install-tools - Install required formatting/linting tools"
 	@echo ""
-	@echo "Examples & Samples:"
-	@echo "  examples     - Build example programs"
+	@echo "Samples:"
 	@echo "  samples      - Build sample programs"
 	@echo "  xor          - Build and run XOR sample"
 	@echo "  model-format-test - Build and run Model Format test"
+	@echo ""
+	@echo "GPU Configuration:"
+	@echo "  Default: All GPU backends enabled (CUDA, ROCm, oneAPI, Metal)"
+	@echo "  GPU detection and usage controlled at runtime"
+	@echo ""
+	@echo "  DISABLE_CUDA=1    - Disable CUDA support at compile time"
+	@echo "  DISABLE_ROCM=1    - Disable AMD ROCm support at compile time" 
+	@echo "  DISABLE_ONEAPI=1  - Disable Intel oneAPI support at compile time"
+	@echo "  DISABLE_METAL=1   - Disable Apple Metal support at compile time"
+	@echo ""
+	@echo "Usage Examples:"
+	@echo "  make                     - Build with all GPU support (runtime detection)"
+	@echo "  make DISABLE_CUDA=1      - Build without CUDA backend"
+	@echo "  make ci-build            - Build for CI (CPU-only with stubs)"
+	@echo "  make ci-test             - Run tests in CI environment"
+	@echo "  make samples             - Build all sample programs"
+	@echo "  make xor                 - Run XOR sample (auto GPU detection)"
+	@echo "  make test                - Run tests with runtime GPU detection"
 	@echo ""
 	@echo "Misc:"
 	@echo "  help         - Show this help message"

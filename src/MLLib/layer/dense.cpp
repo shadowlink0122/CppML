@@ -3,6 +3,8 @@
 #include <cmath>
 #include <random>
 
+using namespace std;
+
 namespace MLLib {
 namespace layer {
 

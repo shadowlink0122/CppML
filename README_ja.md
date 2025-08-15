@@ -2,9 +2,11 @@
 
 [![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
+[![GPU CI](https://github.com/shadowlink0122/CppML/workflows/GPU%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/gpu-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
 [![Tests](https://img.shields.io/badge/tests-21%2F21_unit_tests-brightgreen.svg)](#-テスト)
 [![Integration Tests](https://img.shields.io/badge/integration-3429%2F3429_assertions-brightgreen.svg)](#-テスト)
+[![GPU Tests](https://img.shields.io/badge/GPU_tests-145_assertions-blue.svg)](#-gpuサポート)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25_CI_success-brightgreen.svg)](#-テスト)
 
 > **言語**: [English](README.md) | [日本語](README_ja.md)
@@ -16,11 +18,13 @@
 - **🧠 ニューラルネットワーク**: カスタマイズ可能なSequentialモデル
 - **📊 レイヤー**: Dense（全結合）、ReLU、Sigmoid、Tanh活性化関数
 - **🎯 訓練**: MSE損失関数とSGD最適化器
-- **💾 モデル I/O**: バイナリ、JSON、設定ファイル形式での保存・読み込み
+- **🎯 マルチGPUサポート**: NVIDIA CUDA、AMD ROCm、Intel oneAPI、Apple Metalの自動検出対応
+- **�💾 モデル I/O**: バイナリ、JSON、設定ファイル形式での保存・読み込み
 - **📁 自動ディレクトリ作成**: `mkdir -p` 相当の機能
 - **🔧 型安全性**: enum ベースの形式指定で信頼性向上
 - **⚡ パフォーマンス**: NDArray バックエンドによる最適化されたC++17実装
 - **🧪 テスト**: 包括的なユニット（21/21）と結合テスト（3429/3429アサーション）
+- **🖥️ GPU テスト**: 145個のGPU専用アサーションとフォールバック検証
 - **🔄 クロスプラットフォーム**: Linux、macOS、Windows対応
 - **🎯 CI/CD対応**: 本番デプロイメント用100%テスト成功率
 
@@ -68,7 +72,7 @@ std::vector<std::vector<double>> Y = {{0}, {1}, {1}, {0}};
 loss::MSE loss;
 optimizer::SGD optimizer(0.1);
 model.train(X, Y, loss, optimizer, [](int epoch, double loss) {
-    std::cout << "エポック " << epoch << ", 損失: " << loss << std::endl;
+    printf("エポック %d, 損失: %f\n", epoch, loss);
 }, 1000);
 
 // 予測を実行（複数の構文をサポート）
@@ -266,7 +270,8 @@ make model-format-test  # enumベース形式システムをテスト
 
 ## ⚠️ 現在の制限事項
 
-- 現在はCPUバックエンドのみサポート（GPU対応は将来実装予定）
+- - ニューラルネットワーク学習と推論のCore機能
+- GPU/CPU両対応の計算バックエンド
 - 現在はDense層のみ実装（CNN、RNN層は将来実装予定）
 - 現在はSGD最適化器のみ完全実装（Adam等は部分実装）
 
@@ -276,12 +281,99 @@ make model-format-test  # enumベース形式システムをテスト
 make install-tools
 ```
 
+## 🎯 GPU サポート
+
+MLLibは包括的なマルチGPUベンダーサポートと自動検出・フォールバック機能を提供します：
+
+### 機能
+
+- **🌍 マルチベンダー**: NVIDIA CUDA、AMD ROCm、Intel oneAPI、Apple Metal
+- **� 自動検出**: 実行時のGPU検出と選択
+- **� デフォルトサポート**: 全GPUベンダーをデフォルトで有効化（ライブラリ設計）
+- **🛡️ CPU フォールバック**: GPU利用不可時のシームレスなCPU実行
+- **⚠️ スマート警告**: GPU状態に関する情報的メッセージ
+- **🧪 完全テスト**: ユニットと統合テストでの145個のGPUアサーション
+
+### サポートGPUベンダー
+
+| ベンダー | API | ハードウェアサポート |
+|---------|-----|-------------------|
+| **NVIDIA** | CUDA, cuBLAS | GeForce、Quadro、Tesla、RTX |
+| **AMD** | ROCm, HIP, hipBLAS | Radeon Instinct、Radeon Pro |
+| **Intel** | oneAPI, SYCL, oneMKL | Arc、Iris Xe、UHD Graphics |
+| **Apple** | Metal, MPS | M1、M1 Pro/Max/Ultra、M2 |
+
+### GPU ビルドオプション
+
+```bash
+# デフォルトビルド（全GPUベンダー有効）
+make
+
+# 特定GPUサポートの無効化
+make DISABLE_CUDA=1           # NVIDIA CUDA無効化
+make DISABLE_ROCM=1           # AMD ROCm無効化
+make DISABLE_ONEAPI=1         # Intel oneAPI無効化
+make DISABLE_METAL=1          # Apple Metal無効化
+
+# CPUのみビルド
+make DISABLE_CUDA=1 DISABLE_ROCM=1 DISABLE_ONEAPI=1 DISABLE_METAL=1
+
+# CPUのみテスト
+FORCE_CPU_ONLY=1 make test    # CPUのみ強制テスト
+```
+
+### 使用方法
+
+```cpp
+#include "MLLib.hpp"
+
+int main() {
+    MLLib::model::Sequential model;
+    
+    // GPUデバイス設定（自動ベンダー検出）
+    model.set_device(MLLib::DeviceType::GPU);
+    // ライブラリ出力: ✅ GPU device successfully configured
+    // または警告: ⚠️ WARNING: GPU device requested but no GPU found!
+    
+    // ニューラルネットワーク構築
+    model.add_layer(new MLLib::layer::Dense(784, 128));
+    model.add_layer(new MLLib::layer::activation::ReLU());
+    model.add_layer(new MLLib::layer::Dense(128, 10));
+    
+    // 訓練は自動的に最適GPUを使用
+    model.train(train_X, train_Y, loss, optimizer);
+    
+    return 0;
+}
+```
+
+### GPU状態確認
+
+```cpp
+// GPU利用可能性チェック
+if (MLLib::Device::isGPUAvailable()) {
+    // 検出されたGPUを表示
+    auto gpus = MLLib::Device::detectGPUs();
+    for (const auto& gpu : gpus) {
+        printf("GPU: %s (%s)\n", gpu.name.c_str(), gpu.api_support.c_str());
+    }
+}
+```
+
+### GPUドキュメント
+
+- **📖 [マルチGPUサポートガイド (日本語)](docs/MULTI_GPU_SUPPORT_ja.md)**
+- **📖 [Multi-GPU Support Guide (English)](docs/MULTI_GPU_SUPPORT_en.md)**
+- **⚙️ [GPU CI設定ガイド](docs/GPU_CI_SETUP_ja.md)**
+
 ## 📚 ドキュメント
 
 詳細なドキュメントは `docs/` フォルダをご覧ください：
 
 - [テストドキュメント](docs/TESTING_ja.md) - 包括的なテストシステムガイド
 - [モデルI/O](docs/MODEL_IO_ja.md) - モデル保存・読み込みガイド
+- [GPU CI 設定ガイド](docs/GPU_CI_SETUP_ja.md) - GPU テスト環境の設定方法
+- [GPU CI Setup Guide (English)](docs/GPU_CI_SETUP_en.md) - GPU testing environment configuration
 
 ### APIコンポーネント
 
@@ -373,7 +465,7 @@ auto result = model.predict({1.0, 2.0, 3.0});
 A: はい、提供されているベースクラスを継承してカスタムコンポーネントを実装できます。
 
 #### Q: GPUサポートはありますか？
-A: 現在CPUのみですが、バックエンドアーキテクチャによりGPUサポートの追加が可能です。
+A: はい、NVIDIA CUDA、AMD ROCm、Intel oneAPI、Apple Metalの包括的なマルチGPUサポートを提供しています。ライブラリはデフォルトで全GPUベンダーに対応し、GPU使用不可時は自動的にCPUにフォールバックします。
 
 #### Q: 大規模なデータセットを処理できますか？
 A: はい、効率的なメモリ管理とバッチ処理に対応しています。

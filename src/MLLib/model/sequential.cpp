@@ -11,7 +11,9 @@ namespace model {
 Sequential::Sequential() : device_(DeviceType::CPU) {}
 
 Sequential::Sequential(DeviceType device) : device_(device) {
-  Device::setDevice(device);
+  Device::setDeviceWithValidation(device, true);
+  device_ = Device::getCurrentDevice();  // Update to actual device (in case of
+                                         // fallback)
 }
 
 Sequential::~Sequential() {
@@ -27,8 +29,11 @@ void Sequential::add(std::shared_ptr<layer::BaseLayer> layer) {
 }
 
 void Sequential::set_device(DeviceType device) {
-  device_ = device;
-  Device::setDevice(device);
+  if (Device::setDeviceWithValidation(device, true)) {
+    device_ = device;
+  } else {
+    device_ = Device::getCurrentDevice();  // Update to actual device (fallback)
+  }
 }
 
 NDArray Sequential::predict(const NDArray& input) {

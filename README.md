@@ -2,9 +2,11 @@
 
 [![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
+[![GPU CI](https://github.com/shadowlink0122/CppML/workflows/GPU%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/gpu-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
 [![Tests](https://img.shields.io/badge/tests-21%2F21_unit_tests-brightgreen.svg)](#-testing)
 [![Integration Tests](https://img.shields.io/badge/integration-3429%2F3429_assertions-brightgreen.svg)](#-testing)
+[![GPU Tests](https://img.shields.io/badge/GPU_tests-145_assertions-blue.svg)](#-gpu-support)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25_CI_success-brightgreen.svg)](#-testing)
 
 > **Languages**: [English](README.md) | [日本語](README_ja.md)
@@ -16,11 +18,13 @@ A modern C++17 machine learning library designed for neural network training and
 - **🧠 Neural Networks**: Sequential models with customizable architectures
 - **📊 Layers**: Dense (fully connected), ReLU, Sigmoid, Tanh activation functions  
 - **🎯 Training**: MSE loss function with SGD optimizer
-- **💾 Model I/O**: Save/load models in binary, JSON, and config formats
+- **🎯 Multi-GPU Support**: NVIDIA CUDA, AMD ROCm, Intel oneAPI, Apple Metal with automatic detection
+- **�💾 Model I/O**: Save/load models in binary, JSON, and config formats
 - **📁 Auto Directory**: Automatic directory creation with `mkdir -p` functionality
 - **🔧 Type Safety**: Enum-based format specification for improved reliability
 - **⚡ Performance**: Optimized C++17 implementation with NDArray backend
 - **🧪 Testing**: Comprehensive unit (21/21) and integration tests (3429/3429 assertions)
+- **🖥️ GPU Testing**: 145 GPU-specific assertions with fallback validation
 - **🔄 Cross-platform**: Linux, macOS, Windows support
 - **📊 Benchmarking**: Real-time performance metrics and execution time tracking
 - **🎯 CI/CD Ready**: 100% test success rate for production deployments
@@ -68,7 +72,7 @@ std::vector<std::vector<double>> Y = {{0}, {1}, {1}, {0}};
 loss::MSE loss;
 optimizer::SGD optimizer(0.1);
 model.train(X, Y, loss, optimizer, [](int epoch, double loss) {
-    std::cout << "Epoch " << epoch << ", Loss: " << loss << std::endl;
+    printf("Epoch %d, Loss: %f\n", epoch, loss);
 }, 1000);
 
 // Make predictions (multiple syntax options supported)
@@ -235,6 +239,91 @@ make clean
 make install-tools
 ```
 
+## 🎯 GPU Support
+
+MLLib provides comprehensive multi-GPU vendor support with automatic detection and fallback:
+
+### Features
+
+- **🌍 Multi-Vendor**: NVIDIA CUDA, AMD ROCm, Intel oneAPI, Apple Metal
+- **🔄 Auto Detection**: Runtime GPU detection and selection
+- **💪 Default Support**: All GPU vendors enabled by default (library design)
+- **�️ CPU Fallback**: Seamless CPU execution when GPU unavailable
+- **⚠️ Smart Warnings**: Informative messages about GPU status
+- **🧪 Full Testing**: 145 GPU assertions across unit and integration tests
+
+### Supported GPU Vendors
+
+| Vendor | API | Hardware Support |
+|--------|-----|------------------|
+| **NVIDIA** | CUDA, cuBLAS | GeForce, Quadro, Tesla, RTX |
+| **AMD** | ROCm, HIP, hipBLAS | Radeon Instinct, Radeon Pro |
+| **Intel** | oneAPI, SYCL, oneMKL | Arc, Iris Xe, UHD Graphics |
+| **Apple** | Metal, MPS | M1, M1 Pro/Max/Ultra, M2 |
+
+### GPU Build Options
+
+```bash
+# Default build (all GPU vendors enabled)
+make
+
+# Disable specific GPU support
+make DISABLE_CUDA=1           # Disable NVIDIA CUDA
+make DISABLE_ROCM=1           # Disable AMD ROCm
+make DISABLE_ONEAPI=1         # Disable Intel oneAPI
+make DISABLE_METAL=1          # Disable Apple Metal
+
+# CPU-only build
+make DISABLE_CUDA=1 DISABLE_ROCM=1 DISABLE_ONEAPI=1 DISABLE_METAL=1
+
+# CPU-only testing
+FORCE_CPU_ONLY=1 make test    # Force CPU-only testing
+```
+
+### Usage
+
+```cpp
+#include "MLLib.hpp"
+
+int main() {
+    MLLib::model::Sequential model;
+    
+    // Set GPU device (automatic vendor detection)
+    model.set_device(MLLib::DeviceType::GPU);
+    // Library outputs: ✅ GPU device successfully configured
+    // Or warnings: ⚠️ WARNING: GPU device requested but no GPU found!
+    
+    // Build neural network
+    model.add_layer(new MLLib::layer::Dense(784, 128));
+    model.add_layer(new MLLib::layer::activation::ReLU());
+    model.add_layer(new MLLib::layer::Dense(128, 10));
+    
+    // Training automatically uses optimal GPU
+    model.train(train_X, train_Y, loss, optimizer);
+    
+    return 0;
+}
+```
+
+### GPU Status Check
+
+```cpp
+// Check GPU availability
+if (MLLib::Device::isGPUAvailable()) {
+    // Display detected GPUs
+    auto gpus = MLLib::Device::detectGPUs();
+    for (const auto& gpu : gpus) {
+        printf("GPU: %s (%s)\n", gpu.name.c_str(), gpu.api_support.c_str());
+    }
+}
+```
+
+### GPU Documentation
+
+- **📖 [Multi-GPU Support Guide (English)](docs/MULTI_GPU_SUPPORT_en.md)**
+- **📖 [マルチGPUサポートガイド (日本語)](docs/MULTI_GPU_SUPPORT_ja.md)**
+- **⚙️ [GPU CI Setup Guide](docs/GPU_CI_SETUP_en.md)**
+
 ## 📚 Documentation
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
@@ -244,6 +333,8 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **🇯🇵 [日本語ドキュメント](docs/README_ja.md)** - 日本語での完全ガイド
 - **🇺🇸 [Model I/O Guide (English)](docs/MODEL_IO_en.md)** - Complete model serialization guide
 - **🇯🇵 [モデル I/O ガイド (日本語)](docs/MODEL_IO_ja.md)** - 日本語でのモデル保存・読み込み解説
+- **🇺🇸 [GPU CI Setup Guide (English)](docs/GPU_CI_SETUP_en.md)** - GPU testing environment configuration
+- **🇯🇵 [GPU CI 設定ガイド (日本語)](docs/GPU_CI_SETUP_ja.md)** - GPU テスト環境の設定方法
 - **🇺🇸 [Testing Guide (English)](docs/TESTING_en.md)** - Testing framework documentation
 - **🇯🇵 [テストガイド (日本語)](docs/TESTING_ja.md)** - テストフレームワークの説明
 
