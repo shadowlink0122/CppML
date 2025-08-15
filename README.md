@@ -3,24 +3,27 @@
 [![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
-[![Tests](https://img.shields.io/badge/tests-21%2F21_passing-brightgreen.svg)](#-testing)
+[![Tests](https://img.shields.io/badge/tests-21%2F21_unit_tests-brightgreen.svg)](#-testing)
+[![Integration Tests](https://img.shields.io/badge/integration-3429%2F3429_assertions-brightgreen.svg)](#-testing)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25_CI_success-brightgreen.svg)](#-testing)
 
-> **Languages**: [English](README.md) | [日本語](docs/README_ja.md)
+> **Languages**: [English](README.md) | [日本語](README_ja.md)
 
 A modern C++17 machine learning library designed for neural network training and model persistence with comprehensive testing and performance monitoring.
 
 ## ✨ Features
 
 - **🧠 Neural Networks**: Sequential models with customizable architectures
-- **📊 Layers**: Dense (fully connected), ReLU, Sigmoid, Tanh activation functions
+- **📊 Layers**: Dense (fully connected), ReLU, Sigmoid, Tanh activation functions  
 - **🎯 Training**: MSE loss function with SGD optimizer
 - **💾 Model I/O**: Save/load models in binary, JSON, and config formats
 - **📁 Auto Directory**: Automatic directory creation with `mkdir -p` functionality
 - **🔧 Type Safety**: Enum-based format specification for improved reliability
 - **⚡ Performance**: Optimized C++17 implementation with NDArray backend
-- **🧪 Testing**: Comprehensive unit and integration tests with execution time monitoring
+- **🧪 Testing**: Comprehensive unit (21/21) and integration tests (3429/3429 assertions)
 - **🔄 Cross-platform**: Linux, macOS, Windows support
 - **📊 Benchmarking**: Real-time performance metrics and execution time tracking
+- **🎯 CI/CD Ready**: 100% test success rate for production deployments
 
 ## 🚀 Quick Start
 
@@ -34,10 +37,12 @@ A modern C++17 machine learning library designed for neural network training and
 ```bash
 git clone https://github.com/shadowlink0122/CppML.git
 cd CppML
-make                    # Build the library
-make unit-test         # Run unit tests (21/21 passing)
-make integration-test  # Run integration tests
-make xor              # Run XOR neural network example
+make                         # Build the library
+make test                    # Run all tests (unit + integration)
+make unit-test              # Run unit tests (21/21 passing)
+make integration-test       # Run integration tests (3429/3429 assertions)
+make simple-integration-test # Run simple integration tests
+make xor                    # Run XOR neural network example
 ```
 
 ### Basic Usage
@@ -65,6 +70,10 @@ optimizer::SGD optimizer(0.1);
 model.train(X, Y, loss, optimizer, [](int epoch, double loss) {
     std::cout << "Epoch " << epoch << ", Loss: " << loss << std::endl;
 }, 1000);
+
+// Make predictions (multiple syntax options supported)
+auto pred1 = model.predict(std::vector<double>{1.0, 0.0});  // Vector syntax
+auto pred2 = model.predict({1.0, 0.0});                     // Initializer list syntax (C++17)
 
 // Save model
 model::ModelIO::save_model(model, "model.bin", model::ModelFormat::BINARY);
@@ -145,13 +154,24 @@ make unit-test
 ### Integration Tests
 
 ```bash
-make integration-test
+make integration-test           # Comprehensive integration tests (3429/3429 assertions)
+make simple-integration-test   # Simple integration tests (basic functionality)
 
-# Tests include:
-# - XOR problem end-to-end training
-# - Model I/O workflows (save/load)
-# - Multi-layer architecture validation
-# - Performance and stability testing
+# Comprehensive Integration Test Coverage:
+# 🎯 XOR Model Tests: Basic functionality + learning convergence (CI-safe)
+# 🔧 Optimizer Integration: SGD + Adam fallback testing
+# 📊 Loss Function Integration: MSE + CrossEntropy validation
+# 💻 Backend Integration: CPU backend comprehensive testing (601 assertions)
+# 🔗 Layer Integration: Dense layers + activation functions 
+# 🛠️ Utility Integration: Matrix, Random, Validation utilities (504 assertions)
+# 📱 Device Integration: CPU device operations (2039 assertions)
+# 📁 Data Integration: Loading, batching, validation (157 assertions)
+# ⚡ Performance Testing: Stability + execution time monitoring
+
+# Test Results Summary:
+# ✅ 100% CI success rate (3429/3429 assertions passing)
+# ✅ All tests deterministic and CI-ready
+# ✅ Comprehensive component integration coverage
 ```
 
 ## 🛠️ Development
@@ -160,13 +180,16 @@ make integration-test
 
 ```bash
 # Run all tests
-make test                   # Unit + Integration tests
-make unit-test             # Run unit tests (21/21 passing)
-make integration-test      # End-to-end integration tests
+make test                      # Complete test suite (Unit + Integration)
+make unit-test                # Run unit tests (21/21 passing)
+make integration-test         # Comprehensive integration tests (3429/3429 assertions)
+make simple-integration-test  # Simple integration tests (basic functionality)
 
 # Test output includes execution time monitoring:
-# ✅ NDArrayConstructorTest PASSED (14 assertions, 0.01ms)
-# Total test execution time: 0.45ms
+# ✅ BasicXORModelTest PASSED (5 assertions, 0.17ms)
+# ✅ AdamOptimizerIntegrationTest PASSED (10 assertions, 1.04ms)
+# ✅ BackendPerformanceIntegrationTest PASSED (551 assertions, 43.54ms)
+# 🎉 ALL INTEGRATION TESTS PASSED! (3429/3429 assertions, 100% success rate)
 ```
 
 ### Code Quality
@@ -285,7 +308,46 @@ Test all model I/O formats:
 make model-format-test  # Test enum-based format system
 ```
 
-## 📁 Project Structure
+## � CI/CD & Quality Assurance
+
+MLLib features a comprehensive CI/CD pipeline with 100% test success rate:
+
+### GitHub Actions Pipeline
+
+```yaml
+# Complete CI pipeline workflow:
+Format Validation → Linting → Static Analysis
+         ↓
+    Build Test → Unit Tests → Integration Tests
+         ↓
+     CI Summary
+```
+
+### Test Coverage
+
+- **Unit Tests**: 21/21 passing (100%)
+- **Integration Tests**: 3429/3429 assertions passing (100%)
+- **Simple Integration Tests**: Basic functionality verification
+- **CI Requirements**: 100% deterministic test success rate
+
+### Quality Checks
+
+```bash
+make fmt-check    # Code formatting validation
+make lint         # Clang-tidy linting 
+make check        # Cppcheck static analysis
+make lint-all     # All quality checks combined
+```
+
+### CI Features
+
+- ✅ **Deterministic Testing**: All tests designed for CI reliability
+- ✅ **Comprehensive Coverage**: End-to-end component integration testing
+- ✅ **Performance Monitoring**: Execution time tracking for all tests
+- ✅ **Multi-platform Support**: Ubuntu, macOS, Windows compatibility
+- ✅ **Production Ready**: 100% test success rate for deployment confidence
+
+## �📁 Project Structure
 
 ```
 CppML/

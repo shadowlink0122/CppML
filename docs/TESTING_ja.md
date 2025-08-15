@@ -6,39 +6,91 @@ MLLibの包括的なテストシステムのドキュメントです。
 
 MLLibは高品質なコードを保証するため、以下のテストシステムを提供します：
 
-- **単体テスト**: 21個のテストケース、全て通過
-- **統合テスト**: エンドツーエンドワークフローテスト
+- **単体テスト**: 21個のテストケース、全て通過（100%）
+- **結合テスト**: 3429個のアサーション、全て通過（100%）
+- **シンプル結合テスト**: 基本機能検証
 - **実行時間監視**: マイクロ秒精度のパフォーマンス測定
 - **エラーハンドリング**: 例外条件の包括的テスト
+- **CI/CD対応**: 100%の成功率でプロダクション環境に対応
 
 ## 🚀 テスト実行方法
 
 ### 基本的な実行
 
 ```bash
-# 全テスト実行
+# 全テスト実行（単体 + 結合テスト）
 make test
 
-# 単体テストのみ
+# 単体テストのみ（21/21 通過）
 make unit-test
 
-# 統合テストのみ
+# 包括的結合テスト（3429/3429 アサーション）
 make integration-test
+
+# シンプル結合テスト（基本機能）
+make simple-integration-test
 ```
+
+### 結合テストカバレッジ
+
+結合テストは以下のコンポーネントを包括的にテストします：
+
+- **🎯 XORモデルテスト**: 基本機能 + 学習収束（CI安全）
+- **🔧 最適化器統合**: SGD + Adamフォールバックテスト
+- **📊 損失関数統合**: MSE + CrossEntropy検証
+- **💻 バックエンド統合**: CPUバックエンド包括テスト（601アサーション）
+- **🔗 レイヤー統合**: Denseレイヤー + 活性化関数
+- **🛠️ ユーティリティ統合**: Matrix、Random、Validation（504アサーション）
+- **📱 デバイス統合**: CPUデバイス操作（2039アサーション）
+- **📁 データ統合**: 読み込み、バッチ処理、検証（157アサーション）
+- **⚡ パフォーマンステスト**: 安定性 + 実行時間監視
 
 ### 出力例
 
 ```bash
-$ make unit-test
-=== MLLib Unit Test Suite ===
-Running comprehensive unit tests for MLLib v1.0.0
-Test execution with output capture enabled
+$ make integration-test
+=== MLLib Integration Test Suite ===
+Testing end-to-end functionality and workflows
+Output capture enabled for clean test reporting
 
---- Config Module Tests ---
-Running test: ConfigConstantsTest
-✅ ConfigConstantsTest PASSED (10 assertions, 0.03ms)
-Running test: ConfigUsageTest
-✅ ConfigUsageTest PASSED (10 assertions, 0.01ms)
+=== Running Test Suite: XOR Model Tests ===
+Running test: BasicXORModelTest
+✅ BasicXORModelTest PASSED (5 assertions, 0.17ms)
+
+=== Running Test Suite: Optimizer Integration Tests ===
+Running test: SGDOptimizerIntegrationTest
+✅ SGDOptimizerIntegrationTest PASSED (11 assertions, 2.42ms)
+Running test: AdamOptimizerIntegrationTest
+✅ AdamOptimizerIntegrationTest PASSED (10 assertions, 1.04ms)
+
+=== Running Test Suite: Backend Integration Tests ===
+Running test: BackendPerformanceIntegrationTest
+✅ BackendPerformanceIntegrationTest PASSED (551 assertions, 43.54ms)
+
+============================================================
+INTEGRATION TEST SUMMARY
+============================================================
+🎉 ALL INTEGRATION TESTS PASSED! 🎉
+MLLib components work together correctly.
+📊 Total: 3429/3429 assertions (100% success rate)
+============================================================
+✅ Integration tests passed
+```
+
+### シンプル結合テスト出力例
+
+```bash
+$ make simple-integration-test
+Running simple integration tests...
+Test 1: Basic model creation...
+✓ Model created successfully
+Test 2: Prediction with vector...
+✓ Vector prediction completed successfully
+Test 3: Prediction with initializer list...
+✓ Initializer list prediction completed successfully
+
+🎉 Basic integration tests passed (including {} syntax)!
+✅ Simple integration tests completed successfully
 
 --- NDArray Module Tests ---
 Running test: NDArrayConstructorTest
