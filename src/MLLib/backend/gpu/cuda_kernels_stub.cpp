@@ -19,7 +19,7 @@ void cuda_init() {
   // Check if we're in simulation mode
   const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
   if (sim_mode && std::string(sim_mode) == "1") {
-    std::cout << "CUDA simulation mode initialized successfully" << std::endl;
+    printf("CUDA simulation mode initialized successfully\n");
   } else {
     // This should not be called when CUDA is not available
     std::cerr << "Warning: cuda_init() called without CUDA support"

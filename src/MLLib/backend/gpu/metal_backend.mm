@@ -48,8 +48,8 @@ void MetalBackend::initialize() {
         initializeKernels();
         
         initialized_ = true;
-        std::cout << "Metal backend initialized successfully" << std::endl;
-        std::cout << "Device: " << device_.name.UTF8String << std::endl;
+        printf("Metal backend initialized successfully\n");
+        printf("Device: %s\n", device_.name.UTF8String);
     }
 }
 

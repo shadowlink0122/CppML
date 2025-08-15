@@ -14,10 +14,10 @@ int run_unit_tests();
 int run_integration_tests();
 
 int main(int argc, char* argv[]) {
-  std::cout << "=== MLLib Test Suite Runner ===" << std::endl;
-  std::cout << "MLLib Machine Learning Library v1.0.0" << std::endl;
-  std::cout << "Comprehensive Testing Framework" << std::endl;
-  std::cout << std::endl;
+  printf("=== MLLib Test Suite Runner ===\n");
+  printf("MLLib Machine Learning Library v1.0.0\n");
+  printf("Comprehensive Testing Framework\n");
+  printf("\n");
 
   bool run_unit = true;
   bool run_integration = true;
@@ -30,12 +30,11 @@ int main(int argc, char* argv[]) {
     } else if (arg == "--integration-only") {
       run_unit = false;
     } else if (arg == "--help" || arg == "-h") {
-      std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
-      std::cout << "Options:" << std::endl;
-      std::cout << "  --unit-only       Run only unit tests" << std::endl;
-      std::cout << "  --integration-only Run only integration tests"
-                << std::endl;
-      std::cout << "  --help, -h        Show this help message" << std::endl;
+      printf("Usage: %s [options]\n", argv[0]);
+      printf("Options:\n");
+      printf("  --unit-only       Run only unit tests\n");
+      printf("  --integration-only Run only integration tests\n");
+      printf("  --help, -h        Show this help message\n");
       return 0;
     }
   }
@@ -44,48 +43,46 @@ int main(int argc, char* argv[]) {
 
   // Run unit tests
   if (run_unit) {
-    std::cout << "🧪 Starting Unit Tests..." << std::endl;
-    std::cout << std::string(50, '-') << std::endl;
+    printf("🧪 Starting Unit Tests...\n");
+    printf("--------------------------------------------------\n");
 
     int unit_result = run_unit_tests();
     if (unit_result != 0) {
-      std::cout << "❌ Unit tests failed with exit code: " << unit_result
-                << std::endl;
+      printf("❌ Unit tests failed with exit code: %d\n", unit_result);
       exit_code = unit_result;
     } else {
-      std::cout << "✅ Unit tests completed successfully!" << std::endl;
+      printf("✅ Unit tests completed successfully!\n");
     }
-    std::cout << std::endl;
+    printf("\n");
   }
 
   // Run integration tests
   if (run_integration) {
-    std::cout << "🔗 Starting Integration Tests..." << std::endl;
-    std::cout << std::string(50, '-') << std::endl;
+    printf("🔗 Starting Integration Tests...\n");
+    printf("--------------------------------------------------\n");
 
     int integration_result = run_integration_tests();
     if (integration_result != 0) {
-      std::cout << "❌ Integration tests failed with exit code: "
-                << integration_result << std::endl;
+      printf("❌ Integration tests failed with exit code: %d\n",
+             integration_result);
       if (exit_code == 0) exit_code = integration_result;
     } else {
-      std::cout << "✅ Integration tests completed successfully!" << std::endl;
+      printf("✅ Integration tests completed successfully!\n");
     }
-    std::cout << std::endl;
+    printf("\n");
   }
 
   // Final summary
-  std::cout << std::string(60, '=') << std::endl;
+  printf("============================================================\n");
   if (exit_code == 0) {
-    std::cout << "🎉 ALL TESTS PASSED! 🎉" << std::endl;
-    std::cout << "MLLib is ready for production use." << std::endl;
+    printf("🎉 ALL TESTS PASSED! 🎉\n");
+    printf("MLLib is ready for production use.\n");
   } else {
-    std::cout << "❌ SOME TESTS FAILED" << std::endl;
-    std::cout << "Exit code: " << exit_code << std::endl;
-    std::cout << "Please review the test output and fix the issues."
-              << std::endl;
+    printf("❌ SOME TESTS FAILED\n");
+    printf("Exit code: %d\n", exit_code);
+    printf("Please review the test output and fix the issues.\n");
   }
-  std::cout << std::string(60, '=') << std::endl;
+  printf("============================================================\n");
 
   return exit_code;
 }
@@ -99,7 +96,7 @@ int run_unit_tests() {
   // For now, we'll use system() to execute the unit test binary
   // In a production system, this would be linked directly
 
-  std::cout << "Executing unit tests..." << std::endl;
+  printf("Executing unit tests...\n");
 
   // Note: This assumes the unit test binary will be built separately
   // The actual implementation would call the unit test main function directly
@@ -107,9 +104,8 @@ int run_unit_tests() {
 
   // For demonstration, we'll return success
   // In real implementation, this would execute the actual unit tests
-  std::cout << "Unit test framework initialized successfully." << std::endl;
-  std::cout << "Note: Unit tests will be executed when the library is built."
-            << std::endl;
+  printf("Unit test framework initialized successfully.\n");
+  printf("Note: Unit tests will be executed when the library is built.\n");
 
   return 0;
 }
@@ -119,15 +115,12 @@ int run_unit_tests() {
  * @return Exit code (0 for success, non-zero for failure)
  */
 int run_integration_tests() {
-  std::cout << "Executing integration tests..." << std::endl;
+  printf("Executing integration tests...\n");
 
   // Integration tests would test the complete workflow
   // including model training, saving, loading, and prediction
-  std::cout << "Integration test framework initialized successfully."
-            << std::endl;
-  std::cout
-      << "Note: Integration tests will be executed when samples are built."
-      << std::endl;
+  printf("Integration test framework initialized successfully.\n");
+  printf("Note: Integration tests will be executed when samples are built.\n");
 
   return 0;
 }

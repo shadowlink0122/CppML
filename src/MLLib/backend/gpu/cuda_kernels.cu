@@ -143,9 +143,9 @@ void cuda_init() {
     // Check if we're in simulation mode
     const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
     if (sim_mode && std::string(sim_mode) == "1") {
-      std::cout << "CUDA simulation mode initialized successfully" << std::endl;
+      printf("CUDA simulation mode initialized successfully\n");
     } else {
-      std::cout << "CUDA context initialized successfully" << std::endl;
+      printf("CUDA context initialized successfully\n");
     }
   }
 }

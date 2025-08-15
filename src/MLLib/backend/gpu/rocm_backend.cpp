@@ -39,7 +39,7 @@ void ROCmBackend::initialize() {
     }
 
     initialized_ = true;
-    std::cout << "ROCm backend initialized successfully" << std::endl;
+    printf("ROCm backend initialized successfully\n");
   }
 }
 
@@ -48,7 +48,7 @@ void ROCmBackend::cleanup() {
     hipblasDestroy(hipblas_handle_);
     hipblas_handle_ = nullptr;
     initialized_ = false;
-    std::cout << "ROCm backend cleaned up" << std::endl;
+    printf("ROCm backend cleaned up\n");
   }
 }
 
@@ -163,55 +163,47 @@ hipblasHandle_t ROCmBackend::hipblas_handle_ = nullptr;
 bool ROCmBackend::initialized_ = false;
 
 bool ROCmBackend::isAvailable() {
-  std::cout << "ROCm backend: HIP headers not available, ROCm not supported"
-            << std::endl;
+  printf("ROCm backend: HIP headers not available, ROCm not supported\n");
   return false;
 }
 
 void ROCmBackend::initialize() {
-  std::cout << "ROCm backend: Stub implementation - initialize called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - initialize called\n");
 }
 
 void ROCmBackend::cleanup() {
-  std::cout << "ROCm backend: Stub implementation - cleanup called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - cleanup called\n");
 }
 
 void* ROCmBackend::allocateMemory(size_t size) {
-  std::cout << "ROCm backend: Stub implementation - allocateMemory called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - allocateMemory called\n");
   return malloc(size);
 }
 
 void ROCmBackend::deallocateMemory(void* ptr) {
-  std::cout << "ROCm backend: Stub implementation - deallocateMemory called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - deallocateMemory called\n");
   free(ptr);
 }
 
 void ROCmBackend::copyToDevice(void* dst, const void* src, size_t size) {
-  std::cout << "ROCm backend: Stub implementation - copyToDevice called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - copyToDevice called\n");
   memcpy(dst, src, size);
 }
 
 void ROCmBackend::copyFromDevice(void* dst, const void* src, size_t size) {
-  std::cout << "ROCm backend: Stub implementation - copyFromDevice called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - copyFromDevice called\n");
   memcpy(dst, src, size);
 }
 
 void ROCmBackend::copyDeviceToDevice(void* dst, const void* src, size_t size) {
-  std::cout << "ROCm backend: Stub implementation - copyDeviceToDevice called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - copyDeviceToDevice called\n");
   memcpy(dst, src, size);
 }
 
 void ROCmBackend::gemm(bool transposeA, bool transposeB, int m, int n, int k,
                        double alpha, const double* A, int lda, const double* B,
                        int ldb, double beta, double* C, int ldc) {
-  std::cout << "ROCm backend: Stub implementation - gemm called" << std::endl;
+  printf("ROCm backend: Stub implementation - gemm called\n");
   // Simple CPU fallback implementation would go here
   (void)transposeA;
   (void)transposeB;
@@ -229,15 +221,14 @@ void ROCmBackend::gemm(bool transposeA, bool transposeB, int m, int n, int k,
 }
 
 void ROCmBackend::relu(const double* input, double* output, size_t size) {
-  std::cout << "ROCm backend: Stub implementation - relu called" << std::endl;
+  printf("ROCm backend: Stub implementation - relu called\n");
   for (size_t i = 0; i < size; ++i) {
     output[i] = std::max(0.0, input[i]);
   }
 }
 
 void ROCmBackend::sigmoid(const double* input, double* output, size_t size) {
-  std::cout << "ROCm backend: Stub implementation - sigmoid called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - sigmoid called\n");
   for (size_t i = 0; i < size; ++i) {
     output[i] = 1.0 / (1.0 + std::exp(-input[i]));
   }
@@ -245,33 +236,28 @@ void ROCmBackend::sigmoid(const double* input, double* output, size_t size) {
 
 void ROCmBackend::tanh_activation(const double* input, double* output,
                                   size_t size) {
-  std::cout << "ROCm backend: Stub implementation - tanh_activation called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - tanh_activation called\n");
   for (size_t i = 0; i < size; ++i) {
     output[i] = std::tanh(input[i]);
   }
 }
 
 void ROCmBackend::synchronize() {
-  std::cout << "ROCm backend: Stub implementation - synchronize called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - synchronize called\n");
 }
 
 int ROCmBackend::getDeviceCount() {
-  std::cout << "ROCm backend: Stub implementation - getDeviceCount called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - getDeviceCount called\n");
   return 0;
 }
 
 void ROCmBackend::setDevice(int device) {
-  std::cout << "ROCm backend: Stub implementation - setDevice called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - setDevice called\n");
   (void)device;
 }
 
 std::string ROCmBackend::getDeviceName(int device) {
-  std::cout << "ROCm backend: Stub implementation - getDeviceName called"
-            << std::endl;
+  printf("ROCm backend: Stub implementation - getDeviceName called\n");
   (void)device;
   return "ROCm Stub Device";
 }
