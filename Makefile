@@ -250,6 +250,30 @@ unit-test: $(LIB_TARGET)
 		echo "ℹ️  Unit tests not found"; \
 	fi
 
+# Run simple integration tests
+.PHONY: simple-integration-test
+simple-integration-test: $(LIB_TARGET)
+	@echo "Building and running simple integration tests..."
+	@echo "Compiling simple integration test..."
+	@$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -I$(TEST_DIR) -o $(BUILD_DIR)/simple_integration_test \
+		tests/integration/simple_integration_test.cpp -L$(BUILD_DIR) -lMLLib $(LDFLAGS) 2>&1 | tee $(BUILD_DIR)/simple_integration_compile.log; \
+	if [ $$? -eq 0 ]; then \
+		echo "✅ Simple integration tests compiled successfully"; \
+		echo "Running simple integration tests..."; \
+		$(BUILD_DIR)/simple_integration_test; \
+		if [ $$? -eq 0 ]; then \
+			echo "✅ Simple integration tests completed successfully"; \
+		else \
+			echo "❌ Simple integration tests failed"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Failed to build simple integration tests"; \
+		echo "Compilation errors:"; \
+		cat $(BUILD_DIR)/simple_integration_compile.log; \
+		exit 1; \
+	fi
+
 # Run integration tests only
 .PHONY: integration-test
 integration-test: $(LIB_TARGET)
