@@ -72,7 +72,7 @@ std::vector<std::vector<double>> Y = {{0}, {1}, {1}, {0}};
 loss::MSE loss;
 optimizer::SGD optimizer(0.1);
 model.train(X, Y, loss, optimizer, [](int epoch, double loss) {
-    std::cout << "エポック " << epoch << ", 損失: " << loss << std::endl;
+    printf("エポック %d, 損失: %f\n", epoch, loss);
 }, 1000);
 
 // 予測を実行（複数の構文をサポート）
@@ -356,8 +356,7 @@ if (MLLib::Device::isGPUAvailable()) {
     // 検出されたGPUを表示
     auto gpus = MLLib::Device::detectGPUs();
     for (const auto& gpu : gpus) {
-        std::cout << "GPU: " << gpu.name 
-                  << " (" << gpu.api_support << ")" << std::endl;
+        printf("GPU: %s (%s)\n", gpu.name.c_str(), gpu.api_support.c_str());
     }
 }
 ```

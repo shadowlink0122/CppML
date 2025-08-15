@@ -72,7 +72,7 @@ std::vector<std::vector<double>> Y = {{0}, {1}, {1}, {0}};
 loss::MSE loss;
 optimizer::SGD optimizer(0.1);
 model.train(X, Y, loss, optimizer, [](int epoch, double loss) {
-    std::cout << "Epoch " << epoch << ", Loss: " << loss << std::endl;
+    printf("Epoch %d, Loss: %f\n", epoch, loss);
 }, 1000);
 
 // Make predictions (multiple syntax options supported)
@@ -314,8 +314,7 @@ if (MLLib::Device::isGPUAvailable()) {
     // Display detected GPUs
     auto gpus = MLLib::Device::detectGPUs();
     for (const auto& gpu : gpus) {
-        std::cout << "GPU: " << gpu.name 
-                  << " (" << gpu.api_support << ")" << std::endl;
+        printf("GPU: %s (%s)\n", gpu.name.c_str(), gpu.api_support.c_str());
     }
 }
 ```

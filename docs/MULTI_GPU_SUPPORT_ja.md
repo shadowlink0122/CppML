@@ -114,13 +114,12 @@ int main() {
 ```cpp
 // GPU利用可能性チェック
 if (MLLib::Device::isGPUAvailable()) {
-    std::cout << "GPU available!" << std::endl;
+    printf("GPU available!\n");
     
     // 利用可能GPUの詳細表示
     auto gpus = MLLib::Device::detectGPUs();
     for (const auto& gpu : gpus) {
-        std::cout << "GPU: " << gpu.name 
-                  << " (" << gpu.api_support << ")" << std::endl;
+        printf("GPU: %s (%s)\n", gpu.name.c_str(), gpu.api_support.c_str());
     }
 }
 ```
