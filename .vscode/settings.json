@@ -76,8 +76,9 @@
     "unordered_map": "cpp",
     "variant": "cpp",
     "vector": "cpp",
-    "algorithm": "cpp"
-},
+    "algorithm": "cpp",
+    "iostream": "cpp"
+  },
   "editor.rulers": [80],
   "editor.wordWrap": "off",
   "editor.wordWrapColumn": 80

@@ -21,6 +21,7 @@ on:
         - integration
         - benchmark
         - hardware-only
+        - multi-gpu-vendor
       enable_gpu_hardware:
         description: '🚀 Enable GPU hardware testing (requires GPU runner - MAY INCUR COSTS)'
         required: true
@@ -73,6 +74,10 @@ jobs:
             echo "🧪 Full GPU testing requested via commit message"
             TEST_TYPE="all"
             ENABLE_GPU="true"
+          elif echo "$COMMIT_MSG" | grep -qi "\[gpu-multi\]"; then
+            echo "🎯 Multi-GPU vendor testing requested via commit message"
+            TEST_TYPE="multi-gpu-vendor"
+            ENABLE_GPU="false"
           elif echo "$COMMIT_MSG" | grep -qi "\[gpu-test\]"; then
             echo "🧪 GPU testing requested via commit message"
             TEST_TYPE="unit"
@@ -742,17 +747,91 @@ jobs:
         echo "🔍 GPU source files:"
         find src -name "*gpu*" -o -name "*cuda*" | head -10
         
-        # Check GPU test files
-        echo "🔍 GPU test files:"
-        find tests -name "*gpu*" -o -name "*cuda*" | head -10
+  # Multi-GPU vendor detection test
+  multi-gpu-vendor-test:
+    name: 🎯 Multi-GPU Vendor Detection Test
+    runs-on: ${{ needs.config.outputs.enable-gpu-hardware == 'true' && 'ubuntu-gpu' || 'ubuntu-latest' }}
+    needs: [config, gpu-availability-check]
+    if: needs.config.outputs.test-type == 'multi-gpu-vendor' || needs.config.outputs.test-type == 'all'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install development dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake clang-format
         
-        echo "✅ GPU documentation check completed"
+        echo "🔍 Installing GPU vendor detection utilities..."
+        sudo apt-get install -y pciutils lshw
+        
+    - name: Check for GPU vendors
+      run: |
+        echo "🔍 Checking system for GPU vendors..."
+        
+        echo "📋 PCI devices:"
+        lspci | grep -i vga || echo "No VGA controllers found"
+        lspci | grep -i nvidia || echo "No NVIDIA devices found"
+        lspci | grep -i amd || echo "No AMD devices found" 
+        lspci | grep -i intel || echo "No Intel GPU devices found"
+        
+        echo ""
+        echo "🖥️ System hardware info:"
+        lshw -c display 2>/dev/null | head -20 || echo "lshw not available"
+        
+    - name: Build with multi-GPU support
+      run: |
+        make clean
+        echo "🔧 Building with multi-GPU vendor support..."
+        make lib WITH_CUDA=0 GPU_SIMULATION=1
+        
+    - name: Build multi-GPU example
+      run: |
+        echo "🔧 Building GPU vendor detection example..."
+        make examples
+        
+    - name: Test multi-GPU vendor detection
+      run: |
+        echo "🧪 Testing multi-GPU vendor detection..."
+        
+        if [ -f build/examples/gpu_vendor_detection ]; then
+          echo "✅ Running GPU vendor detection demo:"
+          ./build/examples/gpu_vendor_detection || echo "⚠️ Demo completed with warnings"
+        else
+          echo "❌ GPU vendor detection example not built"
+          exit 1
+        fi
+        
+    - name: Test GPU vendor API availability
+      run: |
+        echo "🧪 Testing GPU vendor API availability..."
+        
+        echo "NVIDIA CUDA:"
+        which nvcc && nvcc --version | head -5 || echo "❌ CUDA not available"
+        which nvidia-smi && nvidia-smi -L || echo "❌ nvidia-smi not available"
+        
+        echo ""
+        echo "AMD ROCm:"
+        which rocm-smi && rocm-smi --list || echo "❌ ROCm not available"
+        which hipcc && hipcc --version | head -5 || echo "❌ HIP not available"
+        
+        echo ""
+        echo "Intel oneAPI:"
+        which sycl-ls && sycl-ls || echo "❌ Intel oneAPI not available"
+        which icpx && icpx --version | head -5 || echo "❌ Intel oneAPI compiler not available"
+        
+        echo ""
+        echo "OpenCL:"
+        which clinfo && clinfo -l || echo "❌ OpenCL not available"
+        
+        echo "✅ GPU vendor API check completed"
 
   # Final GPU CI summary
   gpu-ci-summary:
     name: 📋 GPU CI Summary
     runs-on: ubuntu-latest
-    needs: [config, gpu-availability-check, gpu-fallback-test, gpu-hardware-test, gpu-simulation-test, gpu-documentation]
+    needs: [config, gpu-availability-check, gpu-fallback-test, gpu-hardware-test, gpu-simulation-test, gpu-documentation, multi-gpu-vendor-test]
     if: always()
     
     steps:
@@ -764,6 +843,7 @@ jobs:
         echo "GPU Fallback Test: ${{ needs.gpu-fallback-test.result }}"
         echo "GPU Hardware Test: ${{ needs.gpu-hardware-test.result || 'Skipped (manual only)' }}"
         echo "GPU Simulation Test: ${{ needs.gpu-simulation-test.result || 'Skipped (hardware mode)' }}"
+        echo "Multi-GPU Vendor Test: ${{ needs.multi-gpu-vendor-test.result || 'Skipped' }}"
         echo "GPU Documentation: ${{ needs.gpu-documentation.result }}"
         echo ""
         

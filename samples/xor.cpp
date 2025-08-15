@@ -9,7 +9,7 @@ int main() {
 
   // モデル構築
   MLLib::model::Sequential model;
-  // デバイス指定（将来GPUにも対応可能）
+  // デバイス指定（GPUを使用）
   model.set_device(MLLib::DeviceType::GPU);
   // レイヤー追加
   // 入力層: 2次元入力
@@ -28,7 +28,7 @@ int main() {
   // モデル保存用のラムダ関数（モデルをキャプチャ）
   auto save_callback = [&model](int epoch, double loss) {
     if (epoch % 10 == 0) {
-      std::cout << "Epoch " << epoch << " loss: " << loss << std::endl;
+      printf("Epoch %d loss: %f\n", epoch, loss);
 
       // 10エポックごとにモデルを保存
       std::string model_dir = "samples/training_xor";
@@ -41,8 +41,7 @@ int main() {
         // JSON形式でも保存（デバッグ用）
         MLLib::model::ModelIO::save_model(model, model_path + ".json",
                                           MLLib::model::ModelFormat::JSON);
-        std::cout << "Model saved at epoch " << epoch << " to " << model_path
-                  << std::endl;
+        printf("Model saved at epoch %d to %s\n", epoch, model_path.c_str());
       } catch (const std::exception& e) {
         std::cerr << "Failed to save model at epoch " << epoch << ": "
                   << e.what() << std::endl;
@@ -56,7 +55,7 @@ int main() {
   // 予測表示
   for (auto& x : X) {
     auto y_pred = model.predict(x);
-    std::cout << x[0] << "," << x[1] << " => " << y_pred[0] << std::endl;
+    printf("%g,%g => %g\n", x[0], x[1], y_pred[0]);
   }
 
   // 最終モデルを保存
@@ -70,7 +69,7 @@ int main() {
                                       MLLib::model::ModelFormat::JSON);
     MLLib::model::ModelIO::save_model(model, final_model_path + ".config",
                                       MLLib::model::ModelFormat::CONFIG);
-    std::cout << "Final model saved to " << final_model_path << std::endl;
+    printf("Final model saved to %s\n", final_model_path.c_str());
   } catch (const std::exception& e) {
     std::cerr << "Failed to save final model: " << e.what() << std::endl;
   }
