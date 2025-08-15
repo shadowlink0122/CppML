@@ -18,7 +18,7 @@
 - **🧠 ニューラルネットワーク**: カスタマイズ可能なSequentialモデル
 - **📊 レイヤー**: Dense（全結合）、ReLU、Sigmoid、Tanh活性化関数
 - **🎯 訓練**: MSE損失関数とSGD最適化器
-- **� GPU サポート**: CUDA加速と自動CPUフォールバック
+- **🎯 マルチGPUサポート**: NVIDIA CUDA、AMD ROCm、Intel oneAPI、Apple Metalの自動検出対応
 - **�💾 モデル I/O**: バイナリ、JSON、設定ファイル形式での保存・読み込み
 - **📁 自動ディレクトリ作成**: `mkdir -p` 相当の機能
 - **🔧 型安全性**: enum ベースの形式指定で信頼性向上
@@ -281,30 +281,46 @@ make model-format-test  # enumベース形式システムをテスト
 make install-tools
 ```
 
-## � GPU サポート
+## 🎯 GPU サポート
 
-MLLibは包括的なGPU加速と自動CPUフォールバックを提供します：
+MLLibは包括的なマルチGPUベンダーサポートと自動検出・フォールバック機能を提供します：
 
 ### 機能
 
-- **🖥️ 自動検出**: 実行時のGPU利用可能性検出
-- **🔄 CPU フォールバック**: GPU利用不可時のシームレスなCPU実行
-- **⚠️ ユーザー警告**: GPU状態に関する情報的メッセージ
+- **🌍 マルチベンダー**: NVIDIA CUDA、AMD ROCm、Intel oneAPI、Apple Metal
+- **� 自動検出**: 実行時のGPU検出と選択
+- **� デフォルトサポート**: 全GPUベンダーをデフォルトで有効化（ライブラリ設計）
+- **🛡️ CPU フォールバック**: GPU利用不可時のシームレスなCPU実行
+- **⚠️ スマート警告**: GPU状態に関する情報的メッセージ
 - **🧪 完全テスト**: ユニットと統合テストでの145個のGPUアサーション
 
-### GPU ビルド
+### サポートGPUベンダー
+
+| ベンダー | API | ハードウェアサポート |
+|---------|-----|-------------------|
+| **NVIDIA** | CUDA, cuBLAS | GeForce、Quadro、Tesla、RTX |
+| **AMD** | ROCm, HIP, hipBLAS | Radeon Instinct、Radeon Pro |
+| **Intel** | oneAPI, SYCL, oneMKL | Arc、Iris Xe、UHD Graphics |
+| **Apple** | Metal, MPS | M1、M1 Pro/Max/Ultra、M2 |
+
+### GPU ビルドオプション
 
 ```bash
-# CUDA サポート付きビルド（自動検出）
-make WITH_CUDA=1
+# デフォルトビルド（全GPUベンダー有効）
+make
 
-# GPU 専用テスト
-make unit-test WITH_CUDA=1
-make integration-test WITH_CUDA=1
+# 特定GPUサポートの無効化
+make DISABLE_CUDA=1           # NVIDIA CUDA無効化
+make DISABLE_ROCM=1           # AMD ROCm無効化
+make DISABLE_ONEAPI=1         # Intel oneAPI無効化
+make DISABLE_METAL=1          # Apple Metal無効化
 
-# GPU 状態確認
-nvidia-smi
-nvcc --version
+# CPUのみビルド
+make DISABLE_CUDA=1 DISABLE_ROCM=1 DISABLE_ONEAPI=1 DISABLE_METAL=1
+
+# 環境制御によるGPUテスト
+FORCE_CPU_ONLY=1 make test    # CPUのみ強制テスト
+GPU_SIMULATION=1 make test    # GPUシミュレーションモード有効化
 ```
 
 ### 使用方法
@@ -312,31 +328,47 @@ nvcc --version
 ```cpp
 #include "MLLib.hpp"
 
-using namespace MLLib;
-
-// GPU デバイス作成（利用不可時はCPUにフォールバック）
-auto device = Device::create("gpu");
-
-if (device->is_available()) {
-    std::cout << "GPU使用中: " << device->get_name() << std::endl;
-} else {
-    std::cout << "GPU利用不可、CPUフォールバック使用" << std::endl;
+int main() {
+    MLLib::model::Sequential model;
+    
+    // GPUデバイス設定（自動ベンダー検出）
+    model.set_device(MLLib::DeviceType::GPU);
+    // ライブラリ出力: ✅ GPU device successfully configured
+    // または警告: ⚠️ WARNING: GPU device requested but no GPU found!
+    
+    // ニューラルネットワーク構築
+    model.add_layer(new MLLib::layer::Dense(784, 128));
+    model.add_layer(new MLLib::layer::activation::ReLU());
+    model.add_layer(new MLLib::layer::Dense(128, 10));
+    
+    // 訓練は自動的に最適GPUを使用
+    model.train(train_X, train_Y, loss, optimizer);
+    
+    return 0;
 }
-
-// モデルは自動的に利用可能な最適デバイスを使用
-Sequential model;
-model.add_layer(std::make_shared<Dense>(784, 128));
-model.add_layer(std::make_shared<Dense>(128, 10));
-
-// 訓練はGPUまたはCPUでシームレスに動作
-// ... 訓練コード ...
 ```
 
-### GPU CI テスト
+### GPU状態確認
 
-完全なCI設定については[GPU CI設定ガイド](docs/GPU_CI_SETUP_ja.md)をご覧ください。
+```cpp
+// GPU利用可能性チェック
+if (MLLib::Device::isGPUAvailable()) {
+    // 検出されたGPUを表示
+    auto gpus = MLLib::Device::detectGPUs();
+    for (const auto& gpu : gpus) {
+        std::cout << "GPU: " << gpu.name 
+                  << " (" << gpu.api_support << ")" << std::endl;
+    }
+}
+```
 
-## �📚 ドキュメント
+### GPUドキュメント
+
+- **📖 [マルチGPUサポートガイド (日本語)](docs/MULTI_GPU_SUPPORT_ja.md)**
+- **📖 [Multi-GPU Support Guide (English)](docs/MULTI_GPU_SUPPORT_en.md)**
+- **⚙️ [GPU CI設定ガイド](docs/GPU_CI_SETUP_ja.md)**
+
+## 📚 ドキュメント
 
 詳細なドキュメントは `docs/` フォルダをご覧ください：
 
@@ -435,7 +467,7 @@ auto result = model.predict({1.0, 2.0, 3.0});
 A: はい、提供されているベースクラスを継承してカスタムコンポーネントを実装できます。
 
 #### Q: GPUサポートはありますか？
-A: はい、CUDA加速による完全なGPUサポートを提供しています。GPU使用不可時は自動的にCPUにフォールバックします。
+A: はい、NVIDIA CUDA、AMD ROCm、Intel oneAPI、Apple Metalの包括的なマルチGPUサポートを提供しています。ライブラリはデフォルトで全GPUベンダーに対応し、GPU使用不可時は自動的にCPUにフォールバックします。
 
 #### Q: 大規模なデータセットを処理できますか？
 A: はい、効率的なメモリ管理とバッチ処理に対応しています。

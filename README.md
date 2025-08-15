@@ -18,7 +18,7 @@ A modern C++17 machine learning library designed for neural network training and
 - **🧠 Neural Networks**: Sequential models with customizable architectures
 - **📊 Layers**: Dense (fully connected), ReLU, Sigmoid, Tanh activation functions  
 - **🎯 Training**: MSE loss function with SGD optimizer
-- **� GPU Support**: CUDA acceleration with automatic CPU fallback
+- **🎯 Multi-GPU Support**: NVIDIA CUDA, AMD ROCm, Intel oneAPI, Apple Metal with automatic detection
 - **�💾 Model I/O**: Save/load models in binary, JSON, and config formats
 - **📁 Auto Directory**: Automatic directory creation with `mkdir -p` functionality
 - **🔧 Type Safety**: Enum-based format specification for improved reliability
@@ -239,30 +239,46 @@ make clean
 make install-tools
 ```
 
-## � GPU Support
+## 🎯 GPU Support
 
-MLLib provides comprehensive GPU acceleration with automatic CPU fallback:
+MLLib provides comprehensive multi-GPU vendor support with automatic detection and fallback:
 
 ### Features
 
-- **🖥️ Automatic Detection**: GPU availability detection at runtime
-- **🔄 CPU Fallback**: Seamless CPU execution when GPU unavailable
-- **⚠️ User Warnings**: Informative messages about GPU status
+- **🌍 Multi-Vendor**: NVIDIA CUDA, AMD ROCm, Intel oneAPI, Apple Metal
+- **🔄 Auto Detection**: Runtime GPU detection and selection
+- **💪 Default Support**: All GPU vendors enabled by default (library design)
+- **�️ CPU Fallback**: Seamless CPU execution when GPU unavailable
+- **⚠️ Smart Warnings**: Informative messages about GPU status
 - **🧪 Full Testing**: 145 GPU assertions across unit and integration tests
 
-### GPU Build
+### Supported GPU Vendors
+
+| Vendor | API | Hardware Support |
+|--------|-----|------------------|
+| **NVIDIA** | CUDA, cuBLAS | GeForce, Quadro, Tesla, RTX |
+| **AMD** | ROCm, HIP, hipBLAS | Radeon Instinct, Radeon Pro |
+| **Intel** | oneAPI, SYCL, oneMKL | Arc, Iris Xe, UHD Graphics |
+| **Apple** | Metal, MPS | M1, M1 Pro/Max/Ultra, M2 |
+
+### GPU Build Options
 
 ```bash
-# Build with CUDA support (auto-detected)
-make WITH_CUDA=1
+# Default build (all GPU vendors enabled)
+make
 
-# GPU-specific testing
-make unit-test WITH_CUDA=1
-make integration-test WITH_CUDA=1
+# Disable specific GPU support
+make DISABLE_CUDA=1           # Disable NVIDIA CUDA
+make DISABLE_ROCM=1           # Disable AMD ROCm
+make DISABLE_ONEAPI=1         # Disable Intel oneAPI
+make DISABLE_METAL=1          # Disable Apple Metal
 
-# Check GPU status
-nvidia-smi
-nvcc --version
+# CPU-only build
+make DISABLE_CUDA=1 DISABLE_ROCM=1 DISABLE_ONEAPI=1 DISABLE_METAL=1
+
+# GPU testing with environment control
+FORCE_CPU_ONLY=1 make test    # Force CPU-only testing
+GPU_SIMULATION=1 make test    # Enable GPU simulation mode
 ```
 
 ### Usage
@@ -270,31 +286,47 @@ nvcc --version
 ```cpp
 #include "MLLib.hpp"
 
-using namespace MLLib;
-
-// Create GPU device (falls back to CPU if unavailable)
-auto device = Device::create("gpu");
-
-if (device->is_available()) {
-    std::cout << "Using GPU: " << device->get_name() << std::endl;
-} else {
-    std::cout << "GPU unavailable, using CPU fallback" << std::endl;
+int main() {
+    MLLib::model::Sequential model;
+    
+    // Set GPU device (automatic vendor detection)
+    model.set_device(MLLib::DeviceType::GPU);
+    // Library outputs: ✅ GPU device successfully configured
+    // Or warnings: ⚠️ WARNING: GPU device requested but no GPU found!
+    
+    // Build neural network
+    model.add_layer(new MLLib::layer::Dense(784, 128));
+    model.add_layer(new MLLib::layer::activation::ReLU());
+    model.add_layer(new MLLib::layer::Dense(128, 10));
+    
+    // Training automatically uses optimal GPU
+    model.train(train_X, train_Y, loss, optimizer);
+    
+    return 0;
 }
-
-// Models automatically use the best available device
-Sequential model;
-model.add_layer(std::make_shared<Dense>(784, 128));
-model.add_layer(std::make_shared<Dense>(128, 10));
-
-// Training works seamlessly on GPU or CPU
-// ... training code ...
 ```
 
-### GPU CI Testing
+### GPU Status Check
 
-See [GPU CI Setup Guide](docs/GPU_CI_SETUP.md) for complete CI configuration.
+```cpp
+// Check GPU availability
+if (MLLib::Device::isGPUAvailable()) {
+    // Display detected GPUs
+    auto gpus = MLLib::Device::detectGPUs();
+    for (const auto& gpu : gpus) {
+        std::cout << "GPU: " << gpu.name 
+                  << " (" << gpu.api_support << ")" << std::endl;
+    }
+}
+```
 
-## �📚 Documentation
+### GPU Documentation
+
+- **📖 [Multi-GPU Support Guide (English)](docs/MULTI_GPU_SUPPORT_en.md)**
+- **📖 [マルチGPUサポートガイド (日本語)](docs/MULTI_GPU_SUPPORT_ja.md)**
+- **⚙️ [GPU CI Setup Guide](docs/GPU_CI_SETUP_en.md)**
+
+## 📚 Documentation
 
 Comprehensive documentation is available in the [`docs/`](docs/) directory:
 
