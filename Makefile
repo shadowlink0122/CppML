@@ -504,6 +504,11 @@ samples: $(LIB_TARGET)
 		fi; \
 	fi
 
+# Examples alias for samples (for compatibility)
+.PHONY: examples
+examples: samples
+	@echo "✅ Examples built (alias for samples)"
+
 # Build and run XOR sample
 .PHONY: xor
 xor: samples

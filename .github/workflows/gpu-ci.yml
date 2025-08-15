@@ -789,11 +789,11 @@ jobs:
       run: |
         echo "🧪 Testing multi-GPU vendor detection..."
         
-        if [ -f build/examples/gpu_vendor_detection ]; then
+        if [ -f build/samples/gpu_vendor_detection ]; then
           echo "✅ Running GPU vendor detection demo:"
-          ./build/examples/gpu_vendor_detection || echo "⚠️ Demo completed with warnings"
+          ./build/samples/gpu_vendor_detection || echo "⚠️ Demo completed with warnings"
         else
-          echo "❌ GPU vendor detection example not built"
+          echo "❌ GPU vendor detection sample not built"
           exit 1
         fi
         
