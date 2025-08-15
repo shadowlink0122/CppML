@@ -16,15 +16,8 @@ namespace cuda {
 
 // Initialize CUDA context and cuBLAS (stub)
 void cuda_init() {
-  // Check if we're in simulation mode
-  const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
-  if (sim_mode && std::string(sim_mode) == "1") {
-    printf("CUDA simulation mode initialized successfully\n");
-  } else {
-    // This should not be called when CUDA is not available
-    std::cerr << "Warning: cuda_init() called without CUDA support"
-              << std::endl;
-  }
+  // Stub implementation - no actual CUDA initialization
+  printf("CUDA stub initialized (no GPU hardware available)\n");
 }
 
 // Cleanup CUDA context (stub)
@@ -34,13 +27,7 @@ void cuda_cleanup() {
 
 // Check if CUDA is available (stub)
 bool cuda_is_available() {
-  // Check for GPU simulation mode
-  const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
-  if (sim_mode && std::string(sim_mode) == "1") {
-    return true;  // Force GPU availability in simulation mode
-  }
-
-  // Without real CUDA, return false
+  // Stub implementation - always return false since no real CUDA
   return false;
 }
 

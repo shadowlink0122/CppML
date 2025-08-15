@@ -6,7 +6,16 @@
 
 MLLibのGPU実装は以下のテスト戦略を採用しています：
 
-1. **CPU Fallback Testing**: CPUでGPUの代替動作をテスト
+1. **CPU Famake clean
+make
+
+# GPUテストの実行（実行時検出）
+make unit-test
+make integration-test
+
+# GPU環境チェック
+nvidia-smi
+nvcc --versionting**: CPUでGPUの代替動作をテスト
 2. **GPU Simulation Testing**: CUDA環境をシミュレートしてテスト
 3. **GPU Hardware Testing**: 実際のGPUハードウェアでテスト（オプション）
 
@@ -121,13 +130,13 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 ### GPUテスト実行
 
 ```bash
-# GPU有効でビルド
+# ライブラリビルド（実行時GPU検出）
 make clean
-make WITH_CUDA=1
+make
 
-# GPUテスト実行
-make unit-test WITH_CUDA=1
-make integration-test WITH_CUDA=1
+# GPUテスト実行（実行時検出）
+make unit-test
+make integration-test
 
 # GPU環境確認
 nvidia-smi
@@ -172,7 +181,7 @@ cat /proc/driver/nvidia/version
 
 # ビルド詳細確認
 make clean
-make -d WITH_CUDA=1
+make -d
 
 # テスト詳細実行
 make unit-test VERBOSE=1

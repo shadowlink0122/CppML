@@ -37,18 +37,6 @@ std::string detectAppleGPUName();
 DeviceType Device::current_device_ = DeviceType::CPU;
 
 bool Device::isGPUAvailable() {
-  // Check for forced CPU-only mode first
-  const char* force_cpu = std::getenv("FORCE_CPU_ONLY");
-  if (force_cpu && std::string(force_cpu) == "1") {
-    return false;  // Force CPU-only mode for testing
-  }
-
-  // Check for GPU simulation mode
-  const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
-  if (sim_mode && std::string(sim_mode) == "1") {
-    return true;  // Force GPU availability in simulation mode
-  }
-
 #ifdef WITH_CUDA
   try {
     if (Backend::cuda::cuda_is_available()) {
@@ -163,37 +151,20 @@ bool Device::setDeviceWithValidation(DeviceType device, bool show_warnings) {
         printf("   Falling back to CPU device for computation.\n");
 
 #ifndef WITH_CUDA
-        // Check if we're in GPU simulation mode
-        const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
-        if (sim_mode && std::string(sim_mode) == "1") {
-          printf("   Note: GPU simulation mode should be active but failed.\n");
-          printf("   This may indicate a configuration issue.\n");
-        } else {
-          printf("   Note: MLLib was compiled without CUDA support.\n");
-          printf(
-              "   To enable GPU support, install CUDA and rebuild with: make clean && make all\n");
-        }
+        printf("   Note: MLLib was compiled without CUDA support.\n");
+        printf(
+            "   To enable GPU support, install CUDA and rebuild with: make clean && make all\n");
 #else
-        // Check if we're in GPU simulation mode
-        const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
-        if (sim_mode && std::string(sim_mode) == "1") {
-          printf("   Note: GPU simulation mode should be active but failed.\n");
-        } else {
-          printf("   Possible causes:\n");
-          printf("   - No NVIDIA GPU installed\n");
-          printf("   - CUDA driver not installed or incompatible\n");
-          printf("   - GPU is being used by another process\n");
-        }
+        printf("   Possible causes:\n");
+        printf("   - No NVIDIA GPU installed\n");
+        printf("   - CUDA driver not installed or incompatible\n");
+        printf("   - GPU is being used by another process\n");
 #endif
       }
       current_device_ = DeviceType::CPU;
       return false;
     } else {
-      // Check if we're in GPU simulation mode and show appropriate message
-      const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
-      if (sim_mode && std::string(sim_mode) == "1" && show_warnings) {
-        printf("✅ GPU simulation mode activated successfully\n");
-      } else if (show_warnings) {
+      if (show_warnings) {
         printf("✅ GPU device successfully configured\n");
       }
     }

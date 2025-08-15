@@ -318,9 +318,8 @@ make DISABLE_METAL=1          # Apple Metal無効化
 # CPUのみビルド
 make DISABLE_CUDA=1 DISABLE_ROCM=1 DISABLE_ONEAPI=1 DISABLE_METAL=1
 
-# 環境制御によるGPUテスト
+# CPUのみテスト
 FORCE_CPU_ONLY=1 make test    # CPUのみ強制テスト
-GPU_SIMULATION=1 make test    # GPUシミュレーションモード有効化
 ```
 
 ### 使用方法

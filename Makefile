@@ -27,8 +27,25 @@ DEBUG_FLAGS = -g -DDEBUG
 INCLUDE_FLAGS = -I$(INCLUDE_DIR)
 
 # Enable all GPU support by default for library usage
-# Users can control GPU usage at runtime
+# Users can control GPU usage at runtime via device detection
 CXXFLAGS += -DWITH_CUDA -DWITH_ROCM -DWITH_ONEAPI -DWITH_METAL
+
+# Optional: Disable specific GPU backends at compile time
+ifdef DISABLE_CUDA
+    CXXFLAGS := $(filter-out -DWITH_CUDA,$(CXXFLAGS))
+endif
+
+ifdef DISABLE_ROCM
+    CXXFLAGS := $(filter-out -DWITH_ROCM,$(CXXFLAGS))
+endif
+
+ifdef DISABLE_ONEAPI
+    CXXFLAGS := $(filter-out -DWITH_ONEAPI,$(CXXFLAGS))
+endif
+
+ifdef DISABLE_METAL
+    CXXFLAGS := $(filter-out -DWITH_METAL,$(CXXFLAGS))
+endif
 
 # Add CUDA flags if available
 ifeq ($(CUDA_AVAILABLE),true)
@@ -68,15 +85,13 @@ ifeq ($(METAL_AVAILABLE),true)
     LDFLAGS += -framework Metal -framework Foundation
 endif
 
-# CI environment detection
+# CI environment detection - disable problematic features
 ifdef CI
-    # In CI, disable problematic features
     METAL_AVAILABLE = false
     MM_FILES = 
     $(info CI mode detected - disabling Metal backend)
 endif
 
-# Also check for common CI environment variables
 ifneq ($(GITHUB_ACTIONS),)
     METAL_AVAILABLE = false
     MM_FILES = 
@@ -87,42 +102,6 @@ ifneq ($(GITLAB_CI),)
     METAL_AVAILABLE = false
     MM_FILES = 
     $(info GitLab CI detected - disabling Metal backend)
-endif
-ifdef DISABLE_CUDA
-    ifeq ($(DISABLE_CUDA),1)
-        CXXFLAGS := $(filter-out -DWITH_CUDA,$(CXXFLAGS))
-    endif
-endif
-
-ifdef DISABLE_ROCM
-    ifeq ($(DISABLE_ROCM),1)
-        CXXFLAGS := $(filter-out -DWITH_ROCM,$(CXXFLAGS))
-    endif
-endif
-
-ifdef DISABLE_ONEAPI
-    ifeq ($(DISABLE_ONEAPI),1)
-        CXXFLAGS := $(filter-out -DWITH_ONEAPI,$(CXXFLAGS))
-    endif
-endif
-
-ifdef DISABLE_METAL
-    ifeq ($(DISABLE_METAL),1)
-        CXXFLAGS := $(filter-out -DWITH_METAL,$(CXXFLAGS))
-    endif
-endif
-
-# Add GPU simulation flags if specified
-ifdef GPU_SIMULATION
-    CXXFLAGS += -DGPU_SIMULATION_MODE
-    CUDA_AVAILABLE = true
-    CXXFLAGS += -DWITH_CUDA
-    # Use standard system includes for simulation
-    INCLUDE_FLAGS += -I/usr/local/cuda/include
-    # Override Metal availability for simulation in CI
-    ifeq ($(shell uname),Linux)
-        METAL_AVAILABLE = false
-    endif
 endif
 
 # Find source files
@@ -145,20 +124,9 @@ ifeq ($(METAL_AVAILABLE),true)
     MM_FILES += src/MLLib/backend/gpu/metal_backend.mm
 endif
 
-# Add CUDA stub implementation when CUDA is not available but WITH_CUDA is requested
+# Add CUDA stub implementation when CUDA is not available but WITH_CUDA is enabled
 ifeq ($(CUDA_AVAILABLE),false)
-    # Only add stub once, regardless of multiple conditions
-    NEED_CUDA_STUB := false
-    ifneq ($(WITH_CUDA),)
-        ifeq ($(WITH_CUDA),1)
-            NEED_CUDA_STUB := true
-        endif
-    endif
-    ifdef GPU_SIMULATION
-        NEED_CUDA_STUB := true
-    endif
-    
-    ifeq ($(NEED_CUDA_STUB),true)
+    ifneq ($(findstring -DWITH_CUDA,$(CXXFLAGS)),)
         CPP_FILES += src/MLLib/backend/gpu/cuda_kernels_stub.cpp
     endif
 endif
@@ -388,7 +356,7 @@ unit-test: $(LIB_TARGET)
 		echo "Compiling unit test framework..."; \
 		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
 		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib"; \
-		if [ "$(CUDA_AVAILABLE)" = "true" ] || [ "$(WITH_CUDA)" = "1" ] || [ -n "$(GPU_SIMULATION)" ]; then \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
 			echo "Building with CUDA support for tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
 		fi; \
@@ -441,7 +409,7 @@ integration-test: $(LIB_TARGET)
 		echo "Compiling integration test framework..."; \
 		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
 		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(CPP_FILES)"; \
-		if [ "$(CUDA_AVAILABLE)" = "true" ] || [ "$(WITH_CUDA)" = "1" ] || [ -n "$(GPU_SIMULATION)" ]; then \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
 			echo "Building with CUDA support for tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
 		fi; \
@@ -556,18 +524,16 @@ model-format-test: samples
 		echo "❌ Model Format test not found"; \
 	fi
 
-# CI-specific build target
+# CI-specific build target - builds CPU-only version with all stubs
 .PHONY: ci-build
-ci-build: CI=1
-ci-build: GPU_SIMULATION=1
-ci-build: $(LIB_TARGET)
+ci-build: 
+	@$(MAKE) CI=1 $(LIB_TARGET)
 	@echo "✅ CI build completed successfully"
 
 # CI-specific test target
 .PHONY: ci-test
-ci-test: CI=1
-ci-test: GPU_SIMULATION=1
-ci-test: unit-test simple-integration-test
+ci-test: 
+	@$(MAKE) CI=1 unit-test simple-integration-test
 	@echo "✅ CI tests completed successfully"
 .PHONY: help
 help:
@@ -604,22 +570,21 @@ help:
 	@echo ""
 	@echo "GPU Configuration:"
 	@echo "  Default: All GPU backends enabled (CUDA, ROCm, oneAPI, Metal)"
-	@echo "  Users control GPU usage at runtime via API"
+	@echo "  GPU detection and usage controlled at runtime"
 	@echo ""
-	@echo "  DISABLE_CUDA=1    - Disable CUDA support"
-	@echo "  DISABLE_ROCM=1    - Disable AMD ROCm support" 
-	@echo "  DISABLE_ONEAPI=1  - Disable Intel oneAPI support"
-	@echo "  DISABLE_METAL=1   - Disable Apple Metal support"
-	@echo "  GPU_SIMULATION=1  - Enable GPU simulation mode"
+	@echo "  DISABLE_CUDA=1    - Disable CUDA support at compile time"
+	@echo "  DISABLE_ROCM=1    - Disable AMD ROCm support at compile time" 
+	@echo "  DISABLE_ONEAPI=1  - Disable Intel oneAPI support at compile time"
+	@echo "  DISABLE_METAL=1   - Disable Apple Metal support at compile time"
 	@echo ""
 	@echo "Usage Examples:"
-	@echo "  make                     - Build with all GPU support"
-	@echo "  make DISABLE_CUDA=1      - Build without CUDA"
-	@echo "  make ci-build            - Build for CI (no Metal, GPU simulation)"
+	@echo "  make                     - Build with all GPU support (runtime detection)"
+	@echo "  make DISABLE_CUDA=1      - Build without CUDA backend"
+	@echo "  make ci-build            - Build for CI (CPU-only with stubs)"
 	@echo "  make ci-test             - Run tests in CI environment"
 	@echo "  make samples             - Build all sample programs"
 	@echo "  make xor                 - Run XOR sample (auto GPU detection)"
-	@echo "  make test                - Run tests with full GPU support"
+	@echo "  make test                - Run tests with runtime GPU detection"
 	@echo ""
 	@echo "Misc:"
 	@echo "  help         - Show this help message"

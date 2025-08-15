@@ -152,12 +152,6 @@ When GPU is successfully configured:
 FORCE_CPU_ONLY=1 ./your_program
 ```
 
-### GPU Simulation
-```bash
-# Simulate GPU environment
-GPU_SIMULATION_MODE=1 ./your_program
-```
-
 ## Performance Optimization
 
 ### Memory Management

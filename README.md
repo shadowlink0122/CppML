@@ -276,9 +276,8 @@ make DISABLE_METAL=1          # Disable Apple Metal
 # CPU-only build
 make DISABLE_CUDA=1 DISABLE_ROCM=1 DISABLE_ONEAPI=1 DISABLE_METAL=1
 
-# GPU testing with environment control
+# CPU-only testing
 FORCE_CPU_ONLY=1 make test    # Force CPU-only testing
-GPU_SIMULATION=1 make test    # Enable GPU simulation mode
 ```
 
 ### Usage

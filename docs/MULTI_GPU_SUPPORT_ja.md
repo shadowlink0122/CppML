@@ -152,12 +152,6 @@ GPUが正常に設定された場合：
 FORCE_CPU_ONLY=1 ./your_program
 ```
 
-### GPUシミュレーション
-```bash
-# GPU環境をシミュレート
-GPU_SIMULATION_MODE=1 ./your_program
-```
-
 ## パフォーマンスの最適化
 
 ### メモリ管理

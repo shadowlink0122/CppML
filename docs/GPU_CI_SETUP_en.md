@@ -123,11 +123,11 @@ export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
 ```bash
 # Build with GPU enabled
 make clean
-make WITH_CUDA=1
+make
 
-# Run GPU tests
-make unit-test WITH_CUDA=1
-make integration-test WITH_CUDA=1
+# Run GPU tests (runtime detection)
+make unit-test
+make integration-test
 
 # GPU environment check
 nvidia-smi
@@ -172,7 +172,7 @@ cat /proc/driver/nvidia/version
 
 # Detailed build check
 make clean
-make -d WITH_CUDA=1
+make -d
 
 # Detailed test execution
 make unit-test VERBOSE=1

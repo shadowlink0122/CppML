@@ -139,14 +139,7 @@ static cublasHandle_t cublas_handle = nullptr;
 void cuda_init() {
   if (cublas_handle == nullptr) {
     CUBLAS_CHECK(cublasCreate(&cublas_handle));
-
-    // Check if we're in simulation mode
-    const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
-    if (sim_mode && std::string(sim_mode) == "1") {
-      printf("CUDA simulation mode initialized successfully\n");
-    } else {
-      printf("CUDA context initialized successfully\n");
-    }
+    printf("CUDA context initialized successfully\n");
   }
 }
 
@@ -160,12 +153,6 @@ void cuda_cleanup() {
 
 // Check if CUDA is available
 bool cuda_is_available() {
-  // Check for GPU simulation mode
-  const char* sim_mode = std::getenv("GPU_SIMULATION_MODE");
-  if (sim_mode && std::string(sim_mode) == "1") {
-    return true;  // Force GPU availability in simulation mode
-  }
-
   int device_count;
   cudaError_t error = cudaGetDeviceCount(&device_count);
   return (error == cudaSuccess && device_count > 0);
