@@ -141,12 +141,10 @@ protected:
      * @param actual Actual value
      * @param message Error message if assertion fails
      */
-template<typename T>
-void assertEqual(const T& expected, const T& actual, const std::string& message);
+    template<typename T>
+    void assertEqual(const T& expected, const T& actual, const std::string& message);
 
-// Specialized template declarations for non-numeric types
-template<>
-void assertEqual<std::string>(const std::string& expected, const std::string& actual, const std::string& message);    /**
+    /**
      * @brief Assert that two values are not equal
      * @param not_expected Value that should not match
      * @param actual Actual value
@@ -422,6 +420,10 @@ std::string createTempDirectory();
 void removeTempDirectory(const std::string& path);
 bool fileExists(const std::string& path);
 bool directoryExists(const std::string& path);
+
+// Template specializations (must be outside the class)
+template<>
+void TestCase::assertEqual<std::string>(const std::string& expected, const std::string& actual, const std::string& message);
 
 } // namespace test
 } // namespace MLLib
