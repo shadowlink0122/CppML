@@ -1,6 +1,7 @@
 #include "../../../include/MLLib/model/sequential.hpp"
 #include "../../../include/MLLib/layer/dense.hpp"
 #include <algorithm>
+#include <initializer_list>
 #include <iostream>
 #include <stdexcept>
 
@@ -75,6 +76,11 @@ std::vector<double> Sequential::predict(const std::vector<double>& input) {
   }
 
   return result;
+}
+
+std::vector<double> Sequential::predict(std::initializer_list<double> input) {
+  std::vector<double> input_vector(input);
+  return predict(input_vector);
 }
 
 void Sequential::train(const std::vector<std::vector<double>>& X,

@@ -5,6 +5,7 @@
 #include "../loss/base.hpp"
 #include "../optimizer/base.hpp"
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <vector>
 
@@ -76,6 +77,13 @@ public:
    * @return Output vector
    */
   std::vector<double> predict(const std::vector<double>& input);
+
+  /**
+   * @brief Predict from initializer list (convenience method)
+   * @param input Input as initializer list (e.g., {1.0, 2.0, 3.0})
+   * @return Output vector
+   */
+  std::vector<double> predict(std::initializer_list<double> input);
 
   /**
    * @brief Train the model
