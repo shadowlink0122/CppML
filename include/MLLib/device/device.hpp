@@ -39,10 +39,22 @@ public:
    * @brief Check if GPU is available
    * @return true if GPU is available, false otherwise
    */
-  static bool isGPUAvailable() {
-    // Future implementation
-    return false;
-  }
+  static bool isGPUAvailable();
+
+  /**
+   * @brief Set current device type with validation
+   * @param device Device type to set
+   * @param show_warnings Whether to show warning messages
+   * @return true if device was set successfully, false if fallback occurred
+   */
+  static bool setDeviceWithValidation(DeviceType device, bool show_warnings = true);
+
+  /**
+   * @brief Get device type as string
+   * @param device Device type
+   * @return Device type as string
+   */
+  static const char* getDeviceTypeString(DeviceType device);
 
 private:
   static DeviceType current_device_;

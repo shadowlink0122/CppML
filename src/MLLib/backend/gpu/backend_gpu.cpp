@@ -1,25 +1,126 @@
 #include "../../../../include/MLLib/backend/backend.hpp"
 #include "../../../../include/MLLib/ndarray.hpp"
 #include <stdexcept>
+#include <iostream>
+
+#ifdef WITH_CUDA
+#include "cuda_kernels.hpp"
+#endif
 
 /**
  * @file backend_gpu.cpp
  * @brief GPU backend implementation for MLLib
  * 
- * Note: This is a foundational GPU implementation that currently uses 
- * CPU-like algorithms as placeholders. In a production implementation, 
- * these would be replaced with:
- * - CUDA kernels for NVIDIA GPUs
- * - OpenCL kernels for cross-platform GPU support
- * - Metal shaders for Apple GPUs
- * - Compute shaders for DirectX/Vulkan
+ * This implementation uses CUDA when available, with automatic fallback
+ * to CPU implementation when CUDA is not available or initialization fails.
  * 
- * The current implementation provides the correct interface and behavior
- * while serving as a foundation for future GPU-specific optimizations.
+ * Features:
+ * - CUDA kernels for high-performance GPU computation
+ * - cuBLAS integration for optimized matrix operations
+ * - Automatic CUDA availability detection
+ * - Graceful fallback to CPU when needed
+ * - Comprehensive error handling and memory management
  */
 
 namespace MLLib {
 namespace backend {
+
+// Forward declarations for CPU fallback functions
+void cpu_matmul_impl(const double* a_data, const double* b_data, double* result_data,
+                     size_t m, size_t k, size_t n);
+void cpu_add_impl(const double* a_data, const double* b_data, double* result_data, size_t size);
+void cpu_subtract_impl(const double* a_data, const double* b_data, double* result_data, size_t size);
+void cpu_multiply_impl(const double* a_data, const double* b_data, double* result_data, size_t size);
+void cpu_add_scalar_impl(const double* a_data, double scalar, double* result_data, size_t size);
+void cpu_multiply_scalar_impl(const double* a_data, double scalar, double* result_data, size_t size);
+void cpu_fill_impl(double* data, double value, size_t size);
+void cpu_copy_impl(const double* src_data, double* dst_data, size_t size);
+
+// Helper function to check CUDA availability and handle fallback
+bool use_cuda() {
+    static bool cuda_checked = false;
+    static bool cuda_available = false;
+    
+    if (!cuda_checked) {
+#ifdef WITH_CUDA
+        try {
+            cuda_available = cuda::cuda_is_available();
+            if (cuda_available) {
+                cuda::cuda_init();
+                std::cout << "GPU backend: CUDA initialized successfully" << std::endl;
+            } else {
+                std::cout << "GPU backend: CUDA not available, using CPU fallback" << std::endl;
+            }
+        } catch (const std::exception& e) {
+            std::cout << "GPU backend: CUDA initialization failed (" << e.what() 
+                      << "), using CPU fallback" << std::endl;
+            cuda_available = false;
+        }
+#else
+        std::cout << "GPU backend: Compiled without CUDA support, using CPU fallback" << std::endl;
+        cuda_available = false;
+#endif
+        cuda_checked = true;
+    }
+    
+    return cuda_available;
+}
+
+// CPU implementation helpers
+void cpu_matmul_impl(const double* a_data, const double* b_data, double* result_data,
+                     size_t m, size_t k, size_t n) {
+    for (size_t i = 0; i < m; ++i) {
+        for (size_t j = 0; j < n; ++j) {
+            double sum = 0.0;
+            for (size_t l = 0; l < k; ++l) {
+                sum += a_data[i * k + l] * b_data[l * n + j];
+            }
+            result_data[i * n + j] = sum;
+        }
+    }
+}
+
+void cpu_add_impl(const double* a_data, const double* b_data, double* result_data, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        result_data[i] = a_data[i] + b_data[i];
+    }
+}
+
+void cpu_subtract_impl(const double* a_data, const double* b_data, double* result_data, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        result_data[i] = a_data[i] - b_data[i];
+    }
+}
+
+void cpu_multiply_impl(const double* a_data, const double* b_data, double* result_data, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        result_data[i] = a_data[i] * b_data[i];
+    }
+}
+
+void cpu_add_scalar_impl(const double* a_data, double scalar, double* result_data, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        result_data[i] = a_data[i] + scalar;
+    }
+}
+
+void cpu_multiply_scalar_impl(const double* a_data, double scalar, double* result_data, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        result_data[i] = a_data[i] * scalar;
+    }
+}
+
+void cpu_fill_impl(double* data, double value, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        data[i] = value;
+    }
+}
+
+void cpu_copy_impl(const double* src_data, double* dst_data, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        dst_data[i] = src_data[i];
+    }
+}
 
 // GPU matrix multiplication implementation
 void Backend::gpu_matmul(const NDArray& a, const NDArray& b, NDArray& result) {
@@ -41,22 +142,24 @@ void Backend::gpu_matmul(const NDArray& a, const NDArray& b, NDArray& result) {
     result = NDArray({m, n});
   }
 
-  // TODO: Implement actual GPU computation using CUDA/OpenCL
-  // For now, use CPU implementation as fallback
   const double* a_data = a.data();
   const double* b_data = b.data();
   double* result_data = result.data();
 
-  // Basic parallel-like implementation (could be optimized with actual GPU kernels)
-  for (size_t i = 0; i < m; ++i) {
-    for (size_t j = 0; j < n; ++j) {
-      double sum = 0.0;
-      for (size_t l = 0; l < k; ++l) {
-        sum += a_data[i * k + l] * b_data[l * n + j];
-      }
-      result_data[i * n + j] = sum;
+  if (use_cuda()) {
+#ifdef WITH_CUDA
+    try {
+      cuda::cuda_matmul(a_data, b_data, result_data, 
+                        static_cast<int>(m), static_cast<int>(n), static_cast<int>(k));
+      return;
+    } catch (const std::exception& e) {
+      std::cout << "GPU matmul failed, falling back to CPU: " << e.what() << std::endl;
     }
+#endif
   }
+  
+  // CPU fallback
+  cpu_matmul_impl(a_data, b_data, result_data, m, k, n);
 }
 
 // GPU element-wise addition
@@ -72,11 +175,21 @@ void Backend::gpu_add(const NDArray& a, const NDArray& b, NDArray& result) {
   const double* a_data = a.data();
   const double* b_data = b.data();
   double* result_data = result.data();
+  size_t size = a.size();
 
-  // TODO: Implement GPU kernel for parallel addition
-  for (size_t i = 0; i < a.size(); ++i) {
-    result_data[i] = a_data[i] + b_data[i];
+  if (use_cuda()) {
+#ifdef WITH_CUDA
+    try {
+      cuda::cuda_add(a_data, b_data, result_data, size);
+      return;
+    } catch (const std::exception& e) {
+      std::cout << "GPU add failed, falling back to CPU: " << e.what() << std::endl;
+    }
+#endif
   }
+  
+  // CPU fallback
+  cpu_add_impl(a_data, b_data, result_data, size);
 }
 
 // GPU element-wise subtraction
@@ -93,11 +206,21 @@ void Backend::gpu_subtract(const NDArray& a, const NDArray& b,
   const double* a_data = a.data();
   const double* b_data = b.data();
   double* result_data = result.data();
+  size_t size = a.size();
 
-  // TODO: Implement GPU kernel for parallel subtraction
-  for (size_t i = 0; i < a.size(); ++i) {
-    result_data[i] = a_data[i] - b_data[i];
+  if (use_cuda()) {
+#ifdef WITH_CUDA
+    try {
+      cuda::cuda_subtract(a_data, b_data, result_data, size);
+      return;
+    } catch (const std::exception& e) {
+      std::cout << "GPU subtract failed, falling back to CPU: " << e.what() << std::endl;
+    }
+#endif
   }
+  
+  // CPU fallback
+  cpu_subtract_impl(a_data, b_data, result_data, size);
 }
 
 // GPU element-wise multiplication
@@ -114,11 +237,21 @@ void Backend::gpu_multiply(const NDArray& a, const NDArray& b,
   const double* a_data = a.data();
   const double* b_data = b.data();
   double* result_data = result.data();
+  size_t size = a.size();
 
-  // TODO: Implement GPU kernel for parallel multiplication
-  for (size_t i = 0; i < a.size(); ++i) {
-    result_data[i] = a_data[i] * b_data[i];
+  if (use_cuda()) {
+#ifdef WITH_CUDA
+    try {
+      cuda::cuda_multiply(a_data, b_data, result_data, size);
+      return;
+    } catch (const std::exception& e) {
+      std::cout << "GPU multiply failed, falling back to CPU: " << e.what() << std::endl;
+    }
+#endif
   }
+  
+  // CPU fallback
+  cpu_multiply_impl(a_data, b_data, result_data, size);
 }
 
 // GPU scalar addition
@@ -129,11 +262,21 @@ void Backend::gpu_add_scalar(const NDArray& a, double scalar, NDArray& result) {
 
   const double* a_data = a.data();
   double* result_data = result.data();
+  size_t size = a.size();
 
-  // TODO: Implement GPU kernel for parallel scalar addition
-  for (size_t i = 0; i < a.size(); ++i) {
-    result_data[i] = a_data[i] + scalar;
+  if (use_cuda()) {
+#ifdef WITH_CUDA
+    try {
+      cuda::cuda_add_scalar(a_data, scalar, result_data, size);
+      return;
+    } catch (const std::exception& e) {
+      std::cout << "GPU add_scalar failed, falling back to CPU: " << e.what() << std::endl;
+    }
+#endif
   }
+  
+  // CPU fallback
+  cpu_add_scalar_impl(a_data, scalar, result_data, size);
 }
 
 // GPU scalar multiplication
@@ -145,21 +288,41 @@ void Backend::gpu_multiply_scalar(const NDArray& a, double scalar,
 
   const double* a_data = a.data();
   double* result_data = result.data();
+  size_t size = a.size();
 
-  // TODO: Implement GPU kernel for parallel scalar multiplication
-  for (size_t i = 0; i < a.size(); ++i) {
-    result_data[i] = a_data[i] * scalar;
+  if (use_cuda()) {
+#ifdef WITH_CUDA
+    try {
+      cuda::cuda_multiply_scalar(a_data, scalar, result_data, size);
+      return;
+    } catch (const std::exception& e) {
+      std::cout << "GPU multiply_scalar failed, falling back to CPU: " << e.what() << std::endl;
+    }
+#endif
   }
+  
+  // CPU fallback
+  cpu_multiply_scalar_impl(a_data, scalar, result_data, size);
 }
 
 // GPU fill array
 void Backend::gpu_fill(NDArray& array, double value) {
   double* data = array.data();
+  size_t size = array.size();
   
-  // TODO: Implement GPU kernel for parallel fill
-  for (size_t i = 0; i < array.size(); ++i) {
-    data[i] = value;
+  if (use_cuda()) {
+#ifdef WITH_CUDA
+    try {
+      cuda::cuda_fill(data, value, size);
+      return;
+    } catch (const std::exception& e) {
+      std::cout << "GPU fill failed, falling back to CPU: " << e.what() << std::endl;
+    }
+#endif
   }
+  
+  // CPU fallback
+  cpu_fill_impl(data, value, size);
 }
 
 // GPU copy array
@@ -170,11 +333,21 @@ void Backend::gpu_copy(const NDArray& src, NDArray& dst) {
 
   const double* src_data = src.data();
   double* dst_data = dst.data();
+  size_t size = src.size();
 
-  // TODO: Implement GPU kernel for parallel copy
-  for (size_t i = 0; i < src.size(); ++i) {
-    dst_data[i] = src_data[i];
+  if (use_cuda()) {
+#ifdef WITH_CUDA
+    try {
+      cuda::cuda_copy(src_data, dst_data, size);
+      return;
+    } catch (const std::exception& e) {
+      std::cout << "GPU copy failed, falling back to CPU: " << e.what() << std::endl;
+    }
+#endif
   }
+  
+  // CPU fallback
+  cpu_copy_impl(src_data, dst_data, size);
 }
 
 }  // namespace backend

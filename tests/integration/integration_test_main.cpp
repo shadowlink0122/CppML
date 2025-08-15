@@ -4,6 +4,7 @@
 
 // Hierarchical integration tests
 #include "MLLib/backend/test_backend_integration.hpp"
+#include "MLLib/backend/test_gpu_integration.hpp"
 #include "MLLib/data/test_data_integration.hpp"
 #include "MLLib/device/test_device_integration.hpp"
 #include "MLLib/layer/activation/test_activation_integration.hpp"
@@ -483,6 +484,18 @@ int main() {
         std::make_unique<BackendPerformanceIntegrationTest>());
 
     bool suite_result = backend_suite.runAll();
+    all_tests_passed &= suite_result;
+  }
+
+  // GPU Backend integration tests
+  {
+    TestSuite gpu_backend_suite("GPU Backend Integration Tests");
+    gpu_backend_suite.addTest(std::make_unique<GPUCPUFallbackIntegrationTest>());
+    gpu_backend_suite.addTest(std::make_unique<GPUModelComplexityIntegrationTest>());
+    gpu_backend_suite.addTest(std::make_unique<GPUMemoryIntegrationTest>());
+    gpu_backend_suite.addTest(std::make_unique<GPUCrossDeviceIntegrationTest>());
+
+    bool suite_result = gpu_backend_suite.runAll();
     all_tests_passed &= suite_result;
   }
 

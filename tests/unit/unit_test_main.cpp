@@ -5,6 +5,7 @@
 #include "MLLib/model/test_sequential.hpp"
 #include "MLLib/test_config.hpp"
 #include "MLLib/test_ndarray.hpp"
+#include "MLLib/backend/test_gpu_backend.hpp"
 #include <chrono>
 #include <iomanip>
 
@@ -76,6 +77,15 @@ int main() {
   // Sequential model tests
   std::cout << "\n--- Sequential Model Tests ---" << std::endl;
   runTest(std::make_unique<SequentialModelTests>());
+
+  // GPU backend tests
+  std::cout << "\n--- GPU Backend Tests ---" << std::endl;
+  runTest(std::make_unique<GPUAvailabilityTest>());
+  runTest(std::make_unique<GPUDeviceValidationTest>());
+  runTest(std::make_unique<GPUBackendOperationsTest>());
+  runTest(std::make_unique<GPUArrayOperationsTest>());
+  runTest(std::make_unique<GPUModelTest>());
+  runTest(std::make_unique<GPUPerformanceTest>());
 
   // Model I/O tests (temporarily disabled)
   // std::cout << "\n--- Model I/O Tests ---" << std::endl;

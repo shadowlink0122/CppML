@@ -13,11 +13,21 @@ TEST_DIR = tests
 EXAMPLE_DIR = examples
 SAMPLE_DIR = samples
 
+# Include CUDA configuration
+include cuda.mk
+
 # Compiler settings
 CXX = g++
 CXXFLAGS = -std=c++17 -Wall -Wextra -O2
 DEBUG_FLAGS = -g -DDEBUG
 INCLUDE_FLAGS = -I$(INCLUDE_DIR)
+
+# Add CUDA flags if available
+ifeq ($(CUDA_AVAILABLE),true)
+    CXXFLAGS += -DWITH_CUDA
+    INCLUDE_FLAGS += $(CUDA_INCLUDE)
+    LDFLAGS += $(CUDA_LIBS)
+endif
 
 # Find source files
 CPP_FILES = $(shell find $(SRC_DIR) -name "*.cpp" 2>/dev/null || true)
@@ -44,13 +54,23 @@ $(BUILD_DIR):
 # Build static library
 $(LIB_TARGET): $(BUILD_DIR)
 	@echo "Building $(PROJECT_NAME) library..."
+	@echo $(CUDA_MESSAGE)
 	@echo "Source files found: $(CPP_FILES)"
+	@echo "CUDA files found: $(CUDA_FILES)"
 	@echo "Header files found: $(HPP_FILES)"
-	@if [ -n "$(CPP_FILES)" ]; then \
+	@if [ -n "$(CPP_FILES)" ] || [ -n "$(CUDA_FILES)" ]; then \
 		echo "Compiling source files..."; \
 		echo "Compiler: $(CXX)"; \
 		echo "Flags: $(CXXFLAGS) $(INCLUDE_FLAGS)"; \
 		if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(CPP_FILES) 2>&1; then \
+			if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+				echo "Compiling CUDA files..."; \
+				for cu_file in $(CUDA_FILES); do \
+					obj_file=$$(basename $$cu_file .cu).o; \
+					echo "  nvcc $$cu_file -> $$obj_file"; \
+					$(NVCC) $(NVCC_FLAGS) $(INCLUDE_FLAGS) $(CUDA_INCLUDE) -c $$cu_file -o $$obj_file; \
+				done; \
+			fi; \
 			echo "Creating static library..."; \
 			if ar rcs $(LIB_TARGET) *.o 2>&1; then \
 				rm -f *.o; \
