@@ -12,7 +12,7 @@
 #include <string>
 
 namespace MLLib {
-namespace backend {
+namespace Backend {
 namespace cuda {
 
 // Error checking macro
@@ -452,5 +452,5 @@ void cuda_copy(const double* h_src, double* h_dst, size_t size) {
 }
 
 }  // namespace cuda
-}  // namespace backend
+}  // namespace Backend
 }  // namespace MLLib

@@ -3,6 +3,8 @@
 #include <iostream>
 #include <stdexcept>
 
+using namespace std;
+
 #ifdef WITH_CUDA
 #include "cuda_kernels.hpp"
 #endif
@@ -23,7 +25,7 @@
  */
 
 namespace MLLib {
-namespace backend {
+namespace Backend {
 
 // Forward declarations for CPU fallback functions
 void cpu_matmul_impl(const double* a_data, const double* b_data,
@@ -371,5 +373,5 @@ void Backend::gpu_copy(const NDArray& src, NDArray& dst) {
   cpu_copy_impl(src_data, dst_data, size);
 }
 
-}  // namespace backend
+}  // namespace Backend
 }  // namespace MLLib

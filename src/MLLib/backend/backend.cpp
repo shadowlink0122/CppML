@@ -1,8 +1,19 @@
 #include "../../../include/MLLib/backend/backend.hpp"
 #include "../../../include/MLLib/device/device.hpp"
+#include <vector>
 
 namespace MLLib {
-namespace backend {
+namespace Backend {
+
+// Forward declarations for CPU/GPU functions
+void cpu_matmul(const NDArray& a, const NDArray& b, NDArray& result);
+void cpu_add(const NDArray& a, const NDArray& b, NDArray& result);
+void cpu_subtract(const NDArray& a, const NDArray& b, NDArray& result);
+void cpu_multiply(const NDArray& a, const NDArray& b, NDArray& result);
+void cpu_add_scalar(const NDArray& a, double scalar, NDArray& result);
+void cpu_multiply_scalar(const NDArray& a, double scalar, NDArray& result);
+void cpu_fill(NDArray& array, double value);
+void cpu_copy(const NDArray& src, NDArray& dst);
 
 void Backend::matmul(const NDArray& a, const NDArray& b, NDArray& result) {
   switch (Device::getCurrentDevice()) {
@@ -69,5 +80,21 @@ void Backend::copy(const NDArray& src, NDArray& dst) {
   }
 }
 
-}  // namespace backend
+GPUBackendType Backend::getCurrentGPUBackend() {
+  // Stub implementation - return NONE for now
+  return GPUBackendType::NONE;
+}
+
+std::vector<GPUBackendType> Backend::getAvailableGPUBackends() {
+  // Stub implementation - return empty vector for now
+  return std::vector<GPUBackendType>();
+}
+
+bool Backend::setPreferredGPUBackend(GPUBackendType backend) {
+  // Stub implementation - return false for now
+  (void)backend;  // Suppress unused parameter warning
+  return false;
+}
+
+}  // namespace Backend
 }  // namespace MLLib

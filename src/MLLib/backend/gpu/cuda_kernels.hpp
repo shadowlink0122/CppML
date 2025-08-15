@@ -8,7 +8,7 @@
 #include <cstddef>
 
 namespace MLLib {
-namespace backend {
+namespace Backend {
 namespace cuda {
 
 /**
@@ -113,5 +113,5 @@ void cuda_fill(double* h_array, double value, size_t size);
 void cuda_copy(const double* h_src, double* h_dst, size_t size);
 
 }  // namespace cuda
-}  // namespace backend
+}  // namespace Backend
 }  // namespace MLLib
