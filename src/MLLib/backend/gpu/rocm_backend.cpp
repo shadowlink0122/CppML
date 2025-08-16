@@ -5,18 +5,21 @@
 
 #ifdef WITH_ROCM
 
+// Check if ROCm headers are available
+#ifdef __has_include
+#if __has_include(<hip/hip_runtime.h>) && __has_include(<hipblas.h>)
+#define ROCM_HEADERS_AVAILABLE
+#endif
+#endif
+
+#ifdef ROCM_HEADERS_AVAILABLE
 #include "../../../../include/MLLib/backend/rocm_backend.hpp"
-#include <algorithm>
-#include <cmath>
-#include <cstdlib>
-#include <cstring>
-#include <iostream>
+#include <cstdio>
 #include <stdexcept>
 
 namespace MLLib {
 namespace Backend {
 
-#if HIP_AVAILABLE
 hipblasHandle_t ROCmBackend::hipblas_handle_ = nullptr;
 bool ROCmBackend::initialized_ = false;
 
@@ -27,36 +30,38 @@ bool ROCmBackend::isAvailable() {
 }
 
 void ROCmBackend::initialize() {
-  if (!initialized_) {
-    hipError_t error = hipInit(0);
-    if (error != hipSuccess) {
-      throw std::runtime_error("Failed to initialize HIP");
-    }
+  if (initialized_) return;
 
-    hipblasStatus_t status = hipblasCreate(&hipblas_handle_);
-    if (status != HIPBLAS_STATUS_SUCCESS) {
-      throw std::runtime_error("Failed to create hipBLAS handle");
-    }
-
-    initialized_ = true;
-    printf("ROCm backend initialized successfully\n");
+  hipError_t hip_status = hipInit(0);
+  if (hip_status != hipSuccess) {
+    throw std::runtime_error("Failed to initialize HIP runtime");
   }
+
+  hipblasStatus_t status = hipblasCreate(&hipblas_handle_);
+  if (status != HIPBLAS_STATUS_SUCCESS) {
+    throw std::runtime_error("Failed to create hipBLAS handle");
+  }
+
+  initialized_ = true;
+  printf("ROCm backend initialized successfully\n");
 }
 
 void ROCmBackend::cleanup() {
-  if (initialized_ && hipblas_handle_) {
+  if (!initialized_) return;
+
+  if (hipblas_handle_) {
     hipblasDestroy(hipblas_handle_);
     hipblas_handle_ = nullptr;
-    initialized_ = false;
-    printf("ROCm backend cleaned up\n");
   }
+
+  initialized_ = false;
 }
 
 void* ROCmBackend::allocateMemory(size_t size) {
-  void* ptr;
+  void* ptr = nullptr;
   hipError_t error = hipMalloc(&ptr, size);
   if (error != hipSuccess) {
-    throw std::runtime_error("Failed to allocate HIP memory");
+    throw std::runtime_error("Failed to allocate device memory");
   }
   return ptr;
 }
@@ -70,75 +75,115 @@ void ROCmBackend::deallocateMemory(void* ptr) {
 void ROCmBackend::copyToDevice(void* dst, const void* src, size_t size) {
   hipError_t error = hipMemcpy(dst, src, size, hipMemcpyHostToDevice);
   if (error != hipSuccess) {
-    throw std::runtime_error("Failed to copy to device");
+    throw std::runtime_error("Failed to copy data to device");
   }
 }
 
 void ROCmBackend::copyFromDevice(void* dst, const void* src, size_t size) {
   hipError_t error = hipMemcpy(dst, src, size, hipMemcpyDeviceToHost);
   if (error != hipSuccess) {
-    throw std::runtime_error("Failed to copy from device");
+    throw std::runtime_error("Failed to copy data from device");
   }
 }
 
 void ROCmBackend::copyDeviceToDevice(void* dst, const void* src, size_t size) {
   hipError_t error = hipMemcpy(dst, src, size, hipMemcpyDeviceToDevice);
   if (error != hipSuccess) {
-    throw std::runtime_error("Failed to copy device to device");
+    throw std::runtime_error("Failed to copy data between devices");
   }
 }
 
 void ROCmBackend::gemm(bool transposeA, bool transposeB, int m, int n, int k,
                        double alpha, const double* A, int lda, const double* B,
                        int ldb, double beta, double* C, int ldc) {
-  if (!initialized_) {
-    throw std::runtime_error("ROCm backend not initialized");
-  }
 
-  hipblasOperation_t transa = transposeA ? HIPBLAS_OP_T : HIPBLAS_OP_N;
-  hipblasOperation_t transb = transposeB ? HIPBLAS_OP_T : HIPBLAS_OP_N;
+  hipblasOperation_t opA = transposeA ? HIPBLAS_OP_T : HIPBLAS_OP_N;
+  hipblasOperation_t opB = transposeB ? HIPBLAS_OP_T : HIPBLAS_OP_N;
 
-  hipblasStatus_t status =
-      hipblasDgemm(hipblas_handle_, transa, transb, m, n, k, &alpha, A, lda, B,
-                   ldb, &beta, C, ldc);
+  hipblasStatus_t status = hipblasDgemm(hipblas_handle_, opA, opB, m, n, k,
+                                        &alpha, A, lda, B, ldb, &beta, C, ldc);
+
   if (status != HIPBLAS_STATUS_SUCCESS) {
-    throw std::runtime_error("hipBLAS GEMM failed");
+    throw std::runtime_error("hipBLAS GEMM operation failed");
+  }
+}
+
+// HIP kernel implementations
+__global__ void hip_relu_kernel(const double* input, double* output,
+                                size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    output[idx] = fmax(0.0, input[idx]);
+  }
+}
+
+__global__ void hip_sigmoid_kernel(const double* input, double* output,
+                                   size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    output[idx] = 1.0 / (1.0 + exp(-input[idx]));
+  }
+}
+
+__global__ void hip_tanh_kernel(const double* input, double* output,
+                                size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    output[idx] = tanh(input[idx]);
   }
 }
 
 void ROCmBackend::relu(const double* input, double* output, size_t size) {
-  // TODO: Implement HIP kernel for ReLU
-  for (size_t i = 0; i < size; ++i) {
-    output[i] = std::max(0.0, input[i]);
+  int threads_per_block = 256;
+  int blocks = (size + threads_per_block - 1) / threads_per_block;
+
+  hipLaunchKernelGGL(hip_relu_kernel, blocks, threads_per_block, 0, 0, input,
+                     output, size);
+
+  hipError_t error = hipGetLastError();
+  if (error != hipSuccess) {
+    throw std::runtime_error("HIP ReLU kernel launch failed");
   }
 }
 
 void ROCmBackend::sigmoid(const double* input, double* output, size_t size) {
-  // TODO: Implement HIP kernel for Sigmoid
-  for (size_t i = 0; i < size; ++i) {
-    output[i] = 1.0 / (1.0 + std::exp(-input[i]));
+  int threads_per_block = 256;
+  int blocks = (size + threads_per_block - 1) / threads_per_block;
+
+  hipLaunchKernelGGL(hip_sigmoid_kernel, blocks, threads_per_block, 0, 0, input,
+                     output, size);
+
+  hipError_t error = hipGetLastError();
+  if (error != hipSuccess) {
+    throw std::runtime_error("HIP Sigmoid kernel launch failed");
   }
 }
 
 void ROCmBackend::tanh_activation(const double* input, double* output,
                                   size_t size) {
-  // TODO: Implement HIP kernel for Tanh
-  for (size_t i = 0; i < size; ++i) {
-    output[i] = std::tanh(input[i]);
+  int threads_per_block = 256;
+  int blocks = (size + threads_per_block - 1) / threads_per_block;
+
+  hipLaunchKernelGGL(hip_tanh_kernel, blocks, threads_per_block, 0, 0, input,
+                     output, size);
+
+  hipError_t error = hipGetLastError();
+  if (error != hipSuccess) {
+    throw std::runtime_error("HIP Tanh kernel launch failed");
   }
 }
 
 void ROCmBackend::synchronize() {
   hipError_t error = hipDeviceSynchronize();
   if (error != hipSuccess) {
-    throw std::runtime_error("Failed to synchronize device");
+    throw std::runtime_error("Device synchronization failed");
   }
 }
 
 int ROCmBackend::getDeviceCount() {
-  int device_count = 0;
-  hipGetDeviceCount(&device_count);
-  return device_count;
+  int count = 0;
+  hipGetDeviceCount(&count);
+  return count;
 }
 
 void ROCmBackend::setDevice(int device) {
@@ -157,54 +202,81 @@ std::string ROCmBackend::getDeviceName(int device) {
   return std::string(prop.name);
 }
 
-#else
-// Stub implementation when HIP is not available
+}  // namespace Backend
+}  // namespace MLLib
+
+#else  // !ROCM_HEADERS_AVAILABLE
+
+// Stub implementation when ROCm headers are not available
+#include <cstdio>
+#include <cstdlib>
+#include <stdexcept>
+#include <string>
+
+// Forward declaration for ROCmBackend class
+namespace MLLib {
+namespace Backend {
+class ROCmBackend;
+}
+}  // namespace MLLib
+
+// Mock hipBLAS handle type
+typedef void* hipblasHandle_t;
+
+#include "../../../../include/MLLib/backend/rocm_backend.hpp"
+
+namespace MLLib {
+namespace Backend {
+
 hipblasHandle_t ROCmBackend::hipblas_handle_ = nullptr;
 bool ROCmBackend::initialized_ = false;
 
 bool ROCmBackend::isAvailable() {
-  printf("ROCm backend: HIP headers not available, ROCm not supported\n");
+  printf("ROCm backend: Headers not available, ROCm not supported\n");
   return false;
 }
 
 void ROCmBackend::initialize() {
-  printf("ROCm backend: Stub implementation - initialize called\n");
+  printf("ROCm backend: Headers not available, initialization skipped\n");
 }
 
 void ROCmBackend::cleanup() {
-  printf("ROCm backend: Stub implementation - cleanup called\n");
+  // Nothing to cleanup in stub mode
 }
 
 void* ROCmBackend::allocateMemory(size_t size) {
-  printf("ROCm backend: Stub implementation - allocateMemory called\n");
-  return malloc(size);
+  (void)size;  // Suppress unused parameter warning
+  throw std::runtime_error("ROCm backend not available");
 }
 
 void ROCmBackend::deallocateMemory(void* ptr) {
-  printf("ROCm backend: Stub implementation - deallocateMemory called\n");
-  free(ptr);
+  (void)ptr;  // Suppress unused parameter warning
 }
 
 void ROCmBackend::copyToDevice(void* dst, const void* src, size_t size) {
-  printf("ROCm backend: Stub implementation - copyToDevice called\n");
-  memcpy(dst, src, size);
+  (void)dst;
+  (void)src;
+  (void)size;
+  throw std::runtime_error("ROCm backend not available");
 }
 
 void ROCmBackend::copyFromDevice(void* dst, const void* src, size_t size) {
-  printf("ROCm backend: Stub implementation - copyFromDevice called\n");
-  memcpy(dst, src, size);
+  (void)dst;
+  (void)src;
+  (void)size;
+  throw std::runtime_error("ROCm backend not available");
 }
 
 void ROCmBackend::copyDeviceToDevice(void* dst, const void* src, size_t size) {
-  printf("ROCm backend: Stub implementation - copyDeviceToDevice called\n");
-  memcpy(dst, src, size);
+  (void)dst;
+  (void)src;
+  (void)size;
+  throw std::runtime_error("ROCm backend not available");
 }
 
 void ROCmBackend::gemm(bool transposeA, bool transposeB, int m, int n, int k,
                        double alpha, const double* A, int lda, const double* B,
                        int ldb, double beta, double* C, int ldc) {
-  printf("ROCm backend: Stub implementation - gemm called\n");
-  // Simple CPU fallback implementation would go here
   (void)transposeA;
   (void)transposeB;
   (void)m;
@@ -218,53 +290,52 @@ void ROCmBackend::gemm(bool transposeA, bool transposeB, int m, int n, int k,
   (void)beta;
   (void)C;
   (void)ldc;
+  throw std::runtime_error("ROCm backend not available");
 }
 
 void ROCmBackend::relu(const double* input, double* output, size_t size) {
-  printf("ROCm backend: Stub implementation - relu called\n");
-  for (size_t i = 0; i < size; ++i) {
-    output[i] = std::max(0.0, input[i]);
-  }
+  (void)input;
+  (void)output;
+  (void)size;
+  throw std::runtime_error("ROCm backend not available");
 }
 
 void ROCmBackend::sigmoid(const double* input, double* output, size_t size) {
-  printf("ROCm backend: Stub implementation - sigmoid called\n");
-  for (size_t i = 0; i < size; ++i) {
-    output[i] = 1.0 / (1.0 + std::exp(-input[i]));
-  }
+  (void)input;
+  (void)output;
+  (void)size;
+  throw std::runtime_error("ROCm backend not available");
 }
 
 void ROCmBackend::tanh_activation(const double* input, double* output,
                                   size_t size) {
-  printf("ROCm backend: Stub implementation - tanh_activation called\n");
-  for (size_t i = 0; i < size; ++i) {
-    output[i] = std::tanh(input[i]);
-  }
+  (void)input;
+  (void)output;
+  (void)size;
+  throw std::runtime_error("ROCm backend not available");
 }
 
 void ROCmBackend::synchronize() {
-  printf("ROCm backend: Stub implementation - synchronize called\n");
+  // Nothing to synchronize in stub mode
 }
 
 int ROCmBackend::getDeviceCount() {
-  printf("ROCm backend: Stub implementation - getDeviceCount called\n");
   return 0;
 }
 
 void ROCmBackend::setDevice(int device) {
-  printf("ROCm backend: Stub implementation - setDevice called\n");
   (void)device;
+  throw std::runtime_error("ROCm backend not available");
 }
 
 std::string ROCmBackend::getDeviceName(int device) {
-  printf("ROCm backend: Stub implementation - getDeviceName called\n");
   (void)device;
-  return "ROCm Stub Device";
+  return "ROCm not available";
 }
-
-#endif  // HIP_AVAILABLE
 
 }  // namespace Backend
 }  // namespace MLLib
+
+#endif  // ROCM_HEADERS_AVAILABLE
 
 #endif  // WITH_ROCM

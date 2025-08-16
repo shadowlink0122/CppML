@@ -48,7 +48,7 @@ bool Device::isGPUAvailable() {
 #endif
 
   // Check for other GPU vendors
-  auto gpus = detectGPUs();
+  auto gpus = Device::detectGPUs();
   return !gpus.empty();
 }
 
@@ -111,7 +111,7 @@ std::vector<GPUInfo> Device::detectGPUs() {
 }
 
 GPUVendor Device::getPrimaryGPUVendor() {
-  auto gpus = detectGPUs();
+  auto gpus = Device::detectGPUs();
   if (gpus.empty()) {
     return GPUVendor::UNKNOWN;
   }
@@ -134,7 +134,7 @@ GPUVendor Device::getPrimaryGPUVendor() {
 }
 
 bool Device::isGPUVendorAvailable(GPUVendor vendor) {
-  auto gpus = detectGPUs();
+  auto gpus = Device::detectGPUs();
   for (const auto& gpu : gpus) {
     if (gpu.vendor == vendor) {
       return true;

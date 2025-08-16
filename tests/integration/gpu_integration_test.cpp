@@ -29,8 +29,9 @@ protected:
 
     try {
       // Test GPU detection
-      auto gpus = Device::detectGPUs();
-      printf("  Detected %zu GPU(s)\n", gpus.size());
+      auto detected_gpus = Device::detectGPUs();
+      size_t gpu_count = detected_gpus.size();
+      printf("  Detected %zu GPU(s)\n", gpu_count);
 
       // Test GPU availability
       bool gpu_available = Device::isGPUAvailable();
@@ -242,4 +243,8 @@ int run_gpu_integration_tests() {
          total_tests);
 
   return (passed_tests == total_tests) ? 0 : 1;
+}
+
+int main() {
+  return run_gpu_integration_tests();
 }

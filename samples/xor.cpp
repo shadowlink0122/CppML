@@ -1,5 +1,5 @@
 #include "MLLib.hpp"
-#include <iostream>
+#include <cstdio>
 #include <vector>
 
 int main() {
@@ -43,8 +43,7 @@ int main() {
                                           MLLib::model::ModelFormat::JSON);
         printf("Model saved at epoch %d to %s\n", epoch, model_path.c_str());
       } catch (const std::exception& e) {
-        std::cerr << "Failed to save model at epoch " << epoch << ": "
-                  << e.what() << std::endl;
+        printf("Failed to save model at epoch %d: %s\n", epoch, e.what());
       }
     }
   };
@@ -71,6 +70,6 @@ int main() {
                                       MLLib::model::ModelFormat::CONFIG);
     printf("Final model saved to %s\n", final_model_path.c_str());
   } catch (const std::exception& e) {
-    std::cerr << "Failed to save final model: " << e.what() << std::endl;
+    printf("Failed to save final model: %s\n", e.what());
   }
 }

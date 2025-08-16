@@ -1,6 +1,6 @@
 #include "../../../../include/MLLib/backend/backend.hpp"
 #include "../../../../include/MLLib/ndarray.hpp"
-#include <iostream>
+#include <cstdio>
 #include <stdexcept>
 
 #ifdef WITH_CUDA
@@ -36,20 +36,18 @@ bool use_cuda() {
       cuda_available = cuda::cuda_is_available();
       if (cuda_available) {
         cuda::cuda_init();
-        std::cout << "GPU backend: CUDA initialized successfully" << std::endl;
+        printf("GPU backend: CUDA initialized successfully\n");
       } else {
-        std::cout << "GPU backend: CUDA not available, using CPU fallback"
-                  << std::endl;
+        printf("GPU backend: CUDA not available, using CPU fallback\n");
       }
     } catch (const std::exception& e) {
-      std::cout << "GPU backend: CUDA initialization failed (" << e.what()
-                << "), using CPU fallback" << std::endl;
+      printf(
+          "GPU backend: CUDA initialization failed (%s), using CPU fallback\n",
+          e.what());
       cuda_available = false;
     }
 #else
-    std::cout
-        << "GPU backend: Compiled without CUDA support, using CPU fallback"
-        << std::endl;
+    printf("GPU backend: Compiled without CUDA support, using CPU fallback\n");
     cuda_available = false;
 #endif
     cuda_checked = true;
@@ -89,8 +87,7 @@ void Backend::gpu_matmul(const NDArray& a, const NDArray& b, NDArray& result) {
                         static_cast<int>(n), static_cast<int>(k));
       return;
     } catch (const std::exception& e) {
-      std::cout << "GPU matmul failed, falling back to CPU: " << e.what()
-                << std::endl;
+      printf("GPU matmul failed, falling back to CPU: %s\n", e.what());
     }
 #endif
   }
@@ -120,8 +117,7 @@ void Backend::gpu_add(const NDArray& a, const NDArray& b, NDArray& result) {
       cuda::cuda_add(a_data, b_data, result_data, size);
       return;
     } catch (const std::exception& e) {
-      std::cout << "GPU add failed, falling back to CPU: " << e.what()
-                << std::endl;
+      printf("GPU add failed, falling back to CPU: %s\n", e.what());
     }
 #endif
   }
@@ -152,8 +148,7 @@ void Backend::gpu_subtract(const NDArray& a, const NDArray& b,
       cuda::cuda_subtract(a_data, b_data, result_data, size);
       return;
     } catch (const std::exception& e) {
-      std::cout << "GPU subtract failed, falling back to CPU: " << e.what()
-                << std::endl;
+      printf("GPU subtract failed, falling back to CPU: %s\n", e.what());
     }
 #endif
   }
@@ -184,8 +179,7 @@ void Backend::gpu_multiply(const NDArray& a, const NDArray& b,
       cuda::cuda_multiply(a_data, b_data, result_data, size);
       return;
     } catch (const std::exception& e) {
-      std::cout << "GPU multiply failed, falling back to CPU: " << e.what()
-                << std::endl;
+      printf("GPU multiply failed, falling back to CPU: %s\n", e.what());
     }
 #endif
   }
@@ -210,8 +204,7 @@ void Backend::gpu_add_scalar(const NDArray& a, double scalar, NDArray& result) {
       cuda::cuda_add_scalar(a_data, scalar, result_data, size);
       return;
     } catch (const std::exception& e) {
-      std::cout << "GPU add_scalar failed, falling back to CPU: " << e.what()
-                << std::endl;
+      printf("GPU add_scalar failed, falling back to CPU: %s\n", e.what());
     }
 #endif
   }
@@ -237,8 +230,7 @@ void Backend::gpu_multiply_scalar(const NDArray& a, double scalar,
       cuda::cuda_multiply_scalar(a_data, scalar, result_data, size);
       return;
     } catch (const std::exception& e) {
-      std::cout << "GPU multiply_scalar failed, falling back to CPU: "
-                << e.what() << std::endl;
+      printf("GPU multiply_scalar failed, falling back to CPU: %s\n", e.what());
     }
 #endif
   }
@@ -258,8 +250,7 @@ void Backend::gpu_fill(NDArray& array, double value) {
       cuda::cuda_fill(data, value, size);
       return;
     } catch (const std::exception& e) {
-      std::cout << "GPU fill failed, falling back to CPU: " << e.what()
-                << std::endl;
+      printf("GPU fill failed, falling back to CPU: %s\n", e.what());
     }
 #endif
   }
@@ -284,8 +275,7 @@ void Backend::gpu_copy(const NDArray& src, NDArray& dst) {
       cuda::cuda_copy(src_data, dst_data, size);
       return;
     } catch (const std::exception& e) {
-      std::cout << "GPU copy failed, falling back to CPU: " << e.what()
-                << std::endl;
+      printf("GPU copy failed, falling back to CPU: %s\n", e.what());
     }
 #endif
   }

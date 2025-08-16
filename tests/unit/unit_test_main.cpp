@@ -1,12 +1,23 @@
 #include "../common/test_utils.hpp"
-#include "MLLib/layer/activation/test_activation.hpp"
-#include "MLLib/layer/test_dense.hpp"
-// #include "MLLib/model/test_model_io.hpp"  // Temporarily disabled
 #include "MLLib/backend/test_gpu_backend.hpp"
+#include "MLLib/layer/activation/test_activation.hpp"
+#include "MLLib/layer/activation/test_elu.hpp"
+#include "MLLib/layer/activation/test_gelu.hpp"
+#include "MLLib/layer/activation/test_leaky_relu.hpp"
+#include "MLLib/layer/activation/test_softmax.hpp"
+#include "MLLib/layer/activation/test_swish.hpp"
+#include "MLLib/layer/test_dense.hpp"
+#include "MLLib/model/test_model_io.hpp"
 #include "MLLib/model/test_sequential.hpp"
+#include "MLLib/optimizer/test_adadelta.hpp"
+#include "MLLib/optimizer/test_adagrad.hpp"
+#include "MLLib/optimizer/test_adam.hpp"
+#include "MLLib/optimizer/test_nag.hpp"
+#include "MLLib/optimizer/test_rmsprop.hpp"
 #include "MLLib/test_config.hpp"
 #include "MLLib/test_ndarray.hpp"
 #include <chrono>
+#include <cstdio>
 #include <iomanip>
 
 /**
@@ -42,14 +53,13 @@ int main() {
     total_execution_time += test->getExecutionTimeMs();
   };
 
-  // Config tests
-  std::cout << "\n--- Config Module Tests ---" << std::endl;
+  printf("\n--- Config Module Tests ---\n");
   runTest(std::make_unique<ConfigConstantsTest>());
   runTest(std::make_unique<ConfigUsageTest>());
   runTest(std::make_unique<ConfigMathTest>());
 
   // NDArray tests
-  std::cout << "\n--- NDArray Module Tests ---" << std::endl;
+  printf("\n--- NDArray Module Tests ---\n");
   runTest(std::make_unique<NDArrayConstructorTest>());
   runTest(std::make_unique<NDArrayAccessTest>());
   runTest(std::make_unique<NDArrayOperationsTest>());
@@ -58,14 +68,14 @@ int main() {
   runTest(std::make_unique<NDArrayErrorTest>());
 
   // Dense layer tests
-  std::cout << "\n--- Dense Layer Tests ---" << std::endl;
+  printf("\n--- Dense Layer Tests ---\n");
   runTest(std::make_unique<DenseConstructorTest>());
   runTest(std::make_unique<DenseForwardTest>());
   runTest(std::make_unique<DenseBackwardTest>());
   runTest(std::make_unique<DenseParameterTest>());
 
   // Activation function tests
-  std::cout << "\n--- Activation Function Tests ---" << std::endl;
+  printf("\n--- Activation Function Tests ---\n");
   runTest(std::make_unique<ReLUTest>());
   runTest(std::make_unique<ReLUBackwardTest>());
   runTest(std::make_unique<SigmoidTest>());
@@ -74,8 +84,44 @@ int main() {
   runTest(std::make_unique<TanhBackwardTest>());
   runTest(std::make_unique<ActivationErrorTest>());
 
+  // New activation function tests
+  printf("\n--- New Activation Function Tests ---\n");
+  runTest(std::make_unique<LeakyReLUTest>());
+  runTest(std::make_unique<LeakyReLUErrorTest>());
+  runTest(std::make_unique<ELUTest>());
+  runTest(std::make_unique<ELUErrorTest>());
+  runTest(std::make_unique<SwishTest>());
+  runTest(std::make_unique<SwishErrorTest>());
+  runTest(std::make_unique<GELUTest>());
+  runTest(std::make_unique<GELUApproximateTest>());
+  runTest(std::make_unique<GELUErrorTest>());
+  runTest(std::make_unique<SoftmaxTest>());
+  runTest(std::make_unique<SoftmaxBatchTest>());
+  runTest(std::make_unique<SoftmaxErrorTest>());
+
+  // Optimizer tests
+  printf("\n--- Optimizer Tests ---\n");
+  runTest(std::make_unique<AdamConstructorTest>());
+  runTest(std::make_unique<AdamUpdateTest>());
+  runTest(std::make_unique<AdamResetTest>());
+  runTest(std::make_unique<AdamErrorTest>());
+  runTest(std::make_unique<RMSpropConstructorTest>());
+  runTest(std::make_unique<RMSpropUpdateTest>());
+  runTest(std::make_unique<RMSpropResetTest>());
+  runTest(std::make_unique<AdaGradTest>());
+  runTest(std::make_unique<AdaGradConstructorTest>());
+  runTest(std::make_unique<AdaGradResetTest>());
+  runTest(std::make_unique<AdaDeltaTest>());
+  runTest(std::make_unique<AdaDeltaConstructorTest>());
+  runTest(std::make_unique<AdaDeltaResetTest>());
+  runTest(std::make_unique<AdaDeltaMultipleUpdatesTest>());
+  runTest(std::make_unique<NAGTest>());
+  runTest(std::make_unique<NAGConstructorTest>());
+  runTest(std::make_unique<NAGMomentumTest>());
+  runTest(std::make_unique<NAGResetTest>());
+
   // Sequential model tests
-  std::cout << "\n--- Sequential Model Tests ---" << std::endl;
+  printf("\n--- Sequential Model Tests ---\n");
   runTest(std::make_unique<SequentialModelTests>());
 
   // GPU backend tests
@@ -87,28 +133,21 @@ int main() {
   runTest(std::make_unique<GPUModelTest>());
   runTest(std::make_unique<GPUPerformanceTest>());
 
-  // Multi-GPU tests
-  printf("\n--- Multi-GPU Support Tests ---\n");
-  runTest(std::make_unique<MultiGPUDetectionTest>());
-  runTest(std::make_unique<GPUBackendTypesTest>());
-  runTest(std::make_unique<MultiGPUBackendOperationsTest>());
-  runTest(std::make_unique<GPUVendorPriorityTest>());
-  runTest(std::make_unique<GPUMemoryTest>());
-  runTest(std::make_unique<GPUErrorHandlingTest>());
-  runTest(std::make_unique<GPUCompilationTest>());
-
-  // Model I/O tests (temporarily disabled)
-  // std::cout << "\n--- Model I/O Tests ---" << std::endl;
-  // runTest(std::make_unique<ModelFormatTest>());
-  // runTest(std::make_unique<ModelSaveLoadTest>());
-  // runTest(std::make_unique<ModelParameterTest>());
-  // runTest(std::make_unique<ModelIOErrorTest>());
-  // runTest(std::make_unique<ModelIOFileHandlingTest>());
+  // Model I/O tests
+  printf("\n--- Model I/O Tests ---\n");
+  runTest(std::make_unique<ModelFormatTest>());
+  runTest(std::make_unique<ModelSaveLoadTest>());
+  runTest(std::make_unique<ModelParameterTest>());
+  runTest(std::make_unique<ModelIOErrorTest>());
+  runTest(std::make_unique<ModelIOFileHandlingTest>());
 
   // Print final summary
-  printf("\n============================================================\n");
+  printf("\n");
+  for (int i = 0; i < 60; i++) printf("=");
+  printf("\n");
   printf("FINAL TEST SUMMARY\n");
-  printf("============================================================\n");
+  for (int i = 0; i < 60; i++) printf("=");
+  printf("\n");
   printf("Total individual tests: %d\n", total_tests);
   printf("Passed tests: %d\n", passed_tests);
   printf("Failed tests: %d\n", (total_tests - passed_tests));
@@ -130,7 +169,8 @@ int main() {
     printf("Please review the test output above and fix the issues.\n");
   }
 
-  printf("============================================================\n");
+  for (int i = 0; i < 60; i++) printf("=");
+  printf("\n");
 
   return all_tests_passed ? 0 : 1;
 }

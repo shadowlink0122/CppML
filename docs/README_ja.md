@@ -198,9 +198,11 @@ make
 make debug
 
 # サンプルビルドと実行
-make samples
-make xor                    # XORニューラルネットワーク
-make model-format-test      # モデルI/O形式テスト
+make samples               # 全サンプルプログラムをビルド
+make run-sample            # 利用可能なサンプル一覧を表示
+make xor                   # XORニューラルネットワーク（エイリアス）
+make device-detection      # GPUデバイス検出サンプル（エイリアス）
+make gpu-vendor-detection  # GPUベンダー検出サンプル（エイリアス）
 
 # クリーン（訓練出力削除）
 make clean
@@ -254,7 +256,7 @@ MLLib/
 2. 機能ブランチの作成（`git checkout -b feature/amazing-feature`）
 3. 変更を実装
 4. 品質チェック実行（`make lint-all`）
-5. 変更をテスト（`make samples`）
+5. 変更をテスト（`make test`）
 6. 変更をコミット（`git commit -m 'Add amazing feature'`）
 7. ブランチにプッシュ（`git push origin feature/amazing-feature`）
 8. プルリクエストを開く
