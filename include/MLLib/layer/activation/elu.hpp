@@ -14,7 +14,7 @@ namespace activation {
 /**
  * @class ELU
  * @brief Exponential Linear Unit activation function
- * 
+ *
  * ELU has negative values which allows them to push mean unit activations
  * closer to zero: f(x) = x if x > 0, alpha * (exp(x) - 1) if x <= 0
  */
@@ -22,7 +22,8 @@ class ELU : public Activation {
 public:
   /**
    * @brief Constructor
-   * @param alpha Controls the value to which an ELU saturates for negative inputs (default: 1.0)
+   * @param alpha Controls the value to which an ELU saturates for negative
+   * inputs (default: 1.0)
    */
   explicit ELU(double alpha = 1.0);
 

@@ -14,7 +14,7 @@ namespace activation {
 /**
  * @class Softmax
  * @brief Softmax activation function
- * 
+ *
  * Softmax is commonly used in the output layer for multi-class classification:
  * f(x_i) = exp(x_i) / sum(exp(x_j)) for all j
  * Numerically stable implementation using the log-sum-exp trick
@@ -53,8 +53,8 @@ public:
   int get_axis() const { return axis_; }
 
 private:
-  int axis_;           ///< Axis along which to apply softmax
-  NDArray last_output_; ///< Cache output for backward pass
+  int axis_;             ///< Axis along which to apply softmax
+  NDArray last_output_;  ///< Cache output for backward pass
 };
 
 }  // namespace activation

@@ -6,9 +6,7 @@ namespace MLLib {
 namespace optimizer {
 
 RMSprop::RMSprop(double learning_rate, double rho, double epsilon)
-    : BaseOptimizer(learning_rate),
-      rho_(rho),
-      epsilon_(epsilon),
+    : BaseOptimizer(learning_rate), rho_(rho), epsilon_(epsilon),
       v_initialized_(false) {
   if (learning_rate <= 0.0) {
     throw std::invalid_argument("Learning rate must be positive");
@@ -56,9 +54,10 @@ void RMSprop::update(const std::vector<NDArray*>& parameters,
     for (size_t j = 0; j < param.size(); ++j) {
       // Update exponential moving average of squared gradients
       v_data[j] = rho_ * v_data[j] + (1.0 - rho_) * grad_data[j] * grad_data[j];
-      
+
       // Update parameter
-      param_data[j] -= learning_rate_ * grad_data[j] / (std::sqrt(v_data[j]) + epsilon_);
+      param_data[j] -=
+          learning_rate_ * grad_data[j] / (std::sqrt(v_data[j]) + epsilon_);
     }
   }
 }

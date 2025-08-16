@@ -14,7 +14,7 @@ namespace activation {
 /**
  * @class LeakyReLU
  * @brief Leaky Rectified Linear Unit activation function
- * 
+ *
  * LeakyReLU allows a small positive gradient when the unit is not active:
  * f(x) = max(alpha * x, x) where alpha is a small positive constant
  */

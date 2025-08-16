@@ -50,7 +50,8 @@ NDArray ELU::backward(const NDArray& grad_output) {
       grad_input_data[i] = grad_output_data[i];
     } else {
       // Derivative: alpha * exp(x) when x <= 0
-      grad_input_data[i] = grad_output_data[i] * alpha_ * std::exp(input_data[i]);
+      grad_input_data[i] =
+          grad_output_data[i] * alpha_ * std::exp(input_data[i]);
     }
   }
 

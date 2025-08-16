@@ -6,9 +6,7 @@ namespace MLLib {
 namespace optimizer {
 
 AdaGrad::AdaGrad(double learning_rate, double epsilon)
-    : BaseOptimizer(learning_rate),
-      epsilon_(epsilon),
-      G_initialized_(false) {
+    : BaseOptimizer(learning_rate), epsilon_(epsilon), G_initialized_(false) {
   if (learning_rate <= 0.0) {
     throw std::invalid_argument("Learning rate must be positive");
   }
@@ -52,9 +50,10 @@ void AdaGrad::update(const std::vector<NDArray*>& parameters,
     for (size_t j = 0; j < param.size(); ++j) {
       // Accumulate squared gradients
       G_data[j] += grad_data[j] * grad_data[j];
-      
+
       // Update parameter
-      param_data[j] -= learning_rate_ * grad_data[j] / (std::sqrt(G_data[j]) + epsilon_);
+      param_data[j] -=
+          learning_rate_ * grad_data[j] / (std::sqrt(G_data[j]) + epsilon_);
     }
   }
 }
