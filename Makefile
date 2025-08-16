@@ -110,12 +110,13 @@ MM_FILES = $(shell find $(SRC_DIR) -name "*.mm" 2>/dev/null || true)
 HPP_FILES = $(shell find $(INCLUDE_DIR) -name "*.hpp" 2>/dev/null || true)
 TEST_FILES = $(shell find $(TEST_DIR) -name "*.cpp" 2>/dev/null || true)
 
-# Filter GPU backend files based on availability
-ifeq ($(ROCM_AVAILABLE),true)
+# Filter GPU backend files based on WITH_* flags (not availability)
+# Include backend files if WITH_* is defined to ensure stub implementations are compiled
+ifneq ($(findstring -DWITH_ROCM,$(CXXFLAGS)),)
     CPP_FILES += src/MLLib/backend/gpu/rocm_backend.cpp
 endif
 
-ifeq ($(ONEAPI_AVAILABLE),true)
+ifneq ($(findstring -DWITH_ONEAPI,$(CXXFLAGS)),)
     CPP_FILES += src/MLLib/backend/gpu/oneapi_backend.cpp
 endif
 
@@ -148,7 +149,7 @@ CLANG_TIDY = clang-tidy
 CPPCHECK = cppcheck
 
 # Phony targets for main build, clean, test, and samples
-.PHONY: all clean debug test samples run-samples help install build-tools gpu-check
+.PHONY: all clean debug test samples run-sample xor device-detection gpu-vendor-detection help install build-tools gpu-check
 
 # Default target
 .PHONY: all
@@ -463,7 +464,7 @@ samples: $(LIB_TARGET)
 			if [ -f "$$sample" ]; then \
 				name=$$(basename $$sample .cpp); \
 				echo "Building sample: $$name"; \
-				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(CPP_FILES) -o $(BUILD_DIR)/samples/$$name; then \
+				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET) -o $(BUILD_DIR)/samples/$$name; then \
 					echo "✓ Built sample: $$name"; \
 				else \
 					echo "❌ Failed to build sample: $$name"; \
@@ -480,49 +481,50 @@ samples: $(LIB_TARGET)
 	else \
 		echo "ℹ️  No samples directory found"; \
 	fi
-	@if [ -d "samples" ]; then \
-		echo "Building additional samples..."; \
-		mkdir -p $(BUILD_DIR)/samples; \
-		ADDITIONAL_SUCCESS=true; \
-		for sample in samples/*.cpp; do \
-			if [ -f "$$sample" ]; then \
-				name=$$(basename $$sample .cpp); \
-				echo "Building sample: $$name"; \
-				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(CPP_FILES) -o $(BUILD_DIR)/samples/$$name; then \
-					echo "✓ Built sample: $$name"; \
-				else \
-					echo "❌ Failed to build sample: $$name"; \
-					ADDITIONAL_SUCCESS=false; \
+
+# Generic sample runner
+.PHONY: run-sample
+run-sample:
+	@if [ -z "$(SAMPLE)" ]; then \
+		echo "Usage: make run-sample SAMPLE=<sample_name>"; \
+		echo "Available samples:"; \
+		if [ -d "$(BUILD_DIR)/samples" ]; then \
+			for sample in $(BUILD_DIR)/samples/*; do \
+				if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
+					echo "  $$(basename $$sample)"; \
 				fi; \
-			fi; \
-		done; \
-		if [ "$$ADDITIONAL_SUCCESS" = "true" ]; then \
-			echo "✅ Additional samples built successfully"; \
+			done; \
 		else \
-			echo "❌ Some additional samples failed to build"; \
-			exit 1; \
+			echo "  (no samples built yet - run 'make samples' first)"; \
 		fi; \
+	elif [ -f "$(BUILD_DIR)/samples/$(SAMPLE)" ]; then \
+		echo "Running $(SAMPLE) sample..."; \
+		$(BUILD_DIR)/samples/$(SAMPLE); \
+	else \
+		echo "❌ Sample '$(SAMPLE)' not found"; \
+		echo "Available samples:"; \
+		if [ -d "$(BUILD_DIR)/samples" ]; then \
+			for sample in $(BUILD_DIR)/samples/*; do \
+				if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
+					echo "  $$(basename $$sample)"; \
+				fi; \
+			done; \
+		fi; \
+		echo "Build samples first with 'make samples'"; \
 	fi
 
-# Build and run XOR sample
-.PHONY: xor
+# Convenience aliases for commonly used samples
+.PHONY: xor device-detection gpu-vendor-detection
 xor: samples
-	@if [ -f "$(BUILD_DIR)/samples/xor" ]; then \
-		echo "Running XOR sample..."; \
-		$(BUILD_DIR)/samples/xor; \
-	else \
-		echo "❌ XOR sample not found"; \
-	fi
+	@$(MAKE) run-sample SAMPLE=xor
 
-# Build and run Model I/O test
-.PHONY: model-format-test
-model-format-test: samples
-	@if [ -f "$(BUILD_DIR)/samples/model_format_test" ]; then \
-		echo "Running Model Format test..."; \
-		$(BUILD_DIR)/samples/model_format_test; \
-	else \
-		echo "❌ Model Format test not found"; \
-	fi
+.PHONY: device-detection
+device-detection: samples
+	@$(MAKE) run-sample SAMPLE=device_detection
+
+.PHONY: gpu-vendor-detection
+gpu-vendor-detection: samples
+	@$(MAKE) run-sample SAMPLE=gpu_vendor_detection
 
 # CI-specific build target - builds CPU-only version with all stubs
 .PHONY: ci-build
@@ -564,9 +566,11 @@ help:
 	@echo "  install-tools - Install required formatting/linting tools"
 	@echo ""
 	@echo "Samples:"
-	@echo "  samples      - Build sample programs"
-	@echo "  xor          - Build and run XOR sample"
-	@echo "  model-format-test - Build and run Model Format test"
+	@echo "  samples           - Build all sample programs"
+	@echo "  run-sample SAMPLE=<name> - Run specific sample"
+	@echo "  xor               - Build and run XOR sample (alias)"
+	@echo "  device-detection  - Build and run device detection sample (alias)"
+	@echo "  gpu-vendor-detection - Build and run GPU vendor detection sample (alias)"
 	@echo ""
 	@echo "GPU Configuration:"
 	@echo "  Default: All GPU backends enabled (CUDA, ROCm, oneAPI, Metal)"
