@@ -202,8 +202,9 @@ protected:
     std::vector<std::vector<double>> dev_X = {{0.1, 0.2, 0.3}, {0.4, 0.5, 0.6},
                                               {0.7, 0.8, 0.9}, {0.9, 0.8, 0.7},
                                               {0.6, 0.5, 0.4}, {0.3, 0.2, 0.1}};
-    std::vector<std::vector<double>> dev_Y = {
-        {0.8, 0.2}, {0.6, 0.4}, {0.4, 0.6}, {0.2, 0.8}, {0.5, 0.5}, {0.9, 0.1}};
+    std::vector<std::vector<double>> dev_Y = {{0.8, 0.2}, {0.6, 0.4},
+                                              {0.4, 0.6}, {0.2, 0.8},
+                                              {0.5, 0.5}, {0.9, 0.1}};
 
     MSELoss loss;
     SGD optimizer(0.1);
@@ -220,9 +221,9 @@ protected:
     assertTrue(ModelIO::save_model(*development_model, checkpoint_path + ".bin",
                                    ModelFormat::BINARY),
                "Checkpoint save should succeed");
-    assertTrue(
-        ModelIO::save_config(*development_model, checkpoint_path + ".config"),
-        "Config checkpoint should succeed");
+    assertTrue(ModelIO::save_config(*development_model,
+                                    checkpoint_path + ".config"),
+               "Config checkpoint should succeed");
 
     // Phase 3: Model Loading and Continued Training
     auto loaded_model =
@@ -280,8 +281,9 @@ protected:
                   "Production model load should succeed");
 
     // Simulate production inference
-    std::vector<std::vector<double>> production_inputs = {
-        {0.2, 0.4, 0.6}, {0.8, 0.6, 0.4}, {0.1, 0.9, 0.5}};
+    std::vector<std::vector<double>> production_inputs = {{0.2, 0.4, 0.6},
+                                                          {0.8, 0.6, 0.4},
+                                                          {0.1, 0.9, 0.5}};
 
     for (const auto& input : production_inputs) {
       std::vector<double> output = production_model->predict(input);
@@ -327,7 +329,7 @@ protected:
 
       // Test empty data
       std::vector<std::vector<double>> empty_X, empty_Y;
-      assertThrows(
+      assertThrows<std::invalid_argument>(
           [&]() {
             model->train(empty_X, empty_Y, loss, optimizer, nullptr, 10);
           },
@@ -337,14 +339,26 @@ protected:
       std::vector<std::vector<double>> X = {{1.0, 2.0}, {3.0, 4.0}};
       std::vector<std::vector<double>> Y = {
           {5.0}};  // Only one output for two inputs
-      assertThrows([&]() { model->train(X, Y, loss, optimizer, nullptr, 10); },
-                   "Training with mismatched data should throw");
-      assertThrows([&]() { model->train(X, Y, loss, optimizer, nullptr, 10); },
-                   "Training with mismatched data should throw");
-      assertThrows([&]() { model->predict(MLLib::NDArray({1.0}); },
-                   "Predict with wrong input shape should throw");
-      assertThrows([&]() { model->predict(MLLib::NDArray({1.0}); },
-                   "Predict with wrong input shape should throw");
+      assertThrows<std::invalid_argument>(
+          [&]() {
+            model->train(X, Y, loss, optimizer, nullptr, 10);
+          },
+          "Training with mismatched data should throw");
+      assertThrows<std::invalid_argument>(
+          [&]() {
+            model->train(X, Y, loss, optimizer, nullptr, 10);
+          },
+          "Training with mismatched data should throw");
+      assertThrows<std::invalid_argument>(
+          [&]() {
+            model->predict(std::vector<double>{1.0});
+          },
+          "Predict with wrong input shape should throw");
+      assertThrows<std::invalid_argument>(
+          [&]() {
+            model->predict(std::vector<double>{1.0});
+          },
+          "Predict with wrong input shape should throw");
       {
         auto model = std::make_unique<Sequential>();
         model->add(std::make_shared<Dense>(1, 2));
@@ -429,125 +443,133 @@ protected:
           SGD optimizer(0.01);
 
           assertNoThrow(
-              [&]() { model->train(X, Y, loss, optimizer, nullptr, 5); },
+              [&]() {
+                model->train(X, Y, loss, optimizer, nullptr, 5);
+              },
               "Repeated model creation should not cause issues");
         }
       }
     }
-  };
+  }
+};
 
-  /**
-   * @class WorkflowPerformanceBenchmarkTest
-   * @brief Benchmark performance in realistic scenarios
-   */
-  class WorkflowPerformanceBenchmarkTest : public TestCase {
-  public:
-    WorkflowPerformanceBenchmarkTest()
-        : TestCase("WorkflowPerformanceBenchmarkTest") {}
+/**
+ * @class WorkflowPerformanceBenchmarkTest
+ * @brief Benchmark performance in realistic scenarios
+ */
+class WorkflowPerformanceBenchmarkTest : public TestCase {
+public:
+  WorkflowPerformanceBenchmarkTest()
+      : TestCase("WorkflowPerformanceBenchmarkTest") {}
 
-  protected:
-    void test() override {
-      using namespace MLLib::model;
-      using namespace MLLib::layer;
-      using namespace MLLib::loss;
-      using namespace MLLib::optimizer;
+protected:
+  void test() override {
+    using namespace MLLib::model;
+    using namespace MLLib::layer;
+    using namespace MLLib::loss;
+    using namespace MLLib::optimizer;
 
-      OutputCapture capture;
+    OutputCapture capture;
 
-      // Test 1: Large dataset training performance
-      {
+    // Test 1: Large dataset training performance
+    {
+      auto model = std::make_unique<Sequential>();
+      model->add(std::make_shared<Dense>(10, 20));
+      model->add(std::make_shared<activation::ReLU>());
+      model->add(std::make_shared<Dense>(20, 10));
+      model->add(std::make_shared<activation::Sigmoid>());
+      model->add(std::make_shared<Dense>(10, 1));
+
+      // Generate larger dataset
+      std::vector<std::vector<double>> X;
+      std::vector<std::vector<double>> Y;
+
+      for (int i = 0; i < 500; ++i) {
+        std::vector<double> x(10);
+        for (int j = 0; j < 10; ++j) {
+          x[j] = (i + j) * 0.001;
+        }
+        X.push_back(x);
+        Y.push_back({static_cast<double>(i % 2)});
+      }
+
+      MSELoss loss;
+      SGD optimizer(0.01);
+
+      assertNoThrow(
+          [&]() {
+            model->train(X, Y, loss, optimizer, nullptr, 50);
+          },
+          "Large dataset training should complete");
+    }
+
+    // Test 2: High-frequency inference performance
+    {
+      auto model = std::make_unique<Sequential>();
+      model->add(std::make_shared<Dense>(5, 8));
+      model->add(std::make_shared<activation::Tanh>());
+      model->add(std::make_shared<Dense>(8, 3));
+
+      // Quick training
+      std::vector<std::vector<double>> X = {{1, 2, 3, 4, 5},
+                                            {5, 4, 3, 2, 1},
+                                            {3, 1, 4, 1, 5}};
+      std::vector<std::vector<double>> Y = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+
+      MSELoss loss;
+      SGD optimizer(0.1);
+      model->train(X, Y, loss, optimizer, nullptr, 20);
+
+      // High-frequency inference test
+      std::vector<double> test_input = {2.5, 3.5, 2.0, 4.0, 1.5};
+
+      assertNoThrow(
+          [&]() {
+            for (int i = 0; i < 1000; ++i) {
+              std::vector<double> output = model->predict(test_input);
+              assertEqual(size_t(3), output.size(),
+                          "Each prediction should have 3 outputs");
+            }
+          },
+          "High-frequency inference should be stable");
+    }
+
+    // Test 3: Memory usage stability
+    {
+      // Test that repeated operations don't cause memory issues
+      for (int trial = 0; trial < 5; ++trial) {
         auto model = std::make_unique<Sequential>();
-        model->add(std::make_shared<Dense>(10, 20));
+        model->add(std::make_shared<Dense>(20, 30));
         model->add(std::make_shared<activation::ReLU>());
-        model->add(std::make_shared<Dense>(20, 10));
+        model->add(std::make_shared<Dense>(30, 20));
         model->add(std::make_shared<activation::Sigmoid>());
-        model->add(std::make_shared<Dense>(10, 1));
+        model->add(std::make_shared<Dense>(20, 1));
 
-        // Generate larger dataset
+        // Generate data for this trial
         std::vector<std::vector<double>> X;
         std::vector<std::vector<double>> Y;
 
-        for (int i = 0; i < 500; ++i) {
-          std::vector<double> x(10);
-          for (int j = 0; j < 10; ++j) {
-            x[j] = (i + j) * 0.001;
+        for (int i = 0; i < 100; ++i) {
+          std::vector<double> x(20);
+          for (int j = 0; j < 20; ++j) {
+            x[j] = (trial * 100 + i + j) * 0.001;
           }
           X.push_back(x);
-          Y.push_back({static_cast<double>(i % 2)});
+          Y.push_back({static_cast<double>((trial + i) % 2)});
         }
 
         MSELoss loss;
         SGD optimizer(0.01);
 
         assertNoThrow(
-            [&]() { model->train(X, Y, loss, optimizer, nullptr, 50); },
-            "Large dataset training should complete");
-      }
-
-      // Test 2: High-frequency inference performance
-      {
-        auto model = std::make_unique<Sequential>();
-        model->add(std::make_shared<Dense>(5, 8));
-        model->add(std::make_shared<activation::Tanh>());
-        model->add(std::make_shared<Dense>(8, 3));
-
-        // Quick training
-        std::vector<std::vector<double>> X = {
-            {1, 2, 3, 4, 5}, {5, 4, 3, 2, 1}, {3, 1, 4, 1, 5}};
-        std::vector<std::vector<double>> Y = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-
-        MSELoss loss;
-        SGD optimizer(0.1);
-        model->train(X, Y, loss, optimizer, nullptr, 20);
-
-        // High-frequency inference test
-        std::vector<double> test_input = {2.5, 3.5, 2.0, 4.0, 1.5};
-
-        assertNoThrow(
             [&]() {
-              for (int i = 0; i < 1000; ++i) {
-                std::vector<double> output = model->predict(test_input);
-                assertEqual(size_t(3), output.size(),
-                            "Each prediction should have 3 outputs");
-              }
+              model->train(X, Y, loss, optimizer, nullptr, 30);
             },
-            "High-frequency inference should be stable");
-      }
-
-      // Test 3: Memory usage stability
-      {
-        // Test that repeated operations don't cause memory issues
-        for (int trial = 0; trial < 5; ++trial) {
-          auto model = std::make_unique<Sequential>();
-          model->add(std::make_shared<Dense>(20, 30));
-          model->add(std::make_shared<activation::ReLU>());
-          model->add(std::make_shared<Dense>(30, 20));
-          model->add(std::make_shared<activation::Sigmoid>());
-          model->add(std::make_shared<Dense>(20, 1));
-
-          // Generate data for this trial
-          std::vector<std::vector<double>> X;
-          std::vector<std::vector<double>> Y;
-
-          for (int i = 0; i < 100; ++i) {
-            std::vector<double> x(20);
-            for (int j = 0; j < 20; ++j) {
-              x[j] = (trial * 100 + i + j) * 0.001;
-            }
-            X.push_back(x);
-            Y.push_back({static_cast<double>((trial + i) % 2)});
-          }
-
-          MSELoss loss;
-          SGD optimizer(0.01);
-
-          assertNoThrow(
-              [&]() { model->train(X, Y, loss, optimizer, nullptr, 30); },
-              "Memory stability test should complete");
-        }
+            "Memory stability test should complete");
       }
     }
-  };
+  }
+};
 
-};  // namespace test
+}  // namespace test
 }  // namespace MLLib

@@ -54,8 +54,10 @@ protected:
                                           {0.5, 0.6, 0.7, 0.8},
                                           {0.9, 0.8, 0.7, 0.6},
                                           {0.5, 0.4, 0.3, 0.2}};
-    std::vector<std::vector<double>> Y = {
-        {0.8, 0.2}, {0.3, 0.7}, {0.6, 0.4}, {0.1, 0.9}};
+    std::vector<std::vector<double>> Y = {{0.8, 0.2},
+                                          {0.3, 0.7},
+                                          {0.6, 0.4},
+                                          {0.1, 0.9}};
 
     MSELoss loss;
     SGD optimizer(0.1);
@@ -91,9 +93,9 @@ protected:
     {
       std::string json_path = temp_dir + "/model_json.json";
 
-      assertTrue(
-          ModelIO::save_model(*reference_model, json_path, ModelFormat::JSON),
-          "JSON format save should succeed");
+      assertTrue(ModelIO::save_model(*reference_model, json_path,
+                                     ModelFormat::JSON),
+                 "JSON format save should succeed");
 
       auto loaded_json = ModelIO::load_model(json_path, ModelFormat::JSON);
       assertNotNull(loaded_json.get(), "JSON format load should succeed");
@@ -117,9 +119,9 @@ protected:
       assertTrue(ModelIO::save_model(*reference_model, binary_path,
                                      ModelFormat::BINARY),
                  "Cross-format binary save should succeed");
-      assertTrue(
-          ModelIO::save_model(*reference_model, json_path, ModelFormat::JSON),
-          "Cross-format JSON save should succeed");
+      assertTrue(ModelIO::save_model(*reference_model, json_path,
+                                     ModelFormat::JSON),
+                 "Cross-format JSON save should succeed");
 
       // Load both and compare
       auto binary_model = ModelIO::load_model(binary_path, ModelFormat::BINARY);
@@ -191,8 +193,10 @@ protected:
     std::string temp_dir = createTempDirectory();
 
     // Test data
-    std::vector<std::vector<double>> X = {
-        {0.1, 0.2}, {0.3, 0.4}, {0.5, 0.6}, {0.7, 0.8}};
+    std::vector<std::vector<double>> X = {{0.1, 0.2},
+                                          {0.3, 0.4},
+                                          {0.5, 0.6},
+                                          {0.7, 0.8}};
     std::vector<std::vector<double>> Y = {{0.9}, {0.7}, {0.5}, {0.3}};
 
     // Test 1: Different activation function configurations
@@ -217,7 +221,9 @@ protected:
         SGD optimizer(0.1);
 
         assertNoThrow(
-            [&]() { model->train(X, Y, loss, optimizer, nullptr, 30); },
+            [&]() {
+              model->train(X, Y, loss, optimizer, nullptr, 30);
+            },
             "Model with " + activation_name + " should train successfully");
 
         // Test save/load for each configuration
@@ -268,7 +274,9 @@ protected:
         SGD optimizer(0.1);
 
         assertNoThrow(
-            [&]() { model->train(X, Y, loss, optimizer, nullptr, 20); },
+            [&]() {
+              model->train(X, Y, loss, optimizer, nullptr, 20);
+            },
             "Model configuration " + std::to_string(config_idx) +
                 " should train");
 
@@ -379,9 +387,9 @@ protected:
 
       // Test save to invalid directory
       std::string invalid_path = "/invalid/directory/model.bin";
-      assertFalse(
-          ModelIO::save_model(*model, invalid_path, ModelFormat::BINARY),
-          "Save to invalid path should fail gracefully");
+      assertFalse(ModelIO::save_model(*model, invalid_path,
+                                      ModelFormat::BINARY),
+                  "Save to invalid path should fail gracefully");
 
       // Model should still be functional after failed save
       std::vector<double> test_input = {0.1, 0.2, 0.3};
@@ -409,18 +417,24 @@ protected:
       SGD optimizer(0.1);
 
       // Simulate interrupted training by training for fewer epochs
-      assertNoThrow([&]() { model->train(X, Y, loss, optimizer, nullptr, 10); },
-                    "Partial training should complete");
+      assertNoThrow(
+          [&]() {
+            model->train(X, Y, loss, optimizer, nullptr, 10);
+          },
+          "Partial training should complete");
 
       // Save intermediate state
       std::string checkpoint_path = temp_dir + "/checkpoint.bin";
-      assertTrue(
-          ModelIO::save_model(*model, checkpoint_path, ModelFormat::BINARY),
-          "Checkpoint save should succeed");
+      assertTrue(ModelIO::save_model(*model, checkpoint_path,
+                                     ModelFormat::BINARY),
+                 "Checkpoint save should succeed");
 
       // Continue training from where we left off
-      assertNoThrow([&]() { model->train(X, Y, loss, optimizer, nullptr, 10); },
-                    "Continued training should work");
+      assertNoThrow(
+          [&]() {
+            model->train(X, Y, loss, optimizer, nullptr, 10);
+          },
+          "Continued training should work");
 
       // Load checkpoint and verify it works
       auto checkpoint_model =
@@ -464,9 +478,9 @@ protected:
       valid_model->add(std::make_shared<Dense>(2, 2));
 
       std::string valid_path = temp_dir + "/valid_after_failures.bin";
-      assertTrue(
-          ModelIO::save_model(*valid_model, valid_path, ModelFormat::BINARY),
-          "Valid operations should work after failed loads");
+      assertTrue(ModelIO::save_model(*valid_model, valid_path,
+                                     ModelFormat::BINARY),
+                 "Valid operations should work after failed loads");
     }
 
     // Test 4: Handling edge cases in model operations
@@ -475,10 +489,16 @@ protected:
       model->add(std::make_shared<Dense>(1, 1));
 
       // Test with extreme input values
-      std::vector<std::vector<double>> extreme_X = {
-          {1e6}, {-1e6}, {0.0}, {1e-10}, {-1e-10}};
-      std::vector<std::vector<double>> extreme_Y = {
-          {1.0}, {0.0}, {0.5}, {0.25}, {0.75}};
+      std::vector<std::vector<double>> extreme_X = {{1e6},
+                                                    {-1e6},
+                                                    {0.0},
+                                                    {1e-10},
+                                                    {-1e-10}};
+      std::vector<std::vector<double>> extreme_Y = {{1.0},
+                                                    {0.0},
+                                                    {0.5},
+                                                    {0.25},
+                                                    {0.75}};
 
       MSELoss loss;
       SGD optimizer(0.001);  // Very small learning rate for stability
@@ -495,8 +515,11 @@ protected:
                  "Training should complete even with extreme values");
 
       // Test prediction with various inputs
-      std::vector<std::vector<double>> test_inputs = {
-          {0.0}, {1.0}, {-1.0}, {100.0}, {-100.0}};
+      std::vector<std::vector<double>> test_inputs = {{0.0},
+                                                      {1.0},
+                                                      {-1.0},
+                                                      {100.0},
+                                                      {-100.0}};
 
       for (const auto& input : test_inputs) {
         std::vector<double> output = model->predict(input);
@@ -538,8 +561,9 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // Train with consistent data
-    std::vector<std::vector<double>> X = {
-        {0.1, 0.2, 0.3}, {0.4, 0.5, 0.6}, {0.7, 0.8, 0.9}};
+    std::vector<std::vector<double>> X = {{0.1, 0.2, 0.3},
+                                          {0.4, 0.5, 0.6},
+                                          {0.7, 0.8, 0.9}};
     std::vector<std::vector<double>> Y = {{0.9, 0.1}, {0.4, 0.6}, {0.2, 0.8}};
 
     MSELoss loss;
@@ -549,9 +573,11 @@ protected:
     // Test 1: File path handling
     {
       // Test various path separators and formats
-      std::vector<std::string> path_variants = {
-          temp_dir + "/model1.bin", temp_dir + "/subfolder/model2.bin",
-          temp_dir + "/model with spaces.bin"};
+      std::vector<std::string> path_variants = {temp_dir + "/model1.bin",
+                                                temp_dir +
+                                                    "/subfolder/model2.bin",
+                                                temp_dir +
+                                                    "/model with spaces.bin"};
 
       for (const auto& path : path_variants) {
         // Create directory if needed
@@ -583,15 +609,16 @@ protected:
       std::string precision_path = temp_dir + "/precision_test.bin";
 
       // Save model
-      assertTrue(
-          ModelIO::save_model(*model, precision_path, ModelFormat::BINARY),
-          "Precision test save should succeed");
+      assertTrue(ModelIO::save_model(*model, precision_path,
+                                     ModelFormat::BINARY),
+                 "Precision test save should succeed");
 
       // Load and test multiple times
       for (int i = 0; i < 5; ++i) {
         auto loaded = ModelIO::load_model(precision_path, ModelFormat::BINARY);
-        assertNotNull(loaded.get(), "Precision test load " + std::to_string(i) +
-                                        " should succeed");
+        assertNotNull(loaded.get(),
+                      "Precision test load " + std::to_string(i) +
+                          " should succeed");
 
         std::vector<double> test_input = {0.123456789, 0.987654321,
                                           0.555555555};
@@ -658,9 +685,9 @@ protected:
 
       // Test save/load with potentially large weights
       std::string large_path = temp_dir + "/large_model.bin";
-      assertTrue(
-          ModelIO::save_model(*large_model, large_path, ModelFormat::BINARY),
-          "Large model save should succeed");
+      assertTrue(ModelIO::save_model(*large_model, large_path,
+                                     ModelFormat::BINARY),
+                 "Large model save should succeed");
 
       auto loaded_large = ModelIO::load_model(large_path, ModelFormat::BINARY);
       assertNotNull(loaded_large.get(), "Large model load should succeed");

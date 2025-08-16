@@ -63,8 +63,10 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // XOR test data
-    std::vector<std::vector<double>> X = {
-        {0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
+    std::vector<std::vector<double>> X = {{0.0, 0.0},
+                                          {0.0, 1.0},
+                                          {1.0, 0.0},
+                                          {1.0, 1.0}};
     std::vector<std::vector<double>> Y = {{0.0}, {1.0}, {1.0}, {0.0}};
 
     // Test basic functionality
@@ -120,8 +122,10 @@ protected:
     model->add(std::make_shared<Dense>(4, 1));
     model->add(std::make_shared<activation::Sigmoid>());
 
-    std::vector<std::vector<double>> X = {
-        {0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
+    std::vector<std::vector<double>> X = {{0.0, 0.0},
+                                          {0.0, 1.0},
+                                          {1.0, 0.0},
+                                          {1.0, 1.0}};
     std::vector<std::vector<double>> Y = {{0.0}, {1.0}, {1.0}, {0.0}};
 
     MLLib::loss::MSELoss loss;
@@ -167,8 +171,9 @@ protected:
     original_model->add(std::make_shared<activation::Sigmoid>());
 
     // Simple training data
-    std::vector<std::vector<double>> X = {
-        {1.0, 0.0, 0.5}, {0.0, 1.0, 0.3}, {0.5, 0.5, 1.0}};
+    std::vector<std::vector<double>> X = {{1.0, 0.0, 0.5},
+                                          {0.0, 1.0, 0.3},
+                                          {0.5, 0.5, 1.0}};
     std::vector<std::vector<double>> Y = {{1.0, 0.0}, {0.0, 1.0}, {0.5, 0.5}};
 
     MLLib::loss::MSELoss loss;
@@ -189,9 +194,9 @@ protected:
     std::string config_path = temp_dir + "/test_model.config";
 
     // Test binary format
-    assertTrue(
-        ModelIO::save_model(*original_model, binary_path, ModelFormat::BINARY),
-        "Binary save should succeed");
+    assertTrue(ModelIO::save_model(*original_model, binary_path,
+                                   ModelFormat::BINARY),
+               "Binary save should succeed");
 
     auto loaded_binary = ModelIO::load_model(binary_path, ModelFormat::BINARY);
     assertNotNull(loaded_binary.get(), "Binary load should succeed");
@@ -202,9 +207,9 @@ protected:
                      "Binary format should preserve model predictions");
 
     // Test JSON format
-    assertTrue(
-        ModelIO::save_model(*original_model, json_path, ModelFormat::JSON),
-        "JSON save should succeed");
+    assertTrue(ModelIO::save_model(*original_model, json_path,
+                                   ModelFormat::JSON),
+               "JSON save should succeed");
 
     auto loaded_json = ModelIO::load_model(json_path, ModelFormat::JSON);
     assertNotNull(loaded_json.get(), "JSON load should succeed");

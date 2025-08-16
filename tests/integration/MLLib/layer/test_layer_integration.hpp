@@ -121,8 +121,11 @@ protected:
       model->add(std::make_shared<activation::Sigmoid>());
 
       // Process multiple inputs
-      std::vector<std::vector<double>> batch_inputs = {
-          {1.0, 0.0}, {0.0, 1.0}, {0.5, 0.5}, {-0.5, 0.5}, {0.5, -0.5}};
+      std::vector<std::vector<double>> batch_inputs = {{1.0, 0.0},
+                                                       {0.0, 1.0},
+                                                       {0.5, 0.5},
+                                                       {-0.5, 0.5},
+                                                       {0.5, -0.5}};
 
       for (size_t i = 0; i < batch_inputs.size(); ++i) {
         std::vector<double> output = model->predict(batch_inputs[i]);
@@ -163,8 +166,10 @@ protected:
       model->add(std::make_shared<activation::ReLU>());
       model->add(std::make_shared<Dense>(4, 1));
 
-      std::vector<std::vector<double>> X = {
-          {1.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}, {0.0, 0.0}};
+      std::vector<std::vector<double>> X = {{1.0, 0.0},
+                                            {0.0, 1.0},
+                                            {1.0, 1.0},
+                                            {0.0, 0.0}};
       std::vector<std::vector<double>> Y = {{1.0}, {1.0}, {0.0}, {0.0}};
 
       MSELoss loss;
@@ -278,8 +283,10 @@ protected:
       model->add(std::make_shared<Dense>(3, 1));
       model->add(std::make_shared<activation::Sigmoid>());
 
-      std::vector<std::vector<double>> X = {
-          {0.3, 0.7}, {0.8, 0.2}, {0.1, 0.9}, {0.6, 0.4}};
+      std::vector<std::vector<double>> X = {{0.3, 0.7},
+                                            {0.8, 0.2},
+                                            {0.1, 0.9},
+                                            {0.6, 0.4}};
       std::vector<std::vector<double>> Y = {{0.6}, {0.4}, {0.8}, {0.5}};
 
       MSELoss loss;
@@ -338,8 +345,11 @@ protected:
       }
 
       std::vector<double> output;
-      assertNoThrow([&]() { output = model->predict(large_input); },
-                    "Large input processing should not throw");
+      assertNoThrow(
+          [&]() {
+            output = model->predict(large_input);
+          },
+          "Large input processing should not throw");
 
       assertEqual(size_t(1), output.size(),
                   "Large input should produce scalar output");
@@ -365,8 +375,11 @@ protected:
       std::vector<double> input = {0.1, 0.2, 0.3, 0.4, 0.5};
       std::vector<double> output;
 
-      assertNoThrow([&]() { output = model->predict(input); },
-                    "Deep network prediction should not throw");
+      assertNoThrow(
+          [&]() {
+            output = model->predict(input);
+          },
+          "Deep network prediction should not throw");
 
       assertEqual(size_t(1), output.size(),
                   "Deep network should produce scalar output");

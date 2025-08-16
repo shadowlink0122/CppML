@@ -47,8 +47,10 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // XOR-like problem data
-    std::vector<std::vector<double>> X = {
-        {0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}};
+    std::vector<std::vector<double>> X = {{0.0, 0.0},
+                                          {0.0, 1.0},
+                                          {1.0, 0.0},
+                                          {1.0, 1.0}};
     std::vector<std::vector<double>> Y = {{0.0}, {1.0}, {1.0}, {0.0}};
 
     MSELoss loss;
@@ -81,8 +83,7 @@ protected:
 
     // ReLU with SGD should be stable and effective
     assertTrue(stable_epochs >= 150, "SGD+ReLU should have stable training");
-    assertTrue(final_loss <= initial_loss,
-               "SGD+ReLU should not increase loss");
+    assertTrue(final_loss <= initial_loss, "SGD+ReLU should not increase loss");
 
     // Test predictions work correctly
     std::vector<double> pred1 = model->predict({0.0, 0.0});
@@ -126,8 +127,10 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // Binary classification data
-    std::vector<std::vector<double>> X = {
-        {0.2, 0.1}, {0.8, 0.3}, {0.1, 0.9}, {0.7, 0.8}};
+    std::vector<std::vector<double>> X = {{0.2, 0.1},
+                                          {0.8, 0.3},
+                                          {0.1, 0.9},
+                                          {0.7, 0.8}};
     std::vector<std::vector<double>> Y = {{0.0}, {1.0}, {1.0}, {0.0}};
 
     MSELoss loss;
@@ -196,15 +199,20 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());  // Output activation
 
     // Regression-like data
-    std::vector<std::vector<double>> X = {
-        {-1.0, 0.0, 1.0}, {0.5, -0.5, 0.0}, {-0.5, 1.0, -0.5}, {1.0, 1.0, 1.0}};
+    std::vector<std::vector<double>> X = {{-1.0, 0.0, 1.0},
+                                          {0.5, -0.5, 0.0},
+                                          {-0.5, 1.0, -0.5},
+                                          {1.0, 1.0, 1.0}};
     std::vector<std::vector<double>> Y = {{0.2}, {0.8}, {0.3}, {0.9}};
 
     MSELoss loss;
     SGD optimizer(0.2);  // Moderate learning rate for tanh
 
-    assertNoThrow([&]() { model->train(X, Y, loss, optimizer, nullptr, 200); },
-                  "SGD+Tanh training should complete");
+    assertNoThrow(
+        [&]() {
+          model->train(X, Y, loss, optimizer, nullptr, 200);
+        },
+        "SGD+Tanh training should complete");
 
     // Test that tanh handles negative inputs well
     std::vector<double> neg_pred = model->predict({-2.0, -1.0, -0.5});
@@ -255,10 +263,14 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // Multi-class data
-    std::vector<std::vector<double>> X = {
-        {0.1, 0.2}, {0.8, 0.1}, {0.2, 0.9}, {0.9, 0.8}};
-    std::vector<std::vector<double>> Y = {
-        {1.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {0.0, 1.0}};
+    std::vector<std::vector<double>> X = {{0.1, 0.2},
+                                          {0.8, 0.1},
+                                          {0.2, 0.9},
+                                          {0.9, 0.8}};
+    std::vector<std::vector<double>> Y = {{1.0, 0.0},
+                                          {0.0, 1.0},
+                                          {1.0, 0.0},
+                                          {0.0, 1.0}};
 
     MSELoss loss;
 
@@ -456,8 +468,10 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());  // Output
 
     // Simple but challenging data
-    std::vector<std::vector<double>> X = {
-        {0.1, 0.9}, {0.9, 0.1}, {0.3, 0.7}, {0.7, 0.3}};
+    std::vector<std::vector<double>> X = {{0.1, 0.9},
+                                          {0.9, 0.1},
+                                          {0.3, 0.7},
+                                          {0.7, 0.3}};
     std::vector<std::vector<double>> Y = {{0.8}, {0.2}, {0.6}, {0.4}};
 
     MSELoss loss;

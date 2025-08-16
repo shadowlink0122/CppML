@@ -17,9 +17,27 @@ jobs:
       
     - name: Install clang-format
       run: |
+        # Install LLVM official repository for latest clang-format
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        echo "deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-20 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+        
         sudo apt-get update -q
-        sudo apt-get install -y clang-format
-        echo "✅ clang-format installed"
+        # Try to install clang-format-20 first, fallback to available versions
+        if sudo apt-get install -y clang-format-20; then
+          echo "✅ clang-format-20 installed"
+          sudo ln -sf $(which clang-format-20) /usr/bin/clang-format
+        elif sudo apt-get install -y clang-format-18; then
+          echo "✅ clang-format-18 installed"  
+          sudo ln -sf $(which clang-format-18) /usr/bin/clang-format
+        elif sudo apt-get install -y clang-format-16; then
+          echo "✅ clang-format-16 installed"
+          sudo ln -sf $(which clang-format-16) /usr/bin/clang-format
+        else
+          echo "⚠️ Using default clang-format version"
+          sudo apt-get install -y clang-format
+        fi
+        
+        echo "Final clang-format version:"
         clang-format --version
         
     - name: Verify .clang-format exists

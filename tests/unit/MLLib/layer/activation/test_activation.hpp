@@ -368,15 +368,21 @@ protected:
     grad.fill(1.0);
 
     assertThrows<std::runtime_error>(
-        [&]() { relu.backward(grad); },
+        [&]() {
+          relu.backward(grad);
+        },
         "ReLU backward without forward should throw");
 
     assertThrows<std::runtime_error>(
-        [&]() { sigmoid.backward(grad); },
+        [&]() {
+          sigmoid.backward(grad);
+        },
         "Sigmoid backward without forward should throw");
 
     assertThrows<std::runtime_error>(
-        [&]() { tanh_layer.backward(grad); },
+        [&]() {
+          tanh_layer.backward(grad);
+        },
         "Tanh backward without forward should throw");
 
     // Test with mismatched gradient size
@@ -391,15 +397,21 @@ protected:
     wrong_grad.fill(1.0);
 
     assertThrows<std::invalid_argument>(
-        [&]() { relu.backward(wrong_grad); },
+        [&]() {
+          relu.backward(wrong_grad);
+        },
         "ReLU backward with wrong gradient size should throw");
 
     assertThrows<std::invalid_argument>(
-        [&]() { sigmoid.backward(wrong_grad); },
+        [&]() {
+          sigmoid.backward(wrong_grad);
+        },
         "Sigmoid backward with wrong gradient size should throw");
 
     assertThrows<std::invalid_argument>(
-        [&]() { tanh_layer.backward(wrong_grad); },
+        [&]() {
+          tanh_layer.backward(wrong_grad);
+        },
         "Tanh backward with wrong gradient size should throw");
   }
 };
