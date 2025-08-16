@@ -1,11 +1,78 @@
 #include "../../../include/MLLib/backend/backend.hpp"
 #include "../../../include/MLLib/device/device.hpp"
 #include "backend_internal.hpp"
+#include <cstdio>
 #include <stdexcept>
 #include <vector>
 
+// Include GPU backend headers conditionally - they are in gpu/ subfolder
+#ifdef WITH_ROCM
+#include "../../../include/MLLib/backend/rocm_backend.hpp"
+#endif
+#ifdef WITH_ONEAPI
+#include "../../../include/MLLib/backend/oneapi_backend.hpp"
+#endif
+// Metal backend header should only be included in .mm files
+#ifdef WITH_CUDA
+// CUDA functions are declared in backend_internal.hpp
+#endif
+
 namespace MLLib {
 namespace Backend {
+
+// Static variables for GPU backend management
+static GPUBackendType current_gpu_backend_ = GPUBackendType::NONE;
+static bool gpu_backend_initialized_ = false;
+
+// GPU backend availability check functions
+static bool isROCmAvailable() {
+#ifdef WITH_ROCM
+// Simple check - ROCm is available if headers are available and we're on
+// Linux/compatible system
+#ifdef __linux__
+  return true;  // Assume ROCm can be available on Linux
+#else
+  return false;  // ROCm typically not available on non-Linux
+#endif
+#else
+  return false;
+#endif
+}
+
+static bool isOneAPIAvailable() {
+#ifdef WITH_ONEAPI
+// Simple check - oneAPI can be available on Intel platforms
+#if defined(__x86_64__) || defined(__i386__)
+  return true;  // Assume oneAPI can be available on Intel platforms
+#else
+  return false;  // oneAPI typically not available on non-Intel
+#endif
+#else
+  return false;
+#endif
+}
+
+static bool isMetalAvailable() {
+#ifdef WITH_METAL
+// Check if we're on macOS/iOS platform where Metal is available
+#ifdef __APPLE__
+  return true;  // Metal is available on all modern Apple platforms
+#else
+  return false;
+#endif
+#else
+  return false;
+#endif
+}
+
+static bool isCUDAAvailable() {
+#ifdef WITH_CUDA
+  // Check if GPU is available through device detection
+  return Device::isGPUAvailable();
+#else
+  return false;
+#endif
+}
 
 void Backend::matmul(const NDArray& a, const NDArray& b, NDArray& result) {
   dispatch_backend_operation([&]() { cpu_matmul(a, b, result); },
@@ -49,45 +116,123 @@ void Backend::copy(const NDArray& src, NDArray& dst) {
 }
 
 GPUBackendType Backend::getCurrentGPUBackend() {
-  // TODO: Implement proper GPU backend detection
-  // This should query the actual GPU backend in use
-  return GPUBackendType::NONE;
+  if (!gpu_backend_initialized_) {
+    // Auto-select best available GPU backend based on priority
+    if (isCUDAAvailable()) {
+      current_gpu_backend_ = GPUBackendType::CUDA;
+      printf("MLLib: Selected CUDA GPU backend\n");
+    } else if (isROCmAvailable()) {
+      current_gpu_backend_ = GPUBackendType::ROCM;
+      printf("MLLib: Selected ROCm GPU backend\n");
+    } else if (isMetalAvailable()) {
+      current_gpu_backend_ = GPUBackendType::METAL;
+      printf("MLLib: Selected Metal GPU backend\n");
+    } else if (isOneAPIAvailable()) {
+      current_gpu_backend_ = GPUBackendType::ONEAPI;
+      printf("MLLib: Selected oneAPI GPU backend\n");
+    } else {
+      current_gpu_backend_ = GPUBackendType::NONE;
+      printf("MLLib: No GPU backend available, using CPU\n");
+    }
+    gpu_backend_initialized_ = true;
+  }
+  return current_gpu_backend_;
 }
 
 std::vector<GPUBackendType> Backend::getAvailableGPUBackends() {
-  // TODO: Implement proper GPU backend enumeration
-  // This should detect available GPU backends at runtime
   std::vector<GPUBackendType> available_backends;
 
+  // Check each backend's availability at runtime - use local checks to avoid
+  // linking issues
 #ifdef WITH_CUDA
-  available_backends.push_back(GPUBackendType::CUDA);
+  if (isCUDAAvailable()) {
+    available_backends.push_back(GPUBackendType::CUDA);
+  }
 #endif
 
 #ifdef WITH_ROCM
-  available_backends.push_back(GPUBackendType::ROCM);
-#endif
-
-#ifdef WITH_OPENCL
-  available_backends.push_back(GPUBackendType::OPENCL);
+  if (isROCmAvailable()) {
+    available_backends.push_back(GPUBackendType::ROCM);
+  }
 #endif
 
 #ifdef WITH_METAL
-  available_backends.push_back(GPUBackendType::METAL);
+  if (isMetalAvailable()) {
+    available_backends.push_back(GPUBackendType::METAL);
+  }
 #endif
 
 #ifdef WITH_ONEAPI
-  available_backends.push_back(GPUBackendType::ONEAPI);
+  if (isOneAPIAvailable()) {
+    available_backends.push_back(GPUBackendType::ONEAPI);
+  }
+#endif
+
+  // OpenCL support would need additional implementation
+#ifdef WITH_OPENCL
+  // TODO: Implement OpenCL availability check
+  // available_backends.push_back(GPUBackendType::OPENCL);
 #endif
 
   return available_backends;
 }
 
 bool Backend::setPreferredGPUBackend(GPUBackendType backend) {
-  // TODO: Implement proper GPU backend selection
-  // This should validate and set the preferred GPU backend
-  (void)backend;  // Suppress unused parameter warning
+  // Simple validation and setting without dynamic checking
+  if (backend == GPUBackendType::NONE) {
+    current_gpu_backend_ = backend;
+    gpu_backend_initialized_ = true;
+    printf("MLLib: Set preferred GPU backend to None\n");
+    return true;
+  }
 
-  // For now, just return false to indicate unimplemented
+  // Check if backend is theoretically supported
+  bool is_supported = false;
+  const char* backend_name = "Unknown";
+
+  switch (backend) {
+  case GPUBackendType::CUDA:
+#ifdef WITH_CUDA
+    is_supported = true;
+    backend_name = "CUDA";
+#endif
+    break;
+  case GPUBackendType::ROCM:
+#ifdef WITH_ROCM
+    is_supported = true;
+    backend_name = "ROCm";
+#endif
+    break;
+  case GPUBackendType::METAL:
+#ifdef WITH_METAL
+    is_supported = true;
+    backend_name = "Metal";
+#endif
+    break;
+  case GPUBackendType::ONEAPI:
+#ifdef WITH_ONEAPI
+    is_supported = true;
+    backend_name = "oneAPI";
+#endif
+    break;
+  case GPUBackendType::OPENCL:
+#ifdef WITH_OPENCL
+    is_supported = true;
+    backend_name = "OpenCL";
+#endif
+    break;
+  default: break;
+  }
+
+  if (is_supported) {
+    current_gpu_backend_ = backend;
+    gpu_backend_initialized_ = true;
+    printf("MLLib: Set preferred GPU backend to %s\n", backend_name);
+    return true;
+  }
+
+  printf("MLLib: Requested GPU backend %s is not supported in this build\n",
+         backend_name);
   return false;
 }
 
