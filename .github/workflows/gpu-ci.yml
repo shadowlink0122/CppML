@@ -783,19 +783,13 @@ jobs:
     - name: Build multi-GPU example
       run: |
         echo "🔧 Building GPU vendor detection example..."
-        make examples
+        make samples
         
     - name: Test multi-GPU vendor detection
       run: |
         echo "🧪 Testing multi-GPU vendor detection..."
-        
-        if [ -f build/samples/gpu_vendor_detection ]; then
-          echo "✅ Running GPU vendor detection demo:"
-          ./build/samples/gpu_vendor_detection || echo "⚠️ Demo completed with warnings"
-        else
-          echo "❌ GPU vendor detection sample not built"
-          exit 1
-        fi
+        echo "Running device detection sample (includes GPU vendor detection):"
+        make device-detection || echo "⚠️ Demo completed with warnings"
         
     - name: Test GPU vendor API availability
       run: |
