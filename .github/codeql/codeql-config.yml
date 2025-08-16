@@ -1,4 +1,4 @@
-name: "CodeQL Configuration"
+name: "CppML CodeQL Configuration"
 
 disable-default-queries: false
 
@@ -9,21 +9,9 @@ paths:
   - include/
   - src/
   - samples/
-  - tests/
 
 paths-ignore:
   - build/
   - .git/
   - docs/
-
-# Configure C++ extractor
-extraction:
-  cpp:
-    prepare:
-      packages: "build-essential"
-    after_prepare:
-      - "make clean"
-    index:
-      build_command: "make"
-    finalize:
-      - "echo 'CodeQL extraction completed'"
+  - tests/

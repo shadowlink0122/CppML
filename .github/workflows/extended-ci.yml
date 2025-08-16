@@ -168,19 +168,53 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
-      
+    
+    - name: Verify source code structure
+      run: |
+        echo "🔍 Verifying C++ source code structure..."
+        echo "C++ source files (.cpp):"
+        find . -name "*.cpp" -type f | grep -v build | head -10
+        echo "C++ header files (.hpp):"
+        find . -name "*.hpp" -type f | grep -v build | head -10
+        echo "C header files (.h):"
+        find . -name "*.h" -type f | grep -v build | head -10
+        
+        echo "Total source files:"
+        find . \( -name "*.cpp" -o -name "*.cc" -o -name "*.cxx" -o -name "*.c" \) -type f | grep -v build | wc -l
+        
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3
       with:
         languages: cpp
+        config-file: ./.github/codeql/codeql-config.yml
         
     - name: Install build dependencies
       run: |
         sudo apt-get update -q
         sudo apt-get install -y build-essential make
         
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v3
+    - name: Manual build for CodeQL
+      run: |
+        echo "🔒 Building project for security analysis..."
+        echo "Working directory: $(pwd)"
+        echo "CodeQL environment variables:"
+        env | grep -i codeql || echo "No CodeQL environment variables found"
+        
+        echo "Source files verification:"
+        find src -name "*.cpp" -type f | head -10
+        find include -name "*.hpp" -type f | head -10
+        
+        echo "Makefile verification:"
+        head -30 Makefile
+        
+        # Clean and build with explicit compiler invocation
+        make clean
+        
+        echo "Starting build process..."
+        make all CXX=g++ VERBOSE=1
+        
+        echo "Build artifacts:"
+        find build -name "*.a" -o -name "*.o" 2>/dev/null || echo "No build artifacts found"
         
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
