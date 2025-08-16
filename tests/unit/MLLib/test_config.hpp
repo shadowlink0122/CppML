@@ -103,8 +103,7 @@ protected:
 
     // Test version number consistency
     int reconstructed_version = config::VERSION_MAJOR * 10000 +
-                                config::VERSION_MINOR * 100 +
-                                config::VERSION_PATCH;
+        config::VERSION_MINOR * 100 + config::VERSION_PATCH;
     assertEqual(10000, reconstructed_version,
                 "Version numbers should be consistent");
 

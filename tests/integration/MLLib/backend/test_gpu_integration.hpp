@@ -68,7 +68,9 @@ protected:
 
       // Test training (simplified version)
       assertNoThrow(
-          [&]() { gpu_model->train(X, y, loss, optimizer, nullptr, 10); },
+          [&]() {
+            gpu_model->train(X, y, loss, optimizer, nullptr, 10);
+          },
           "GPU model training should complete without errors");
 
       // Test prediction
@@ -148,8 +150,11 @@ protected:
       SGD optimizer(0.001);
 
       // Test training with larger dataset
-      assertNoThrow([&]() { model->train(X, y, loss, optimizer, nullptr, 5); },
-                    "Complex model training should complete without errors");
+      assertNoThrow(
+          [&]() {
+            model->train(X, y, loss, optimizer, nullptr, 5);
+          },
+          "Complex model training should complete without errors");
 
       // Test batch prediction
       for (size_t i = 0; i < X.size(); i += 4) {
@@ -249,8 +254,9 @@ protected:
                  "Matrix multiplication should produce expected results");
 
     } catch (const std::exception& e) {
-      assertFalse(
-          true, std::string("GPU memory integration test failed: ") + e.what());
+      assertFalse(true,
+                  std::string("GPU memory integration test failed: ") +
+                      e.what());
     }
 
     Device::setDevice(original_device);

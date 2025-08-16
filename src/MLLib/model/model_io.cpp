@@ -268,8 +268,9 @@ ModelIO::create_from_config(const ModelConfig& config) {
 
   for (const auto& layer_info : config.layers) {
     if (layer_info.type == "Dense") {
-      model->add(std::make_shared<layer::Dense>(
-          layer_info.input_size, layer_info.output_size, layer_info.use_bias));
+      model->add(std::make_shared<layer::Dense>(layer_info.input_size,
+                                                layer_info.output_size,
+                                                layer_info.use_bias));
     } else if (layer_info.type == "ReLU") {
       model->add(std::make_shared<layer::activation::ReLU>());
     } else if (layer_info.type == "Sigmoid") {
@@ -411,8 +412,9 @@ std::unique_ptr<Sequential> ModelIO::load_binary(const std::string& filepath) {
   // Create layers
   for (const auto& layer_info : layers_info) {
     if (layer_info.type == "Dense") {
-      model->add(std::make_shared<layer::Dense>(
-          layer_info.input_size, layer_info.output_size, layer_info.use_bias));
+      model->add(std::make_shared<layer::Dense>(layer_info.input_size,
+                                                layer_info.output_size,
+                                                layer_info.use_bias));
     } else if (layer_info.type == "ReLU") {
       model->add(std::make_shared<layer::activation::ReLU>());
     } else if (layer_info.type == "Sigmoid") {

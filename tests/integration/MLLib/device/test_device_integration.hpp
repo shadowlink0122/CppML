@@ -45,9 +45,12 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // Training data for CPU processing
-    std::vector<std::vector<double>> X = {
-        {0.1, 0.2, 0.3, 0.4}, {0.5, 0.6, 0.7, 0.8}, {0.2, 0.4, 0.6, 0.8},
-        {0.1, 0.3, 0.5, 0.7}, {0.9, 0.8, 0.7, 0.6}, {0.3, 0.6, 0.9, 0.2}};
+    std::vector<std::vector<double>> X = {{0.1, 0.2, 0.3, 0.4},
+                                          {0.5, 0.6, 0.7, 0.8},
+                                          {0.2, 0.4, 0.6, 0.8},
+                                          {0.1, 0.3, 0.5, 0.7},
+                                          {0.9, 0.8, 0.7, 0.6},
+                                          {0.3, 0.6, 0.9, 0.2}};
     std::vector<std::vector<double>> Y = {{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0},
                                           {0.0, 0.0, 1.0}, {1.0, 0.0, 0.0},
                                           {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}};
@@ -153,8 +156,7 @@ protected:
     new_model->add(std::make_shared<Dense>(3, 4));
     new_model->add(std::make_shared<activation::Tanh>());
 
-    std::vector<double> cleanup_test =
-        new_model->predict({0.1, 0.2, 0.3});
+    std::vector<double> cleanup_test = new_model->predict({0.1, 0.2, 0.3});
     assertEqual(size_t(4), cleanup_test.size(),
                 "Device memory cleanup should allow new allocations");
   }
@@ -277,8 +279,9 @@ protected:
     OutputCapture capture;
 
     // Test performance with different model sizes
-    std::vector<std::pair<int, int>> size_configs = {
-        {5, 10}, {10, 20}, {20, 30}};
+    std::vector<std::pair<int, int>> size_configs = {{5, 10},
+                                                     {10, 20},
+                                                     {20, 30}};
 
     for (const auto& config : size_configs) {
       int input_size = config.first;

@@ -75,44 +75,84 @@ static bool isCUDAAvailable() {
 }
 
 void Backend::matmul(const NDArray& a, const NDArray& b, NDArray& result) {
-  dispatch_backend_operation([&]() { cpu_matmul(a, b, result); },
-                             [&]() { gpu_matmul(a, b, result); });
+  dispatch_backend_operation(
+      [&]() {
+        cpu_matmul(a, b, result);
+      },
+      [&]() {
+        gpu_matmul(a, b, result);
+      });
 }
 
 void Backend::add(const NDArray& a, const NDArray& b, NDArray& result) {
-  dispatch_backend_operation([&]() { cpu_add(a, b, result); },
-                             [&]() { gpu_add(a, b, result); });
+  dispatch_backend_operation(
+      [&]() {
+        cpu_add(a, b, result);
+      },
+      [&]() {
+        gpu_add(a, b, result);
+      });
 }
 
 void Backend::subtract(const NDArray& a, const NDArray& b, NDArray& result) {
-  dispatch_backend_operation([&]() { cpu_subtract(a, b, result); },
-                             [&]() { gpu_subtract(a, b, result); });
+  dispatch_backend_operation(
+      [&]() {
+        cpu_subtract(a, b, result);
+      },
+      [&]() {
+        gpu_subtract(a, b, result);
+      });
 }
 
 void Backend::multiply(const NDArray& a, const NDArray& b, NDArray& result) {
-  dispatch_backend_operation([&]() { cpu_multiply(a, b, result); },
-                             [&]() { gpu_multiply(a, b, result); });
+  dispatch_backend_operation(
+      [&]() {
+        cpu_multiply(a, b, result);
+      },
+      [&]() {
+        gpu_multiply(a, b, result);
+      });
 }
 
 void Backend::add_scalar(const NDArray& a, double scalar, NDArray& result) {
-  dispatch_backend_operation([&]() { cpu_add_scalar(a, scalar, result); },
-                             [&]() { gpu_add_scalar(a, scalar, result); });
+  dispatch_backend_operation(
+      [&]() {
+        cpu_add_scalar(a, scalar, result);
+      },
+      [&]() {
+        gpu_add_scalar(a, scalar, result);
+      });
 }
 
 void Backend::multiply_scalar(const NDArray& a, double scalar,
                               NDArray& result) {
-  dispatch_backend_operation([&]() { cpu_multiply_scalar(a, scalar, result); },
-                             [&]() { gpu_multiply_scalar(a, scalar, result); });
+  dispatch_backend_operation(
+      [&]() {
+        cpu_multiply_scalar(a, scalar, result);
+      },
+      [&]() {
+        gpu_multiply_scalar(a, scalar, result);
+      });
 }
 
 void Backend::fill(NDArray& array, double value) {
-  dispatch_backend_operation([&]() { cpu_fill(array, value); },
-                             [&]() { gpu_fill(array, value); });
+  dispatch_backend_operation(
+      [&]() {
+        cpu_fill(array, value);
+      },
+      [&]() {
+        gpu_fill(array, value);
+      });
 }
 
 void Backend::copy(const NDArray& src, NDArray& dst) {
-  dispatch_backend_operation([&]() { cpu_copy(src, dst); },
-                             [&]() { gpu_copy(src, dst); });
+  dispatch_backend_operation(
+      [&]() {
+        cpu_copy(src, dst);
+      },
+      [&]() {
+        gpu_copy(src, dst);
+      });
 }
 
 GPUBackendType Backend::getCurrentGPUBackend() {

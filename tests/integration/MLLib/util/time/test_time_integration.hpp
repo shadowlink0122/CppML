@@ -55,8 +55,11 @@ protected:
     // Measure training time
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    assertNoThrow([&]() { model->train(X, Y, loss, optimizer, nullptr, 100); },
-                  "Timed training should complete");
+    assertNoThrow(
+        [&]() {
+          model->train(X, Y, loss, optimizer, nullptr, 100);
+        },
+        "Timed training should complete");
 
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -197,8 +200,10 @@ protected:
                                           {0.6, 0.7, 0.8, 0.9, 1.0},
                                           {0.2, 0.4, 0.6, 0.8, 1.0},
                                           {0.1, 0.3, 0.5, 0.7, 0.9}};
-    std::vector<std::vector<double>> Y = {
-        {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}, {0.5, 0.3, 0.2}};
+    std::vector<std::vector<double>> Y = {{1.0, 0.0, 0.0},
+                                          {0.0, 1.0, 0.0},
+                                          {0.0, 0.0, 1.0},
+                                          {0.5, 0.3, 0.2}};
 
     MSELoss loss;
     SGD optimizer(0.01);  // Slow learning rate
@@ -269,8 +274,11 @@ protected:
     model->add(std::make_shared<Dense>(4, 1));
     model->add(std::make_shared<activation::Sigmoid>());
 
-    std::vector<std::vector<double>> X = {
-        {0.1, 0.9}, {0.9, 0.1}, {0.3, 0.7}, {0.7, 0.3}, {0.5, 0.5}};
+    std::vector<std::vector<double>> X = {{0.1, 0.9},
+                                          {0.9, 0.1},
+                                          {0.3, 0.7},
+                                          {0.7, 0.3},
+                                          {0.5, 0.5}};
     std::vector<std::vector<double>> Y = {{1.0}, {0.0}, {1.0}, {0.0}, {0.5}};
 
     MSELoss loss;
