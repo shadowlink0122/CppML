@@ -16,6 +16,9 @@
 #include "MLLib/device/device.hpp"
 #include "MLLib/ndarray.hpp"
 
+// Backend components
+#include "MLLib/backend/backend.hpp"
+
 // Data processing
 #include "MLLib/data/batch.hpp"
 #include "MLLib/data/loader.hpp"

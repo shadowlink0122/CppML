@@ -149,7 +149,7 @@ CLANG_TIDY = clang-tidy
 CPPCHECK = cppcheck
 
 # Phony targets for main build, clean, test, and samples
-.PHONY: all clean debug test samples run-sample xor device-detection gpu-vendor-detection help install build-tools gpu-check
+.PHONY: all clean debug test gpu-integration-test samples run-sample xor device-detection gpu-vendor-detection gpu-test help install build-tools gpu-check
 
 # Default target
 .PHONY: all
@@ -348,6 +348,31 @@ install-tools:
 test: unit-test integration-test
 	@echo "✅ All tests completed successfully"
 
+# Run GPU integration tests
+.PHONY: gpu-integration-test
+gpu-integration-test: $(LIB_TARGET)
+	@echo "Building and running GPU integration tests..."
+	@mkdir -p $(BUILD_DIR)/tests
+	@if [ -f "$(TEST_DIR)/integration/gpu_integration_test.cpp" ]; then \
+		echo "Compiling GPU integration test..."; \
+		GPU_TEST_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/gpu_integration_test.cpp"; \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$GPU_TEST_FILES -L$(BUILD_DIR) -lMLLib"; \
+		if $$COMPILE_CMD -o $(BUILD_DIR)/tests/gpu_integration_test; then \
+			echo "Running GPU integration tests..."; \
+			if $(BUILD_DIR)/tests/gpu_integration_test; then \
+				echo "✅ GPU integration tests passed"; \
+			else \
+				echo "❌ GPU integration tests failed"; \
+				exit 1; \
+			fi; \
+		else \
+			echo "❌ Failed to build GPU integration tests"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "ℹ️  GPU integration tests not found"; \
+	fi
+
 # Run unit tests only
 .PHONY: unit-test
 unit-test: $(LIB_TARGET)
@@ -514,9 +539,11 @@ run-sample:
 	fi
 
 # Convenience aliases for commonly used samples
-.PHONY: xor device-detection gpu-vendor-detection
+.PHONY: xor device-detection gpu-vendor-detection gpu-test
 xor: samples
 	@$(MAKE) run-sample SAMPLE=xor
+
+gpu-test: gpu-integration-test
 
 .PHONY: device-detection
 device-detection: samples
@@ -552,6 +579,7 @@ help:
 	@echo "  test         - Run all tests (unit + integration)"
 	@echo "  unit-test    - Run unit tests only"
 	@echo "  integration-test - Run integration tests only"
+	@echo "  gpu-integration-test - Run GPU integration tests only"
 	@echo "  test-all     - Run comprehensive test runner"
 	@echo "  ci-test      - Run tests in CI environment"
 	@echo ""
@@ -571,6 +599,7 @@ help:
 	@echo "  xor               - Build and run XOR sample (alias)"
 	@echo "  device-detection  - Build and run device detection sample (alias)"
 	@echo "  gpu-vendor-detection - Build and run GPU vendor detection sample (alias)"
+	@echo "  gpu-test          - Run GPU integration tests (alias)"
 	@echo ""
 	@echo "GPU Configuration:"
 	@echo "  Default: All GPU backends enabled (CUDA, ROCm, oneAPI, Metal)"
