@@ -1,0 +1,29 @@
+name: "CodeQL Configuration"
+
+disable-default-queries: false
+
+queries:
+  - uses: security-and-quality
+
+paths:
+  - include/
+  - src/
+  - samples/
+  - tests/
+
+paths-ignore:
+  - build/
+  - .git/
+  - docs/
+
+# Configure C++ extractor
+extraction:
+  cpp:
+    prepare:
+      packages: "build-essential"
+    after_prepare:
+      - "make clean"
+    index:
+      build_command: "make"
+    finalize:
+      - "echo 'CodeQL extraction completed'"
