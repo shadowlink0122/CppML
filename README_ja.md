@@ -43,10 +43,17 @@ git clone https://github.com/shadowlink0122/CppML.git
 cd CppML
 make                         # ライブラリをビルド
 make test                    # 全テスト実行（単体 + 結合テスト）
-make unit-test              # 単体テスト実行（21/21 通過）
-make integration-test       # 結合テスト実行（3429/3429 アサーション）
+make unit-test               # 単体テスト実行（21/21 通過）
+make integration-test        # 結合テスト実行（3429/3429 アサーション）
 make simple-integration-test # シンプル結合テスト実行
-make xor                    # XORニューラルネットワークサンプル実行
+# サンプルをビルド
+make samples
+make run-sample SAMPLE=xor   # 汎用ランナーを使用して特定サンプル実行
+make xor                     # XORニューラルネットワーク（エイリアス）
+make device-detection        # GPUデバイス検出（エイリアス）
+make gpu-vendor-detection    # GPUベンダー検出（エイリアス）
+make device-detection        # GPUデバイス検出サンプル実行
+make gpu-vendor-detection    # GPUベンダー検出サンプル実行
 ```
 
 ### 基本的な使用方法
@@ -260,12 +267,15 @@ XORニューラルネットワークサンプル：
 make xor  # XORニューラルネットワークサンプルを実行
 ```
 
-### モデル形式テスト
+### サンプル実行
 
-全モデルI/O形式をテスト：
+全サンプルプログラムをテスト：
 
 ```bash
-make model-format-test  # enumベース形式システムをテスト
+make samples               # 全サンプルプログラムをビルド
+make run-sample            # 利用可能なサンプル一覧を表示
+make run-sample SAMPLE=xor # 特定サンプルを実行
+make xor                   # XORニューラルネットワークサンプル実行（エイリアス）
 ```
 
 ## ⚠️ 現在の制限事項
@@ -318,8 +328,9 @@ make DISABLE_METAL=1          # Apple Metal無効化
 # CPUのみビルド
 make DISABLE_CUDA=1 DISABLE_ROCM=1 DISABLE_ONEAPI=1 DISABLE_METAL=1
 
-# CPUのみテスト
+# 環境制御によるGPUテスト
 FORCE_CPU_ONLY=1 make test    # CPUのみ強制テスト
+GPU_SIMULATION=1 make test    # GPUシミュレーションモード有効化
 ```
 
 ### 使用方法
