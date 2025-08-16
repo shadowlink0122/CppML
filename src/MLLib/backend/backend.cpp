@@ -54,9 +54,19 @@ static bool isOneAPIAvailable() {
 
 static bool isMetalAvailable() {
 #ifdef WITH_METAL
-// Check if we're on macOS/iOS platform where Metal is available
 #ifdef __APPLE__
-  return true;  // Metal is available on all modern Apple platforms
+  // Check if Apple GPU is actually detected
+  if (!Device::isGPUAvailable()) {
+    return false;
+  }
+
+  auto gpus = Device::detectGPUs();
+  for (const auto& gpu : gpus) {
+    if (gpu.vendor == GPUVendor::APPLE) {
+      return true;
+    }
+  }
+  return false;
 #else
   return false;
 #endif
@@ -67,8 +77,19 @@ static bool isMetalAvailable() {
 
 static bool isCUDAAvailable() {
 #ifdef WITH_CUDA
-  // Check if GPU is available through device detection
-  return Device::isGPUAvailable();
+  // Check if actual CUDA hardware and drivers are available
+  if (!Device::isGPUAvailable()) {
+    return false;
+  }
+
+  // Check if any NVIDIA GPU is detected
+  auto gpus = Device::detectGPUs();
+  for (const auto& gpu : gpus) {
+    if (gpu.vendor == GPUVendor::NVIDIA) {
+      return true;
+    }
+  }
+  return false;
 #else
   return false;
 #endif
@@ -157,23 +178,44 @@ void Backend::copy(const NDArray& src, NDArray& dst) {
 
 GPUBackendType Backend::getCurrentGPUBackend() {
   if (!gpu_backend_initialized_) {
-    // Auto-select best available GPU backend based on priority
+    // Auto-select best available GPU backend based on platform and priority
+#ifdef __APPLE__
+    // On Apple platforms, prioritize Metal first
+    if (isMetalAvailable()) {
+      current_gpu_backend_ = GPUBackendType::METAL;
+      printf("MLLib: Selected Metal GPU backend\n");
+    } else if (isCUDAAvailable()) {
+      current_gpu_backend_ = GPUBackendType::CUDA;
+      printf("MLLib: Selected CUDA GPU backend\n");
+    } else if (isOneAPIAvailable()) {
+      current_gpu_backend_ = GPUBackendType::ONEAPI;
+      printf("MLLib: Selected oneAPI GPU backend\n");
+    } else if (isROCmAvailable()) {
+      current_gpu_backend_ = GPUBackendType::ROCM;
+      printf("MLLib: Selected ROCm GPU backend\n");
+    } else {
+      current_gpu_backend_ = GPUBackendType::NONE;
+      printf("MLLib: No GPU backend available, using CPU\n");
+    }
+#else
+    // On other platforms, prioritize CUDA first, then others
     if (isCUDAAvailable()) {
       current_gpu_backend_ = GPUBackendType::CUDA;
       printf("MLLib: Selected CUDA GPU backend\n");
     } else if (isROCmAvailable()) {
       current_gpu_backend_ = GPUBackendType::ROCM;
       printf("MLLib: Selected ROCm GPU backend\n");
-    } else if (isMetalAvailable()) {
-      current_gpu_backend_ = GPUBackendType::METAL;
-      printf("MLLib: Selected Metal GPU backend\n");
     } else if (isOneAPIAvailable()) {
       current_gpu_backend_ = GPUBackendType::ONEAPI;
       printf("MLLib: Selected oneAPI GPU backend\n");
+    } else if (isMetalAvailable()) {
+      current_gpu_backend_ = GPUBackendType::METAL;
+      printf("MLLib: Selected Metal GPU backend\n");
     } else {
       current_gpu_backend_ = GPUBackendType::NONE;
       printf("MLLib: No GPU backend available, using CPU\n");
     }
+#endif
     gpu_backend_initialized_ = true;
   }
   return current_gpu_backend_;

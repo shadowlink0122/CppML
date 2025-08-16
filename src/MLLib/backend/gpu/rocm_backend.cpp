@@ -108,6 +108,14 @@ void ROCmBackend::gemm(bool transposeA, bool transposeB, int m, int n, int k,
   }
 }
 
+void ROCmBackend::matmul(const double* A, const double* B, double* C,
+                         int rows_a, int cols_a, int cols_b) {
+  // Optimized matrix multiplication using rocBLAS
+  const double alpha = 1.0, beta = 0.0;
+  gemm(false, false, rows_a, cols_b, cols_a, alpha, A, rows_a, B, cols_a, beta,
+       C, rows_a);
+}
+
 // HIP kernel implementations
 __global__ void hip_relu_kernel(const double* input, double* output,
                                 size_t size) {

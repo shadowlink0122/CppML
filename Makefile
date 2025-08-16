@@ -26,9 +26,16 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -O2
 DEBUG_FLAGS = -g -DDEBUG
 INCLUDE_FLAGS = -I$(INCLUDE_DIR)
 
-# Enable all GPU support by default for library usage
-# Users can control GPU usage at runtime via device detection
-CXXFLAGS += -DWITH_CUDA -DWITH_ROCM -DWITH_ONEAPI -DWITH_METAL
+# GPU backend configuration
+# CPU-only mode: Build without any GPU backend support
+ifdef CPU_ONLY
+    # Skip all GPU backend flags
+    GPU_DISABLED = true
+else
+    # Enable all GPU support by default for library usage
+    # Users can control GPU usage at runtime via device detection
+    CXXFLAGS += -DWITH_CUDA -DWITH_ROCM -DWITH_ONEAPI -DWITH_METAL
+endif
 
 # Optional: Disable specific GPU backends at compile time
 ifdef DISABLE_CUDA
@@ -45,6 +52,12 @@ endif
 
 ifdef DISABLE_METAL
     CXXFLAGS := $(filter-out -DWITH_METAL,$(CXXFLAGS))
+endif
+
+# Alternative: Disable all GPU backends at once
+ifdef DISABLE_ALL_GPU
+    CXXFLAGS := $(filter-out -DWITH_CUDA -DWITH_ROCM -DWITH_ONEAPI -DWITH_METAL,$(CXXFLAGS))
+    GPU_DISABLED = true
 endif
 
 # Add CUDA flags if available
@@ -82,7 +95,7 @@ endif
 
 # Add Metal flags (always on macOS, mock on other platforms)
 ifeq ($(METAL_AVAILABLE),true)
-    LDFLAGS += -framework Metal -framework Foundation
+    LDFLAGS += -framework Metal -framework Foundation -framework MetalPerformanceShaders
 endif
 
 # CI environment detection - disable problematic features
@@ -505,7 +518,11 @@ integration-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/integration/integration_test_main.cpp" ]; then \
 		echo "Compiling integration test framework..."; \
 		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
-		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(CPP_FILES)"; \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(LIB_TARGET)"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			echo "Building with Metal support for integration tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
 		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
 			echo "Building with CUDA support for tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
@@ -560,7 +577,7 @@ samples: $(LIB_TARGET)
 			if [ -f "$$sample" ]; then \
 				name=$$(basename $$sample .cpp); \
 				echo "Building sample: $$name"; \
-				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET) -o $(BUILD_DIR)/samples/$$name; then \
+				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET) $(LDFLAGS) -o $(BUILD_DIR)/samples/$$name; then \
 					echo "✓ Built sample: $$name"; \
 				else \
 					echo "❌ Failed to build sample: $$name"; \
@@ -676,6 +693,8 @@ help:
 	@echo "  Default: All GPU backends enabled (CUDA, ROCm, oneAPI, Metal)"
 	@echo "  GPU detection and usage controlled at runtime"
 	@echo ""
+	@echo "  CPU_ONLY=1        - Build without any GPU backend support (CPU only)"
+	@echo "  DISABLE_ALL_GPU=1 - Disable all GPU backends at compile time"
 	@echo "  DISABLE_CUDA=1    - Disable CUDA support at compile time"
 	@echo "  DISABLE_ROCM=1    - Disable AMD ROCm support at compile time" 
 	@echo "  DISABLE_ONEAPI=1  - Disable Intel oneAPI support at compile time"
@@ -683,6 +702,8 @@ help:
 	@echo ""
 	@echo "Usage Examples:"
 	@echo "  make                     - Build with all GPU support (runtime detection)"
+	@echo "  make CPU_ONLY=1          - Build CPU-only version (no GPU backends)"
+	@echo "  make DISABLE_ALL_GPU=1   - Build without GPU backends"
 	@echo "  make DISABLE_CUDA=1      - Build without CUDA backend"
 	@echo "  make ci-build            - Build for CI (CPU-only with stubs)"
 	@echo "  make ci-test             - Run tests in CI environment"
