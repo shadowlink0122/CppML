@@ -26,6 +26,19 @@ CXXFLAGS = -std=c++17 -Wall -Wextra -O2
 DEBUG_FLAGS = -g -DDEBUG
 INCLUDE_FLAGS = -I$(INCLUDE_DIR)
 
+# CI environment: use clang++ for Objective-C++ support
+ifdef CI
+    CXX = clang++
+endif
+
+ifneq ($(GITHUB_ACTIONS),)
+    CXX = clang++
+endif
+
+ifneq ($(GITLAB_CI),)
+    CXX = clang++
+endif
+
 # GPU backend configuration
 # CPU-only mode: Build without any GPU backend support
 ifdef CPU_ONLY
@@ -101,20 +114,26 @@ endif
 # CI environment detection - disable problematic features
 ifdef CI
     METAL_AVAILABLE = false
-    MM_FILES = 
-    $(info CI mode detected - disabling Metal backend)
+    # Remove Metal support flag in CI environment
+    CXXFLAGS := $(filter-out -DWITH_METAL,$(CXXFLAGS))
+    CPPFLAGS += -DCI
+    $(info CI mode detected - disabling Metal support, using CPU/other GPU backends only)
 endif
 
 ifneq ($(GITHUB_ACTIONS),)
     METAL_AVAILABLE = false
-    MM_FILES = 
-    $(info GitHub Actions detected - disabling Metal backend)
+    # Remove Metal support flag in GitHub Actions environment
+    CXXFLAGS := $(filter-out -DWITH_METAL,$(CXXFLAGS))
+    CPPFLAGS += -DCI
+    $(info GitHub Actions detected - disabling Metal support, using CPU/other GPU backends only)
 endif
 
 ifneq ($(GITLAB_CI),)
     METAL_AVAILABLE = false
-    MM_FILES = 
-    $(info GitLab CI detected - disabling Metal backend)
+    # Remove Metal support flag in GitLab CI environment
+    CXXFLAGS := $(filter-out -DWITH_METAL,$(CXXFLAGS))
+    CPPFLAGS += -DCI
+    $(info GitLab CI detected - disabling Metal support, using CPU/other GPU backends only)
 endif
 
 # Find source files
@@ -124,6 +143,17 @@ HPP_FILES = $(shell find $(INCLUDE_DIR) -name "*.hpp" 2>/dev/null || true)
 SRC_HPP_FILES = $(shell find $(SRC_DIR) -name "*.hpp" 2>/dev/null || true)
 TEST_FILES = $(shell find $(TEST_DIR) -name "*.cpp" 2>/dev/null || true)
 TEST_HPP_FILES = $(shell find $(TEST_DIR) -name "*.hpp" 2>/dev/null || true)
+
+# Override MM_FILES in CI environment after initial search
+ifdef CI
+    MM_FILES :=
+endif
+ifneq ($(GITHUB_ACTIONS),)
+    MM_FILES :=
+endif
+ifneq ($(GITLAB_CI),)
+    MM_FILES :=
+endif
 
 # Filter GPU backend files based on WITH_* flags (not availability)
 # Include backend files if WITH_* is defined to ensure stub implementations are compiled
@@ -135,9 +165,11 @@ ifneq ($(findstring -DWITH_ONEAPI,$(CXXFLAGS)),)
     CPP_FILES += src/MLLib/backend/gpu/oneapi_backend.cpp
 endif
 
-# Only include Metal backend on macOS
+# Only include Metal backend when Metal support is enabled and available
 ifeq ($(METAL_AVAILABLE),true)
-    MM_FILES += src/MLLib/backend/gpu/metal_backend.mm
+    ifneq ($(findstring -DWITH_METAL,$(CXXFLAGS)),)
+        MM_FILES += src/MLLib/backend/gpu/metal_backend.mm
+    endif
 endif
 
 # Add CUDA stub implementation when CUDA is not available but WITH_CUDA is enabled
@@ -202,6 +234,15 @@ $(LIB_TARGET): $(BUILD_DIR)
 	@if [ -n "$(MM_FILES)" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
 		echo "Compiling Objective-C++ files..."; \
 		$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(MM_FILES); \
+	elif [ -n "$(MM_FILES)" ] && [ -n "$(CI)" ]; then \
+		echo "Checking CI Objective-C++ compiler availability..."; \
+		if $(CXX) --help | grep -q objc 2>/dev/null; then \
+			echo "Compiling Objective-C++ files (CI mode with native implementation)..."; \
+			$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) -c $(MM_FILES); \
+		else \
+			echo "Skipping Objective-C++ files (compiler not available in CI)"; \
+			echo "Metal backend stub will be used instead"; \
+		fi; \
 	elif [ -n "$(MM_FILES)" ]; then \
 		echo "Skipping Objective-C++ files (Metal not available)"; \
 	fi
@@ -441,6 +482,22 @@ gpu-integration-test: $(LIB_TARGET)
 		echo "Compiling GPU integration test..."; \
 		GPU_TEST_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/gpu_integration_test.cpp"; \
 		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$GPU_TEST_FILES -L$(BUILD_DIR) -lMLLib"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			echo "Building with Metal support for GPU integration tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			echo "Building with CUDA support for tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		else \
+			echo "Building without CUDA support for tests..."; \
+			if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+			fi; \
+			if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+			fi; \
+		fi; \
 		if $$COMPILE_CMD -o $(BUILD_DIR)/tests/gpu_integration_test; then \
 			echo "Running GPU integration tests..."; \
 			if $(BUILD_DIR)/tests/gpu_integration_test; then \
@@ -466,9 +523,21 @@ unit-test: $(LIB_TARGET)
 		echo "Compiling unit test framework..."; \
 		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
 		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			echo "Building with Metal support for unit tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
 		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
 			echo "Building with CUDA support for tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		else \
+			echo "Building without CUDA support for tests..."; \
+			if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+			fi; \
+			if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+			fi; \
 		fi; \
 		if $$COMPILE_CMD -o $(BUILD_DIR)/tests/unit_tests; then \
 			echo "Running unit tests..."; \
@@ -491,8 +560,24 @@ unit-test: $(LIB_TARGET)
 simple-integration-test: $(LIB_TARGET)
 	@echo "Building and running simple integration tests..."
 	@echo "Compiling simple integration test..."
-	@$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -I$(TEST_DIR) -o $(BUILD_DIR)/simple_integration_test \
-		tests/integration/simple_integration_test.cpp -L$(BUILD_DIR) -lMLLib $(LDFLAGS) 2>&1 | tee $(BUILD_DIR)/simple_integration_compile.log; \
+	@SIMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -I$(TEST_DIR) -o $(BUILD_DIR)/simple_integration_test tests/integration/simple_integration_test.cpp -L$(BUILD_DIR) -lMLLib"; \
+	if [ "$(shell uname)" = "Darwin" ]; then \
+		echo "Building with Metal support for simple integration tests..."; \
+		SIMPLE_COMPILE_CMD="$$SIMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+	fi; \
+	if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+		echo "Building with CUDA support for tests..."; \
+		SIMPLE_COMPILE_CMD="$$SIMPLE_COMPILE_CMD $(LDFLAGS)"; \
+	else \
+		echo "Building without CUDA support for tests..."; \
+		if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+			SIMPLE_COMPILE_CMD="$$SIMPLE_COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+		fi; \
+		if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+			SIMPLE_COMPILE_CMD="$$SIMPLE_COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+		fi; \
+	fi; \
+	$$SIMPLE_COMPILE_CMD 2>&1 | tee $(BUILD_DIR)/simple_integration_compile.log; \
 	if [ $$? -eq 0 ]; then \
 		echo "✅ Simple integration tests compiled successfully"; \
 		echo "Running simple integration tests..."; \
@@ -526,6 +611,14 @@ integration-test: $(LIB_TARGET)
 		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
 			echo "Building with CUDA support for tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		else \
+			echo "Building without CUDA support for tests..."; \
+			if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+			fi; \
+			if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+			fi; \
 		fi; \
 		if $$COMPILE_CMD -o $(BUILD_DIR)/tests/integration_tests; then \
 			echo "Running integration tests..."; \
@@ -576,8 +669,31 @@ samples: $(LIB_TARGET)
 		for sample in $(SAMPLE_DIR)/*.cpp; do \
 			if [ -f "$$sample" ]; then \
 				name=$$(basename $$sample .cpp); \
+				\
+				if [ "$(CI)" = "1" ] && [ "$$name" = "gpu_usage_test" ]; then \
+					echo "Skipping sample: $$name (requires Metal in CI)"; \
+					continue; \
+				fi; \
+				\
 				echo "Building sample: $$name"; \
-				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET) $(LDFLAGS) -o $(BUILD_DIR)/samples/$$name; then \
+				SAMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET)"; \
+				if [ "$(shell uname)" = "Darwin" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
+					echo "Building with Metal support for sample: $$name"; \
+					SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+				fi; \
+				if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+					echo "Building with CUDA support for sample: $$name"; \
+					SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD $(LDFLAGS)"; \
+				else \
+					echo "Building without CUDA support for sample: $$name"; \
+					if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+						SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+					fi; \
+					if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+						SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+					fi; \
+				fi; \
+				if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$name; then \
 					echo "✓ Built sample: $$name"; \
 				else \
 					echo "❌ Failed to build sample: $$name"; \

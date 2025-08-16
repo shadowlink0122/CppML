@@ -112,9 +112,11 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update -q
-        sudo apt-get install -y build-essential make
-        echo "✅ Build tools installed"
+        sudo apt-get install -y build-essential make clang
+        echo "✅ Build tools installed (including clang++)"
+        echo "Available compilers:"
         gcc --version
+        clang++ --version
         make --version
         
     - name: Verify source structure
@@ -162,7 +164,7 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update -q
-        sudo apt-get install -y build-essential make
+        sudo apt-get install -y build-essential make clang
         
     - name: Build and run unit tests
       run: |
@@ -182,9 +184,10 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update -q
-        sudo apt-get install -y build-essential make
+        sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
         gcc --version
+        clang++ --version
         
     - name: Run simple integration tests
       run: |

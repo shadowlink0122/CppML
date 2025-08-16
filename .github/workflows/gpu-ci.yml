@@ -153,14 +153,16 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update -q
-        sudo apt-get install -y build-essential make
-        echo "✅ Build tools installed"
+        sudo apt-get install -y build-essential make clang
+        echo "✅ Build tools installed (including clang++)"
+        echo "Available compilers:"
+        g++ --version
+        clang++ --version
         
     - name: Build library (CPU-only mode)
       run: |
         echo "🏗️ Building library in CPU-only mode..."
         make clean
-        # Build without CUDA to test fallback
         make
         echo "✅ Library built successfully (CPU-only)"
         

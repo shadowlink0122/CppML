@@ -53,7 +53,7 @@ static bool isOneAPIAvailable() {
 }
 
 static bool isMetalAvailable() {
-#ifdef WITH_METAL
+#if defined(WITH_METAL) && !defined(CI)
 #ifdef __APPLE__
   // Check if Apple GPU is actually detected
   if (!Device::isGPUAvailable()) {
@@ -181,10 +181,13 @@ GPUBackendType Backend::getCurrentGPUBackend() {
     // Auto-select best available GPU backend based on platform and priority
 #ifdef __APPLE__
     // On Apple platforms, prioritize Metal first
+#if defined(WITH_METAL) && !defined(CI)
     if (isMetalAvailable()) {
       current_gpu_backend_ = GPUBackendType::METAL;
       printf("MLLib: Selected Metal GPU backend\n");
-    } else if (isCUDAAvailable()) {
+    } else
+#endif
+        if (isCUDAAvailable()) {
       current_gpu_backend_ = GPUBackendType::CUDA;
       printf("MLLib: Selected CUDA GPU backend\n");
     } else if (isOneAPIAvailable()) {
@@ -208,9 +211,11 @@ GPUBackendType Backend::getCurrentGPUBackend() {
     } else if (isOneAPIAvailable()) {
       current_gpu_backend_ = GPUBackendType::ONEAPI;
       printf("MLLib: Selected oneAPI GPU backend\n");
+#if defined(WITH_METAL) && !defined(CI)
     } else if (isMetalAvailable()) {
       current_gpu_backend_ = GPUBackendType::METAL;
       printf("MLLib: Selected Metal GPU backend\n");
+#endif
     } else {
       current_gpu_backend_ = GPUBackendType::NONE;
       printf("MLLib: No GPU backend available, using CPU\n");
@@ -238,7 +243,7 @@ std::vector<GPUBackendType> Backend::getAvailableGPUBackends() {
   }
 #endif
 
-#ifdef WITH_METAL
+#if defined(WITH_METAL) && !defined(CI)
   if (isMetalAvailable()) {
     available_backends.push_back(GPUBackendType::METAL);
   }

@@ -35,6 +35,19 @@ MLLib C++機械学習ライブラリの包括的なドキュメントコレク�
 | 🇺🇸 **English** | [TESTING_en.md](TESTING_en.md) | Testing framework documentation |
 | 🇯🇵 **日本語** | [TESTING_ja.md](TESTING_ja.md) | テストフレームワークの説明 |
 
+### 🚀 GPU ドキュメント
+
+| 言語 | ファイル | 説明 |
+|------|----------|------|
+| 🇺🇸 **English** | [GPU_STRATEGY_en.md](GPU_STRATEGY_en.md) | GPU backend strategy and roadmap |
+| 🇯🇵 **日本語** | [GPU_STRATEGY_ja.md](GPU_STRATEGY_ja.md) | GPU バックエンド戦略とロードマップ |
+| 🇺🇸 **English** | [MULTI_GPU_SUPPORT_en.md](MULTI_GPU_SUPPORT_en.md) | Multi-GPU vendor support |
+| 🇯🇵 **日本語** | [MULTI_GPU_SUPPORT_ja.md](MULTI_GPU_SUPPORT_ja.md) | マルチGPUベンダーサポート |
+| 🇺🇸 **English** | [GPU_CI_SETUP_en.md](GPU_CI_SETUP_en.md) | GPU testing environment setup |
+| 🇯🇵 **日本語** | [GPU_CI_SETUP_ja.md](GPU_CI_SETUP_ja.md) | GPU テスト環境セットアップ |
+| 🇺🇸 **English** | [GPU_DETECTION_GUIDE_en.md](GPU_DETECTION_GUIDE_en.md) | GPU detection verification guide |
+| 🇯🇵 **日本語** | [GPU_DETECTION_GUIDE_ja.md](GPU_DETECTION_GUIDE_ja.md) | GPU検出機能の検証ガイド |
+
 ## 🚀 クイックアクセス
 
 ### 📖 すぐに始める
@@ -55,6 +68,13 @@ MLLib C++機械学習ライブラリの包括的なドキュメントコレク�
 - **💿 [モデル保存](MODEL_IO_ja.md#モデル保存)** - バイナリ、JSON、コンフィグ形式
 - **📥 [モデル読み込み](MODEL_IO_ja.md#モデル読み込み)** - 訓練済みモデルの利用
 - **🔒 [型安全性](MODEL_IO_ja.md#型安全性)** - enum形式による安全な操作
+
+### 🚀 GPU サポート
+
+- **⚡ [GPU戦略](GPU_STRATEGY_ja.md)** - 全GPUベンダー対応計画
+- **🔧 [マルチGPUサポート](MULTI_GPU_SUPPORT_ja.md)** - NVIDIA、AMD、Intel、Apple GPU対応
+- **🧪 [GPU CI セットアップ](GPU_CI_SETUP_ja.md)** - 自動GPU テスト構成
+- **🔍 [GPU検出ガイド](GPU_DETECTION_GUIDE_ja.md)** - GPU検出機能の検証方法
 
 ## 🏗️ アーキテクチャ
 

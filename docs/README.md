@@ -47,6 +47,8 @@ Welcome to the comprehensive documentation collection for MLLib C++ machine lear
 | 🇯🇵 **Japanese** | [MULTI_GPU_SUPPORT_ja.md](MULTI_GPU_SUPPORT_ja.md) | マルチGPUベンダーサポート |
 | 🇺🇸 **English** | [GPU_CI_SETUP_en.md](GPU_CI_SETUP_en.md) | GPU testing environment setup |
 | 🇯🇵 **Japanese** | [GPU_CI_SETUP_ja.md](GPU_CI_SETUP_ja.md) | GPU テスト環境セットアップ |
+| 🇺🇸 **English** | [GPU_DETECTION_GUIDE_en.md](GPU_DETECTION_GUIDE_en.md) | GPU detection verification guide |
+| 🇯🇵 **Japanese** | [GPU_DETECTION_GUIDE_ja.md](GPU_DETECTION_GUIDE_ja.md) | GPU検出機能の検証ガイド |
 
 ## 🚀 Quick Access
 
@@ -74,6 +76,7 @@ Welcome to the comprehensive documentation collection for MLLib C++ machine lear
 - **⚡ [GPU Strategy](GPU_STRATEGY_en.md)** - Complete coverage plan for all GPU vendors
 - **🔧 [Multi-GPU Support](MULTI_GPU_SUPPORT_en.md)** - NVIDIA, AMD, Intel, Apple GPU support
 - **🧪 [GPU CI Setup](GPU_CI_SETUP_en.md)** - Automated GPU testing configuration
+- **🔍 [GPU Detection Guide](GPU_DETECTION_GUIDE_en.md)** - GPU detection verification methods
 
 ## 🏗️ Architecture
 
