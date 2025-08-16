@@ -1,4 +1,5 @@
 #include "../common/test_utils.hpp"
+#include "MLLib/backend/test_gpu_backend.hpp"
 #include "MLLib/layer/activation/test_activation.hpp"
 #include "MLLib/layer/activation/test_elu.hpp"
 #include "MLLib/layer/activation/test_gelu.hpp"
@@ -6,8 +7,7 @@
 #include "MLLib/layer/activation/test_softmax.hpp"
 #include "MLLib/layer/activation/test_swish.hpp"
 #include "MLLib/layer/test_dense.hpp"
-// #include "MLLib/model/test_model_io.hpp"  // Temporarily disabled
-#include "MLLib/backend/test_gpu_backend.hpp"
+#include "MLLib/model/test_model_io.hpp"
 #include "MLLib/model/test_sequential.hpp"
 #include "MLLib/optimizer/test_adadelta.hpp"
 #include "MLLib/optimizer/test_adagrad.hpp"
@@ -133,13 +133,13 @@ int main() {
   runTest(std::make_unique<GPUModelTest>());
   runTest(std::make_unique<GPUPerformanceTest>());
 
-  // Model I/O tests (temporarily disabled)
-  // std::cout << "\n--- Model I/O Tests ---" << std::endl;
-  // runTest(std::make_unique<ModelFormatTest>());
-  // runTest(std::make_unique<ModelSaveLoadTest>());
-  // runTest(std::make_unique<ModelParameterTest>());
-  // runTest(std::make_unique<ModelIOErrorTest>());
-  // runTest(std::make_unique<ModelIOFileHandlingTest>());
+  // Model I/O tests
+  std::cout << "\n--- Model I/O Tests ---" << std::endl;
+  runTest(std::make_unique<ModelFormatTest>());
+  runTest(std::make_unique<ModelSaveLoadTest>());
+  runTest(std::make_unique<ModelParameterTest>());
+  runTest(std::make_unique<ModelIOErrorTest>());
+  runTest(std::make_unique<ModelIOFileHandlingTest>());
 
   // Print final summary
   std::cout << "\n" << std::string(60, '=') << std::endl;
