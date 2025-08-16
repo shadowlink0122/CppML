@@ -105,8 +105,11 @@ model.add(std::make_shared<layer::activation::Sigmoid>());
 
 ```bash
 # プロジェクトルートで実行
-make xor                    # XORネットワーク例
-make model-format-test      # モデルI/O形式テスト
+make samples               # 全サンプルプログラムをビルド
+make run-sample            # 利用可能なサンプル一覧を表示
+make xor                   # XORネットワーク例（エイリアス）
+make device-detection      # GPUデバイス検出サンプル（エイリアス）
+make gpu-vendor-detection  # GPUベンダー検出サンプル（エイリアス）
 make unit-test             # 全単体テスト実行
 ```
 

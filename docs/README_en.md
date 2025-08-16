@@ -132,8 +132,11 @@ model::ModelIO::save_model(*model, "models/final.config", model::ModelFormat::CO
 make
 
 # Run samples
-make xor                    # XOR network execution
-make model-format-test      # Model I/O format test
+make samples               # Build all sample programs
+make run-sample            # List available samples
+make xor                   # XOR network execution (alias)
+make device-detection      # GPU device detection sample (alias)
+make gpu-vendor-detection  # GPU vendor detection sample (alias)
 
 # Code quality checks
 make fmt                    # Code formatting

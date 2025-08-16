@@ -43,10 +43,13 @@ git clone https://github.com/shadowlink0122/CppML.git
 cd CppML
 make                         # Build the library
 make test                    # Run all tests (unit + integration)
-make unit-test              # Run unit tests (21/21 passing)
-make integration-test       # Run integration tests (3429/3429 assertions)
+make unit-test               # Run unit tests (21/21 passing)
+make integration-test        # Run integration tests (3429/3429 assertions)
 make simple-integration-test # Run simple integration tests
-make xor                    # Run XOR neural network example
+make samples                 # Build all sample programs
+make xor                     # Run XOR neural network example
+make device-detection        # Run GPU device detection sample
+make gpu-vendor-detection    # Run GPU vendor detection sample
 ```
 
 ### Basic Usage
@@ -158,7 +161,7 @@ make unit-test
 ### Integration Tests
 
 ```bash
-make integration-test           # Comprehensive integration tests (3429/3429 assertions)
+make integration-test          # Comprehensive integration tests (3429/3429 assertions)
 make simple-integration-test   # Simple integration tests (basic functionality)
 
 # Comprehensive Integration Test Coverage:
@@ -184,7 +187,7 @@ make simple-integration-test   # Simple integration tests (basic functionality)
 
 ```bash
 # Run all tests
-make test                      # Complete test suite (Unit + Integration)
+make test                     # Complete test suite (Unit + Integration)
 make unit-test                # Run unit tests (21/21 passing)
 make integration-test         # Comprehensive integration tests (3429/3429 assertions)
 make simple-integration-test  # Simple integration tests (basic functionality)
@@ -226,8 +229,10 @@ make debug
 
 # Build and run samples
 make samples
-make xor                    # XOR neural network
-make model-format-test      # Model I/O format testing
+make run-sample SAMPLE=xor           # Run specific sample using generic runner
+make xor                            # XOR neural network (alias)
+make device-detection               # GPU device detection (alias)
+make gpu-vendor-detection           # GPU vendor detection (alias)
 
 # Clean (removes training outputs)
 make clean
@@ -276,8 +281,9 @@ make DISABLE_METAL=1          # Disable Apple Metal
 # CPU-only build
 make DISABLE_CUDA=1 DISABLE_ROCM=1 DISABLE_ONEAPI=1 DISABLE_METAL=1
 
-# CPU-only testing
+# GPU testing with environment control
 FORCE_CPU_ONLY=1 make test    # Force CPU-only testing
+GPU_SIMULATION=1 make test    # Enable GPU simulation mode
 ```
 
 ### Usage
@@ -393,10 +399,13 @@ make xor  # Run the XOR neural network example
 
 ### Model Format Testing
 
-Test all model I/O formats:
+Test all model I/O formats and sample programs:
 
 ```bash
-make model-format-test  # Test enum-based format system
+make samples               # Build all sample programs
+make run-sample            # List available samples
+make run-sample SAMPLE=xor # Run specific sample
+make xor                   # Run XOR neural network example (alias)
 ```
 
 ## � CI/CD & Quality Assurance
