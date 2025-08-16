@@ -17,6 +17,7 @@
 // Mock types when oneAPI is not available
 namespace sycl {
 class queue {};
+class device {};
 }  // namespace sycl
 #endif
 
