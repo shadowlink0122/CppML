@@ -313,6 +313,204 @@ void MetalBackend::matmul(const double* A, const double* B, double* C,
   }
 }
 
+void MetalBackend::relu(const double* input, double* output, size_t size) {
+    if (!initialized_) {
+        initialize();
+    }
+    
+    @autoreleasepool {
+        // Create buffers
+        size_t bufferSize = size * sizeof(float);
+        
+        // Convert double to float for Metal compatibility
+        std::vector<float> input_float(size);
+        for (size_t i = 0; i < size; ++i) {
+            input_float[i] = static_cast<float>(input[i]);
+        }
+        
+        id<MTLBuffer> inputBuffer = [device_ newBufferWithBytes:input_float.data()
+                                                        length:bufferSize
+                                                       options:MTLResourceStorageModeShared];
+        
+        id<MTLBuffer> outputBuffer = [device_ newBufferWithLength:bufferSize
+                                                          options:MTLResourceStorageModeShared];
+        
+        // Create compute command
+        id<MTLCommandBuffer> commandBuffer = [command_queue_ commandBuffer];
+        id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
+        
+        // Use runtime kernel compilation if pipeline not available
+        if (!relu_pipeline_) {
+            NSString* kernelSource = @R"(
+                #include <metal_stdlib>
+                using namespace metal;
+                
+                kernel void relu_kernel(device const float* input [[buffer(0)]],
+                                       device float* output [[buffer(1)]],
+                                       uint index [[thread_position_in_grid]]) {
+                    output[index] = max(0.0f, input[index]);
+                }
+            )";
+            
+            NSError* error = nil;
+            id<MTLLibrary> kernelLib = [device_ newLibraryWithSource:kernelSource options:nil error:&error];
+            id<MTLFunction> function = [kernelLib newFunctionWithName:@"relu_kernel"];
+            relu_pipeline_ = [device_ newComputePipelineStateWithFunction:function error:&error];
+        }
+        
+        [encoder setComputePipelineState:relu_pipeline_];
+        [encoder setBuffer:inputBuffer offset:0 atIndex:0];
+        [encoder setBuffer:outputBuffer offset:0 atIndex:1];
+        
+        MTLSize threadgroupSize = MTLSizeMake(256, 1, 1);
+        MTLSize numThreadgroups = MTLSizeMake((size + 255) / 256, 1, 1);
+        
+        [encoder dispatchThreadgroups:numThreadgroups threadsPerThreadgroup:threadgroupSize];
+        [encoder endEncoding];
+        
+        [commandBuffer commit];
+        [commandBuffer waitUntilCompleted];
+        
+        // Convert result back to double
+        float* result = (float*)[outputBuffer contents];
+        for (size_t i = 0; i < size; ++i) {
+            output[i] = static_cast<double>(result[i]);
+        }
+    }
+}
+
+void MetalBackend::sigmoid(const double* input, double* output, size_t size) {
+    if (!initialized_) {
+        initialize();
+    }
+    
+    @autoreleasepool {
+        // Create buffers
+        size_t bufferSize = size * sizeof(float);
+        
+        // Convert double to float for Metal compatibility
+        std::vector<float> input_float(size);
+        for (size_t i = 0; i < size; ++i) {
+            input_float[i] = static_cast<float>(input[i]);
+        }
+        
+        id<MTLBuffer> inputBuffer = [device_ newBufferWithBytes:input_float.data()
+                                                        length:bufferSize
+                                                       options:MTLResourceStorageModeShared];
+        
+        id<MTLBuffer> outputBuffer = [device_ newBufferWithLength:bufferSize
+                                                          options:MTLResourceStorageModeShared];
+        
+        // Create compute command
+        id<MTLCommandBuffer> commandBuffer = [command_queue_ commandBuffer];
+        id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
+        
+        // Use runtime kernel compilation if pipeline not available
+        if (!sigmoid_pipeline_) {
+            NSString* kernelSource = @R"(
+                #include <metal_stdlib>
+                using namespace metal;
+                
+                kernel void sigmoid_kernel(device const float* input [[buffer(0)]],
+                                          device float* output [[buffer(1)]],
+                                          uint index [[thread_position_in_grid]]) {
+                    output[index] = 1.0f / (1.0f + exp(-input[index]));
+                }
+            )";
+            
+            NSError* error = nil;
+            id<MTLLibrary> kernelLib = [device_ newLibraryWithSource:kernelSource options:nil error:&error];
+            id<MTLFunction> function = [kernelLib newFunctionWithName:@"sigmoid_kernel"];
+            sigmoid_pipeline_ = [device_ newComputePipelineStateWithFunction:function error:&error];
+        }
+        
+        [encoder setComputePipelineState:sigmoid_pipeline_];
+        [encoder setBuffer:inputBuffer offset:0 atIndex:0];
+        [encoder setBuffer:outputBuffer offset:0 atIndex:1];
+        
+        MTLSize threadgroupSize = MTLSizeMake(256, 1, 1);
+        MTLSize numThreadgroups = MTLSizeMake((size + 255) / 256, 1, 1);
+        
+        [encoder dispatchThreadgroups:numThreadgroups threadsPerThreadgroup:threadgroupSize];
+        [encoder endEncoding];
+        
+        [commandBuffer commit];
+        [commandBuffer waitUntilCompleted];
+        
+        // Convert result back to double
+        float* result = (float*)[outputBuffer contents];
+        for (size_t i = 0; i < size; ++i) {
+            output[i] = static_cast<double>(result[i]);
+        }
+    }
+}
+
+void MetalBackend::tanh_activation(const double* input, double* output, size_t size) {
+    if (!initialized_) {
+        initialize();
+    }
+    
+    @autoreleasepool {
+        // Create buffers
+        size_t bufferSize = size * sizeof(float);
+        
+        // Convert double to float for Metal compatibility
+        std::vector<float> input_float(size);
+        for (size_t i = 0; i < size; ++i) {
+            input_float[i] = static_cast<float>(input[i]);
+        }
+        
+        id<MTLBuffer> inputBuffer = [device_ newBufferWithBytes:input_float.data()
+                                                        length:bufferSize
+                                                       options:MTLResourceStorageModeShared];
+        
+        id<MTLBuffer> outputBuffer = [device_ newBufferWithLength:bufferSize
+                                                          options:MTLResourceStorageModeShared];
+        
+        // Create compute command
+        id<MTLCommandBuffer> commandBuffer = [command_queue_ commandBuffer];
+        id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
+        
+        // Use runtime kernel compilation if pipeline not available
+        if (!tanh_pipeline_) {
+            NSString* kernelSource = @R"(
+                #include <metal_stdlib>
+                using namespace metal;
+                
+                kernel void tanh_kernel(device const float* input [[buffer(0)]],
+                                       device float* output [[buffer(1)]],
+                                       uint index [[thread_position_in_grid]]) {
+                    output[index] = tanh(input[index]);
+                }
+            )";
+            
+            NSError* error = nil;
+            id<MTLLibrary> kernelLib = [device_ newLibraryWithSource:kernelSource options:nil error:&error];
+            id<MTLFunction> function = [kernelLib newFunctionWithName:@"tanh_kernel"];
+            tanh_pipeline_ = [device_ newComputePipelineStateWithFunction:function error:&error];
+        }
+        
+        [encoder setComputePipelineState:tanh_pipeline_];
+        [encoder setBuffer:inputBuffer offset:0 atIndex:0];
+        [encoder setBuffer:outputBuffer offset:0 atIndex:1];
+        
+        MTLSize threadgroupSize = MTLSizeMake(256, 1, 1);
+        MTLSize numThreadgroups = MTLSizeMake((size + 255) / 256, 1, 1);
+        
+        [encoder dispatchThreadgroups:numThreadgroups threadsPerThreadgroup:threadgroupSize];
+        [encoder endEncoding];
+        
+        [commandBuffer commit];
+        [commandBuffer waitUntilCompleted];
+        
+        // Convert result back to double
+        float* result = (float*)[outputBuffer contents];
+        for (size_t i = 0; i < size; ++i) {
+            output[i] = static_cast<double>(result[i]);
+        }
+    }
+}
+
 void MetalBackend::synchronize() {
     // Metal operations are already synchronous in this implementation
 }

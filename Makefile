@@ -577,7 +577,15 @@ samples: $(LIB_TARGET)
 			if [ -f "$$sample" ]; then \
 				name=$$(basename $$sample .cpp); \
 				echo "Building sample: $$name"; \
-				if $(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET) $(LDFLAGS) -o $(BUILD_DIR)/samples/$$name; then \
+				SAMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET)"; \
+				if [ "$(shell uname)" = "Darwin" ]; then \
+					echo "Building with Metal support for sample: $$name"; \
+					SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+				fi; \
+				if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+					SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD $(LDFLAGS)"; \
+				fi; \
+				if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$name; then \
 					echo "✓ Built sample: $$name"; \
 				else \
 					echo "❌ Failed to build sample: $$name"; \
