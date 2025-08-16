@@ -5,16 +5,6 @@
 namespace MLLib {
 namespace Backend {
 
-// Forward declarations for CPU/GPU functions
-void cpu_matmul(const NDArray& a, const NDArray& b, NDArray& result);
-void cpu_add(const NDArray& a, const NDArray& b, NDArray& result);
-void cpu_subtract(const NDArray& a, const NDArray& b, NDArray& result);
-void cpu_multiply(const NDArray& a, const NDArray& b, NDArray& result);
-void cpu_add_scalar(const NDArray& a, double scalar, NDArray& result);
-void cpu_multiply_scalar(const NDArray& a, double scalar, NDArray& result);
-void cpu_fill(NDArray& array, double value);
-void cpu_copy(const NDArray& src, NDArray& dst);
-
 void Backend::matmul(const NDArray& a, const NDArray& b, NDArray& result) {
   switch (Device::getCurrentDevice()) {
   case DeviceType::CPU: cpu_matmul(a, b, result); break;
