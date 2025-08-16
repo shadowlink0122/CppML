@@ -1,0 +1,17 @@
+name: "CppML CodeQL Configuration"
+
+disable-default-queries: false
+
+queries:
+  - uses: security-and-quality
+
+paths:
+  - include/
+  - src/
+  - samples/
+
+paths-ignore:
+  - build/
+  - .git/
+  - docs/
+  - tests/
