@@ -46,6 +46,10 @@ public:
                    double alpha, const double* A, int lda, const double* B,
                    int ldb, double beta, double* C, int ldc);
 
+  // Optimized matrix operations
+  static void matmul(const double* A, const double* B, double* C, int rows_a,
+                     int cols_a, int cols_b);
+
   // Activation functions
   static void relu(const double* input, double* output, size_t size);
   static void sigmoid(const double* input, double* output, size_t size);

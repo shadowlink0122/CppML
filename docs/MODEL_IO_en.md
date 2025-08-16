@@ -1,5 +1,7 @@
 # MLLib Model I/O with Directory Management
 
+> **Language**: 🇺🇸 English | [🇯🇵 日本語](MODEL_IO_ja.md)
+
 This example demonstrates how to save and load models with automatic directory creation.
 
 ## Features

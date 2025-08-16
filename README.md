@@ -1,4 +1,5 @@
 # MLLib - C++ Machine Learning Library
+> **Language**: 🇺🇸 English | [🇯🇵 日本語](README_ja.md)
 
 [![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)

@@ -1,5 +1,7 @@
 # GPU Testing Environment Setup
 
+> **Language**: 🇺🇸 English | [🇯🇵 日本語](GPU_CI_SETUP_ja.md)
+
 This document explains how to set up GPU environment testing in CI.
 
 ## Overview

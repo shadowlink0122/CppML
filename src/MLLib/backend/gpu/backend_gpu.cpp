@@ -3,23 +3,36 @@
 #include <cstdio>
 #include <stdexcept>
 
+// Include all GPU backend headers
 #ifdef WITH_CUDA
 #include "cuda_kernels.hpp"
 #endif
 
+#ifdef WITH_ROCM
+#include "../../../../include/MLLib/backend/rocm_backend.hpp"
+#endif
+
+#ifdef WITH_METAL
+#include "../../../../include/MLLib/backend/metal_backend.hpp"
+#endif
+
+#ifdef WITH_ONEAPI
+#include "../../../../include/MLLib/backend/oneapi_backend.hpp"
+#endif
+
 /**
  * @file backend_gpu.cpp
- * @brief GPU backend implementation for MLLib
+ * @brief Multi-GPU backend implementation for MLLib
  *
- * This implementation uses CUDA when available, with automatic fallback
- * to CPU implementation when CUDA is not available or initialization fails.
+ * This implementation supports CUDA, ROCm, Metal, and oneAPI with automatic
+ * backend selection and fallback to CPU when GPU operations fail.
  *
  * Features:
- * - CUDA kernels for high-performance GPU computation
- * - cuBLAS integration for optimized matrix operations
- * - Automatic CUDA availability detection
+ * - Multi-vendor GPU support (NVIDIA/AMD/Apple/Intel)
+ * - Automatic backend selection based on availability
  * - Graceful fallback to CPU when needed
  * - Comprehensive error handling and memory management
+ * - Performance optimization for each vendor's strengths
  */
 
 namespace MLLib {
@@ -56,7 +69,7 @@ bool use_cuda() {
   return cuda_available;
 }
 
-// GPU matrix multiplication implementation
+// GPU matrix multiplication implementation - Multi-backend support
 void Backend::gpu_matmul(const NDArray& a, const NDArray& b, NDArray& result) {
   if (a.shape().size() != 2 || b.shape().size() != 2) {
     throw std::invalid_argument("Matrix multiplication requires 2D arrays");
@@ -80,16 +93,70 @@ void Backend::gpu_matmul(const NDArray& a, const NDArray& b, NDArray& result) {
   const double* b_data = b.data();
   double* result_data = result.data();
 
-  if (use_cuda()) {
+  // Dispatch to appropriate GPU backend
+  GPUBackendType backend = getCurrentGPUBackend();
+
+  try {
+    switch (backend) {
+    case GPUBackendType::CUDA:
 #ifdef WITH_CUDA
-    try {
-      cuda::cuda_matmul(a_data, b_data, result_data, static_cast<int>(m),
-                        static_cast<int>(n), static_cast<int>(k));
-      return;
-    } catch (const std::exception& e) {
-      printf("GPU matmul failed, falling back to CPU: %s\n", e.what());
-    }
+      if (cuda::cuda_is_available()) {
+        cuda::cuda_matmul(a_data, b_data, result_data, static_cast<int>(m),
+                          static_cast<int>(n), static_cast<int>(k));
+        return;
+      }
 #endif
+      break;
+
+    case GPUBackendType::ROCM:
+#ifdef WITH_ROCM
+      if (ROCmBackend::isAvailable()) {
+        // Use ROCm/HIP for matrix multiplication
+        ROCmBackend::gemm(false, false, static_cast<int>(m),
+                          static_cast<int>(n), static_cast<int>(k), 1.0, a_data,
+                          static_cast<int>(m), b_data, static_cast<int>(k), 0.0,
+                          result_data, static_cast<int>(m));
+        return;
+      }
+#endif
+      break;
+
+    case GPUBackendType::METAL:
+#ifdef WITH_METAL
+      if (MetalBackend::isAvailable()) {
+        // Use Metal Performance Shaders for optimized matrix operations
+        MetalBackend::matmul(a_data, b_data, result_data, static_cast<int>(m),
+                             static_cast<int>(n), static_cast<int>(k));
+        return;
+      }
+#endif
+      break;
+
+    case GPUBackendType::ONEAPI:
+#ifdef WITH_ONEAPI
+      if (OneAPIBackend::isAvailable()) {
+        // Use Intel oneMKL for matrix multiplication
+        OneAPIBackend::gemm(false, false, static_cast<int>(m),
+                            static_cast<int>(n), static_cast<int>(k), 1.0,
+                            a_data, static_cast<int>(m), b_data,
+                            static_cast<int>(k), 0.0, result_data,
+                            static_cast<int>(m));
+        return;
+      }
+#endif
+      break;
+
+    case GPUBackendType::NONE:
+    default: break;
+    }
+  } catch (const std::exception& e) {
+    printf("GPU matmul failed (%s), falling back to CPU: %s\n",
+           backend == GPUBackendType::CUDA         ? "CUDA"
+               : backend == GPUBackendType::ROCM   ? "ROCm"
+               : backend == GPUBackendType::METAL  ? "Metal"
+               : backend == GPUBackendType::ONEAPI ? "oneAPI"
+                                                   : "Unknown",
+           e.what());
   }
 
   // CPU fallback

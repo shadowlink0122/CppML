@@ -1,5 +1,7 @@
 # MLLib Testing Documentation
 
+> **Language**: 🇺🇸 English | [🇯🇵 日本語](TESTING_ja.md)
+
 Comprehensive testing system documentation for MLLib.
 
 ## 🧪 Testing Overview

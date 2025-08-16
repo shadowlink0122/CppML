@@ -5,31 +5,16 @@
 
 #pragma once
 
-#ifdef WITH_ONEAPI
-
-// Check if oneAPI headers are available
-#if __has_include(<sycl/sycl.hpp>)
-#include <oneapi/mkl.hpp>
-#include <sycl/sycl.hpp>
-#define ONEAPI_AVAILABLE 1
-#else
-#define ONEAPI_AVAILABLE 0
-// Mock types when oneAPI is not available
-namespace sycl {
-class queue {};
-class device {};
-}  // namespace sycl
-#endif
-
 #include "../ndarray.hpp"
 #include "backend.hpp"
+#include <string>
 
 namespace MLLib {
 namespace Backend {
 
 /**
  * @class OneAPIBackend
- * @brief Intel oneAPI implementation of GPU backend
+ * @brief Intel oneAPI implementation of GPU backend (stub implementation)
  */
 class OneAPIBackend {
 public:
@@ -49,6 +34,10 @@ public:
                    double alpha, const double* A, int lda, const double* B,
                    int ldb, double beta, double* C, int ldc);
 
+  // Optimized matrix operations
+  static void matmul(const double* A, const double* B, double* C, int rows_a,
+                     int cols_a, int cols_b);
+
   // Activation functions
   static void relu(const double* input, double* output, size_t size);
   static void sigmoid(const double* input, double* output, size_t size);
@@ -61,12 +50,8 @@ public:
   static std::string getDeviceName(int device);
 
 private:
-  static sycl::queue* queue_;
   static bool initialized_;
-  static sycl::device current_device_;
 };
 
 }  // namespace Backend
 }  // namespace MLLib
-
-#endif  // WITH_ONEAPI

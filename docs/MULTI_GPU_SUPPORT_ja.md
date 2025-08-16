@@ -1,5 +1,7 @@
 # マルチGPUサポート
 
+> **Language**: [🇺🇸 English](MULTI_GPU_SUPPORT_en.md) | 🇯🇵 日本語
+
 CppMLは複数のGPUベンダーをサポートし、ユーザーの環境に応じて最適なGPUアクセラレーションを提供します。
 
 ## サポートされているGPUベンダー
