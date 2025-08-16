@@ -1,5 +1,7 @@
 # GPU Testing Environment Setup
 
+> **Language**: [🇺🇸 English](GPU_CI_SETUP_en.md) | 🇯🇵 日本語
+
 このドキュメントでは、CIでGPU環境のテストを設定する方法について説明します。
 
 ## 概要
