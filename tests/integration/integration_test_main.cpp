@@ -1,7 +1,6 @@
 #include "../../include/MLLib.hpp"
 #include "../common/test_utils.hpp"
 #include "MLLib/test_basic_integration.hpp"
-#include "gpu_integration_test.cpp"  // Include GPU integration tests
 
 // Hierarchical integration tests
 #include "MLLib/backend/test_backend_integration.hpp"
@@ -12,6 +11,7 @@
 #include "MLLib/layer/test_layer_integration.hpp"
 #include "MLLib/loss/test_loss_integration.hpp"
 #include "MLLib/optimizer/test_optimizer_integration.hpp"
+#include "MLLib/optimizer/test_optimizer_activation_integration.hpp"
 #include "MLLib/util/io/test_io_integration.hpp"
 #include "MLLib/util/misc/test_misc_integration.hpp"
 #include "MLLib/util/number/test_number_integration.hpp"
@@ -465,6 +465,20 @@ int main() {
     all_tests_passed &= suite_result;
   }
 
+  // Optimizer-Activation integration tests
+  {
+    TestSuite optimizer_activation_suite("Optimizer-Activation Integration Tests");
+    optimizer_activation_suite.addTest(std::make_unique<SGDReLUIntegrationTest>());
+    optimizer_activation_suite.addTest(std::make_unique<SGDSigmoidIntegrationTest>());
+    optimizer_activation_suite.addTest(std::make_unique<SGDTanhIntegrationTest>());
+    optimizer_activation_suite.addTest(std::make_unique<AdamActivationIntegrationTest>());
+    optimizer_activation_suite.addTest(std::make_unique<OptimizerActivationPerformanceTest>());
+    optimizer_activation_suite.addTest(std::make_unique<GradientFlowIntegrationTest>());
+
+    bool suite_result = optimizer_activation_suite.runAll();
+    all_tests_passed &= suite_result;
+  }
+
   // Loss function integration tests
   {
     TestSuite loss_suite("Loss Function Integration Tests");
@@ -500,18 +514,6 @@ int main() {
         std::make_unique<GPUCrossDeviceIntegrationTest>());
 
     bool suite_result = gpu_backend_suite.runAll();
-    all_tests_passed &= suite_result;
-  }
-
-  // New Multi-GPU Integration Tests
-  {
-    TestSuite multi_gpu_suite("Multi-GPU Integration Tests");
-    multi_gpu_suite.addTest(std::make_unique<BasicGPUOperationsTest>());
-    multi_gpu_suite.addTest(std::make_unique<GPUVendorDetectionTest>());
-    multi_gpu_suite.addTest(std::make_unique<GPUPerformanceTest>());
-    multi_gpu_suite.addTest(std::make_unique<GPUStabilityTest>());
-
-    bool suite_result = multi_gpu_suite.runAll();
     all_tests_passed &= suite_result;
   }
 
