@@ -37,8 +37,10 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // Simple training data
-    std::vector<std::vector<double>> X = {
-        {1.0, 0.0}, {0.0, 1.0}, {1.0, 1.0}, {0.0, 0.0}};
+    std::vector<std::vector<double>> X = {{1.0, 0.0},
+                                          {0.0, 1.0},
+                                          {1.0, 1.0},
+                                          {0.0, 0.0}};
     std::vector<std::vector<double>> Y = {{1.0}, {1.0}, {0.0}, {0.0}};
 
     MLLib::loss::MSELoss loss;
@@ -47,8 +49,7 @@ protected:
     bool training_completed = false;
     assertNoThrow(
         [&]() {
-          model->train(X, Y, loss, optimizer, nullptr,
-                       20);  // Short training for stability
+          model->train(X, Y, loss, optimizer, nullptr, 20);
           training_completed = true;
         },
         "Basic training should complete without errors");
@@ -91,8 +92,9 @@ protected:
     model->add(std::make_shared<Dense>(4, 2));
     model->add(std::make_shared<activation::Sigmoid>());
 
-    std::vector<std::vector<double>> X = {
-        {1.0, 0.0, 0.5}, {0.0, 1.0, 0.3}, {0.5, 0.5, 1.0}};
+    std::vector<std::vector<double>> X = {{1.0, 0.0, 0.5},
+                                          {0.0, 1.0, 0.3},
+                                          {0.5, 0.5, 1.0}};
     std::vector<std::vector<double>> Y = {{1.0, 0.0}, {0.0, 1.0}, {0.5, 0.5}};
 
     MLLib::loss::MSELoss loss;
@@ -101,14 +103,17 @@ protected:
     // Train for basic functionality test
     assertNoThrow(
         [&]() {
-          model->train(X, Y, loss, optimizer, nullptr, 20);  // Minimal training
+          model->train(X, Y, loss, optimizer, nullptr, 20);
         },
         "Training should complete without errors");
 
     // Get original prediction for comparison
     std::vector<double> original_pred;
-    assertNoThrow([&]() { original_pred = model->predict({0.5, 0.5, 0.5}); },
-                  "Model should make predictions");
+    assertNoThrow(
+        [&]() {
+          original_pred = model->predict({0.5, 0.5, 0.5});
+        },
+        "Model should make predictions");
 
     assertTrue(original_pred.size() == 2,
                "Prediction should have correct output size");
@@ -161,8 +166,11 @@ protected:
     MLLib::optimizer::SGD optimizer(0.1);
 
     // Test complete workflow
-    assertNoThrow([&]() { model->train(X, Y, loss, optimizer, nullptr, 10); },
-                  "Training should complete");
+    assertNoThrow(
+        [&]() {
+          model->train(X, Y, loss, optimizer, nullptr, 10);
+        },
+        "Training should complete");
 
     assertNoThrow(
         [&]() {

@@ -46,9 +46,10 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // Training data that exercises matrix operations
-    std::vector<std::vector<double>> X = {
-        {1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0},    {0.5, 0.5, 0.0},
-        {0.5, 0.0, 0.5}, {0.0, 0.5, 0.5}, {0.33, 0.33, 0.33}, {1.0, 1.0, 1.0}};
+    std::vector<std::vector<double>> X = {{1.0, 0.0, 0.0},    {0.0, 1.0, 0.0},
+                                          {0.0, 0.0, 1.0},    {0.5, 0.5, 0.0},
+                                          {0.5, 0.0, 0.5},    {0.0, 0.5, 0.5},
+                                          {0.33, 0.33, 0.33}, {1.0, 1.0, 1.0}};
     std::vector<std::vector<double>> Y = {{1.0, 0.0}, {0.0, 1.0}, {1.0, 0.0},
                                           {0.5, 0.5}, {0.8, 0.2}, {0.2, 0.8},
                                           {0.6, 0.4}, {0.3, 0.7}};
@@ -151,15 +152,18 @@ protected:
                "Random initialization should produce different models");
 
     // Train one model to verify random initialization allows learning
-    std::vector<std::vector<double>> X = {
-        {0.1, 0.2, 0.3}, {0.4, 0.5, 0.6}, {0.7, 0.8, 0.9}};
+    std::vector<std::vector<double>> X = {{0.1, 0.2, 0.3},
+                                          {0.4, 0.5, 0.6},
+                                          {0.7, 0.8, 0.9}};
     std::vector<std::vector<double>> Y = {{1.0, 0.0}, {0.0, 1.0}, {0.5, 0.5}};
 
     MSELoss loss;
     SGD optimizer(0.1);
 
     assertNoThrow(
-        [&]() { models[0]->train(X, Y, loss, optimizer, nullptr, 50); },
+        [&]() {
+          models[0]->train(X, Y, loss, optimizer, nullptr, 50);
+        },
         "Randomly initialized model should train successfully");
 
     // Verify final predictions are valid
@@ -198,8 +202,10 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // Training data
-    std::vector<std::vector<double>> X_train = {
-        {0.1, 0.9}, {0.9, 0.1}, {0.3, 0.7}, {0.7, 0.3}};
+    std::vector<std::vector<double>> X_train = {{0.1, 0.9},
+                                                {0.9, 0.1},
+                                                {0.3, 0.7},
+                                                {0.7, 0.3}};
     std::vector<std::vector<double>> Y_train = {{1.0}, {0.0}, {1.0}, {0.0}};
 
     // Validation data
@@ -309,8 +315,9 @@ protected:
       model->add(std::make_shared<activation::Tanh>());
       model->add(std::make_shared<Dense>(3, 1));
 
-      std::vector<std::vector<double>> X = {
-          {-1.0, 1.0}, {1.0, -1.0}, {0.0, 0.0}};
+      std::vector<std::vector<double>> X = {{-1.0, 1.0},
+                                            {1.0, -1.0},
+                                            {0.0, 0.0}};
       std::vector<std::vector<double>> Y = {{1.0}, {-1.0}, {0.0}};
 
       MSELoss loss;
@@ -378,8 +385,11 @@ protected:
       std::vector<double> valid_input = {0.5, 0.3};
       std::vector<double> output;
 
-      assertNoThrow([&]() { output = model->predict(valid_input); },
-                    "Error handling should allow valid operations");
+      assertNoThrow(
+          [&]() {
+            output = model->predict(valid_input);
+          },
+          "Error handling should allow valid operations");
 
       assertEqual(size_t(3), output.size(),
                   "Error handling should preserve correct behavior");

@@ -45,8 +45,9 @@ protected:
     assertEqual(size_t(4), arr4.size(), "Total size should match vector size");
 
     // Test 2D vector constructor
-    std::vector<std::vector<double>> vec2d = {
-        {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0}};
+    std::vector<std::vector<double>> vec2d = {{1.0, 2.0},
+                                              {3.0, 4.0},
+                                              {5.0, 6.0}};
     NDArray arr5(vec2d);
     assertEqual(size_t(2), arr5.shape().size(),
                 "2D vector should create 2D array");
@@ -222,8 +223,9 @@ protected:
     assertNear(50.0, result.at({1, 1}), 1e-9, "Matmul (1,1) should be 50.0");
 
     // Test 3x2 * 2x3 multiplication
-    std::vector<std::vector<double>> mat3_data = {
-        {1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0}};
+    std::vector<std::vector<double>> mat3_data = {{1.0, 2.0},
+                                                  {3.0, 4.0},
+                                                  {5.0, 6.0}};
     std::vector<std::vector<double>> mat4_data = {{7.0, 8.0, 9.0},
                                                   {10.0, 11.0, 12.0}};
 

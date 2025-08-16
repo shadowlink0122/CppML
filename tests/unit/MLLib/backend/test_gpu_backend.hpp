@@ -54,8 +54,9 @@ protected:
     DeviceType original_device = Device::getCurrentDevice();
 
     // Test setting GPU device with validation (should show warning if no GPU)
-    bool gpu_set = Device::setDeviceWithValidation(
-        DeviceType::GPU, false);  // no warnings in test
+    bool gpu_set =
+        Device::setDeviceWithValidation(DeviceType::GPU,
+                                        false);  // no warnings in test
 
     // On systems without GPU, this should return false and fallback to CPU
     if (!Device::isGPUAvailable()) {
@@ -298,10 +299,10 @@ protected:
       assertTrue(true, "Model creation and device switching should work");
 
     } catch (const std::exception& e) {
-      assertFalse(
-          true,
-          std::string("GPU backend model test failed with exception: ") +
-              e.what());
+      assertFalse(true,
+                  std::string(
+                      "GPU backend model test failed with exception: ") +
+                      e.what());
     }
 
     // Restore original device

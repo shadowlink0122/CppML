@@ -24,20 +24,23 @@ protected:
 
     // Test string to format conversion
     assertTrue(ModelFormat::BINARY == ModelIO::string_to_format("binary"),
-                "binary string should convert to BINARY");
+               "binary string should convert to BINARY");
     assertTrue(ModelFormat::JSON == ModelIO::string_to_format("json"),
-                "json string should convert to JSON");
+               "json string should convert to JSON");
     assertTrue(ModelFormat::CONFIG == ModelIO::string_to_format("config"),
-                "config string should convert to CONFIG");
+               "config string should convert to CONFIG");
 
-    // Test case insensitive conversion - current implementation doesn't support this
-    // So we expect it to default to BINARY
-    assertTrue(ModelFormat::BINARY == ModelIO::string_to_format("BINARY"),
-                "BINARY string should default to BINARY (case insensitive not supported)");
-    assertTrue(ModelFormat::BINARY == ModelIO::string_to_format("JSON"),
-                "JSON string should default to BINARY (case insensitive not supported)");
-    assertTrue(ModelFormat::BINARY == ModelIO::string_to_format("CONFIG"),
-                "CONFIG string should default to BINARY (case insensitive not supported)");
+    // Test case insensitive conversion - current implementation doesn't support
+    // this So we expect it to default to BINARY
+    assertTrue(
+        ModelFormat::BINARY == ModelIO::string_to_format("BINARY"),
+        "BINARY string should default to BINARY (case insensitive not supported)");
+    assertTrue(
+        ModelFormat::BINARY == ModelIO::string_to_format("JSON"),
+        "JSON string should default to BINARY (case insensitive not supported)");
+    assertTrue(
+        ModelFormat::BINARY == ModelIO::string_to_format("CONFIG"),
+        "CONFIG string should default to BINARY (case insensitive not supported)");
 
     // Test format to string conversion
     assertEqual(std::string("binary"),
@@ -50,9 +53,10 @@ protected:
                 ModelIO::format_to_string(ModelFormat::CONFIG),
                 "CONFIG should convert to config");
 
-    // Test invalid string conversion - current implementation defaults to BINARY
+    // Test invalid string conversion - current implementation defaults to
+    // BINARY
     assertTrue(ModelFormat::BINARY == ModelIO::string_to_format("invalid"),
-              "Invalid format string should default to BINARY");
+               "Invalid format string should default to BINARY");
   }
 };
 
@@ -82,25 +86,31 @@ protected:
 
     // Test binary format save/load
     std::string binary_path = temp_dir + "/model.bin";
-    bool save_result = ModelIO::save_model(*model, binary_path, ModelFormat::BINARY);
+    bool save_result =
+        ModelIO::save_model(*model, binary_path, ModelFormat::BINARY);
     assertTrue(save_result, "Binary save should succeed");
-    
+
     if (save_result) {
-      assertTrue(fileExists(binary_path), "Binary file should exist after save");
-      auto loaded_binary = ModelIO::load_model(binary_path, ModelFormat::BINARY);
-      assertNotNull(loaded_binary.get(), "Binary load should return valid model");
+      assertTrue(fileExists(binary_path),
+                 "Binary file should exist after save");
+      auto loaded_binary =
+          ModelIO::load_model(binary_path, ModelFormat::BINARY);
+      assertNotNull(loaded_binary.get(),
+                    "Binary load should return valid model");
     }
 
     // Test JSON format save/load - simplified test
     std::string json_path = temp_dir + "/model.json";
     save_result = ModelIO::save_model(*model, json_path, ModelFormat::JSON);
-    // JSON save might not be fully implemented, so we just test it doesn't crash
+    // JSON save might not be fully implemented, so we just test it doesn't
+    // crash
     assertTrue(true, "JSON save test completed");
 
     // Test config format save/load - simplified test
     std::string config_path = temp_dir + "/model.cfg";
     save_result = ModelIO::save_model(*model, config_path, ModelFormat::CONFIG);
-    // Config save might not be fully implemented, so we just test it doesn't crash
+    // Config save might not be fully implemented, so we just test it doesn't
+    // crash
     assertTrue(true, "Config save test completed");
 
     // Cleanup
@@ -174,7 +184,8 @@ protected:
     // Test load from nonexistent file
     std::string nonexistent_path = "/nonexistent/file.bin";
     auto loaded = ModelIO::load_model(nonexistent_path, ModelFormat::BINARY);
-    assertTrue(loaded.get() == nullptr, "Load from nonexistent file should return null");
+    assertTrue(loaded.get() == nullptr,
+               "Load from nonexistent file should return null");
 
     // Test load from corrupted file
     std::string temp_dir = createTempDirectory();
@@ -186,8 +197,10 @@ protected:
       corrupted_file << "This is not a valid model file";
       corrupted_file.close();
 
-      auto corrupted_loaded = ModelIO::load_model(corrupted_path, ModelFormat::BINARY);
-      assertTrue(corrupted_loaded.get() == nullptr, "Load from corrupted file should return null");
+      auto corrupted_loaded =
+          ModelIO::load_model(corrupted_path, ModelFormat::BINARY);
+      assertTrue(corrupted_loaded.get() == nullptr,
+                 "Load from corrupted file should return null");
     } else {
       assertTrue(true, "Could not create corrupted file, skipping test");
     }
@@ -195,7 +208,8 @@ protected:
     // Test with empty format string conversion (should handle gracefully)
     std::string test_str = "";
     ModelFormat empty_format = ModelIO::string_to_format(test_str);
-    assertTrue(empty_format == ModelFormat::BINARY, "Empty string should return BINARY format");
+    assertTrue(empty_format == ModelFormat::BINARY,
+               "Empty string should return BINARY format");
 
     // Cleanup
     removeTempDirectory(temp_dir);

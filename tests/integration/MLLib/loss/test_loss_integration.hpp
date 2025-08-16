@@ -42,8 +42,10 @@ protected:
     model->add(std::make_shared<Dense>(4, 1));
 
     // Regression data
-    std::vector<std::vector<double>> X = {
-        {1.0, 2.0}, {2.0, 3.0}, {3.0, 4.0}, {4.0, 5.0}};
+    std::vector<std::vector<double>> X = {{1.0, 2.0},
+                                          {2.0, 3.0},
+                                          {3.0, 4.0},
+                                          {4.0, 5.0}};
     std::vector<std::vector<double>> Y = {
         {3.0}, {5.0}, {7.0}, {9.0}  // y = 2*x1 + x2 - 1
     };
@@ -110,8 +112,11 @@ protected:
     model->add(std::make_shared<activation::Sigmoid>());
 
     // Classification data (3 classes)
-    std::vector<std::vector<double>> X = {
-        {0.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {1.0, 1.0}, {0.5, 0.5}};
+    std::vector<std::vector<double>> X = {{0.0, 0.0},
+                                          {0.0, 1.0},
+                                          {1.0, 0.0},
+                                          {1.0, 1.0},
+                                          {0.5, 0.5}};
     std::vector<std::vector<double>> Y = {{1.0, 0.0, 0.0},
                                           {0.0, 1.0, 0.0},
                                           {0.0, 0.0, 1.0},
@@ -181,8 +186,11 @@ protected:
     OutputCapture capture;
 
     // Binary classification data that can work with both loss functions
-    std::vector<std::vector<double>> X = {
-        {0.1, 0.2}, {0.8, 0.9}, {0.2, 0.1}, {0.9, 0.8}, {0.5, 0.5}};
+    std::vector<std::vector<double>> X = {{0.1, 0.2},
+                                          {0.8, 0.9},
+                                          {0.2, 0.1},
+                                          {0.9, 0.8},
+                                          {0.5, 0.5}};
     std::vector<std::vector<double>> Y = {{0.0}, {1.0}, {0.0}, {1.0}, {0.5}};
 
     SGD optimizer(0.1);
@@ -198,11 +206,12 @@ protected:
       MSELoss mse_loss;
 
       assertNoThrow(
-          [&]() { mse_model->train(X, Y, mse_loss, optimizer, nullptr, 100); },
+          [&]() {
+            mse_model->train(X, Y, mse_loss, optimizer, nullptr, 100);
+          },
           "MSE loss model training should complete");
 
-      std::vector<double> mse_pred =
-          mse_model->predict({0.3, 0.7});
+      std::vector<double> mse_pred = mse_model->predict({0.3, 0.7});
       assertEqual(size_t(1), mse_pred.size(),
                   "MSE model prediction should have correct size");
       assertTrue(mse_pred[0] >= 0.0 && mse_pred[0] <= 1.0,
@@ -218,8 +227,11 @@ protected:
       ce_model->add(std::make_shared<activation::Sigmoid>());
 
       // Convert targets to 2-class format
-      std::vector<std::vector<double>> Y_2class = {
-          {1.0, 0.0}, {0.0, 1.0}, {1.0, 0.0}, {0.0, 1.0}, {0.5, 0.5}};
+      std::vector<std::vector<double>> Y_2class = {{1.0, 0.0},
+                                                   {0.0, 1.0},
+                                                   {1.0, 0.0},
+                                                   {0.0, 1.0},
+                                                   {0.5, 0.5}};
 
       MSELoss ce_loss;
       assertNoThrow(
@@ -228,8 +240,7 @@ protected:
           },
           "CrossEntropy loss model training should complete");
 
-      std::vector<double> ce_pred =
-          ce_model->predict({0.3, 0.7});
+      std::vector<double> ce_pred = ce_model->predict({0.3, 0.7});
       assertEqual(size_t(2), ce_pred.size(),
                   "CE model prediction should have correct size");
 

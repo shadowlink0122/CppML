@@ -108,7 +108,9 @@ endif
 CPP_FILES = $(shell find $(SRC_DIR) -name "*.cpp" 2>/dev/null || true)
 MM_FILES = $(shell find $(SRC_DIR) -name "*.mm" 2>/dev/null || true)
 HPP_FILES = $(shell find $(INCLUDE_DIR) -name "*.hpp" 2>/dev/null || true)
+SRC_HPP_FILES = $(shell find $(SRC_DIR) -name "*.hpp" 2>/dev/null || true)
 TEST_FILES = $(shell find $(TEST_DIR) -name "*.cpp" 2>/dev/null || true)
+TEST_HPP_FILES = $(shell find $(TEST_DIR) -name "*.hpp" 2>/dev/null || true)
 
 # Filter GPU backend files based on WITH_* flags (not availability)
 # Include backend files if WITH_* is defined to ensure stub implementations are compiled
@@ -143,8 +145,18 @@ ALL_SOURCE_FILES = $(CPP_FILES) $(MM_FILES)
 LIB_NAME = lib$(PROJECT_NAME).a
 LIB_TARGET = $(BUILD_DIR)/$(LIB_NAME)
 
-# Tools for formatting and linting
-CLANG_FORMAT = clang-format
+# Tools for formatting and linting - support multiple installation paths
+# Try different common paths for clang-format in order of preference
+CLANG_FORMAT = $(shell \
+	if command -v clang-format-20 >/dev/null 2>&1; then \
+		echo "clang-format-20"; \
+	elif command -v /usr/local/bin/clang-format >/dev/null 2>&1; then \
+		echo "/usr/local/bin/clang-format"; \
+	elif command -v clang-format >/dev/null 2>&1; then \
+		echo "clang-format"; \
+	else \
+		echo "clang-format"; \
+	fi)
 CLANG_TIDY = clang-tidy
 CPPCHECK = cppcheck
 
@@ -242,7 +254,11 @@ fmt:
 	@if command -v $(CLANG_FORMAT) >/dev/null 2>&1; then \
 		if [ -n "$(HPP_FILES)" ]; then \
 			$(CLANG_FORMAT) -i $(HPP_FILES); \
-			echo "✅ Header files formatted"; \
+			echo "✅ Include header files formatted"; \
+		fi; \
+		if [ -n "$(SRC_HPP_FILES)" ]; then \
+			$(CLANG_FORMAT) -i $(SRC_HPP_FILES); \
+			echo "✅ Source header files formatted"; \
 		fi; \
 		if [ -n "$(CPP_FILES)" ]; then \
 			$(CLANG_FORMAT) -i $(CPP_FILES); \
@@ -250,7 +266,11 @@ fmt:
 		fi; \
 		if [ -n "$(TEST_FILES)" ]; then \
 			$(CLANG_FORMAT) -i $(TEST_FILES); \
-			echo "✅ Test files formatted"; \
+			echo "✅ Test source files formatted"; \
+		fi; \
+		if [ -n "$(TEST_HPP_FILES)" ]; then \
+			$(CLANG_FORMAT) -i $(TEST_HPP_FILES); \
+			echo "✅ Test header files formatted"; \
 		fi; \
 		echo "✅ Code formatting completed"; \
 	else \
@@ -261,10 +281,21 @@ fmt:
 .PHONY: fmt-check
 fmt-check:
 	@echo "Checking code format..."
+	@echo "Detected CLANG_FORMAT: $(CLANG_FORMAT)"
 	@if command -v $(CLANG_FORMAT) >/dev/null 2>&1; then \
+		echo "✅ clang-format found: $(CLANG_FORMAT)"; \
+		$(CLANG_FORMAT) --version; \
 		FORMAT_NEEDED=0; \
 		if [ -n "$(HPP_FILES)" ]; then \
 			for file in $(HPP_FILES); do \
+				if ! $(CLANG_FORMAT) --dry-run --Werror $$file >/dev/null 2>&1; then \
+					echo "❌ $$file needs formatting"; \
+					FORMAT_NEEDED=1; \
+				fi; \
+			done; \
+		fi; \
+		if [ -n "$(SRC_HPP_FILES)" ]; then \
+			for file in $(SRC_HPP_FILES); do \
 				if ! $(CLANG_FORMAT) --dry-run --Werror $$file >/dev/null 2>&1; then \
 					echo "❌ $$file needs formatting"; \
 					FORMAT_NEEDED=1; \
@@ -279,6 +310,22 @@ fmt-check:
 				fi; \
 			done; \
 		fi; \
+		if [ -n "$(TEST_FILES)" ]; then \
+			for file in $(TEST_FILES); do \
+				if ! $(CLANG_FORMAT) --dry-run --Werror $$file >/dev/null 2>&1; then \
+					echo "❌ $$file needs formatting"; \
+					FORMAT_NEEDED=1; \
+				fi; \
+			done; \
+		fi; \
+		if [ -n "$(TEST_HPP_FILES)" ]; then \
+			for file in $(TEST_HPP_FILES); do \
+				if ! $(CLANG_FORMAT) --dry-run --Werror $$file >/dev/null 2>&1; then \
+					echo "❌ $$file needs formatting"; \
+					FORMAT_NEEDED=1; \
+				fi; \
+			done; \
+		fi; \
 		if [ $$FORMAT_NEEDED -eq 0 ]; then \
 			echo "✅ All files are properly formatted"; \
 		else \
@@ -287,6 +334,14 @@ fmt-check:
 		fi; \
 	else \
 		echo "❌ clang-format not found"; \
+		echo "Diagnostic information:"; \
+		echo "  CLANG_FORMAT variable: $(CLANG_FORMAT)"; \
+		echo "  Searching in common locations:"; \
+		ls -la /usr/bin/clang-format* 2>/dev/null || echo "  - Not found in /usr/bin/"; \
+		ls -la /usr/local/bin/clang-format* 2>/dev/null || echo "  - Not found in /usr/local/bin/"; \
+		which clang-format 2>/dev/null || echo "  - Not found in PATH"; \
+		echo "  Available packages:"; \
+		apt list --installed | grep clang 2>/dev/null || echo "  - No clang packages found"; \
 		exit 1; \
 	fi
 
@@ -298,8 +353,24 @@ lint:
 		if [ -n "$(CPP_FILES)" ]; then \
 			$(CLANG_TIDY) $(CPP_FILES) -- $(CXXFLAGS) $(INCLUDE_FLAGS); \
 		fi; \
+		if [ -n "$(SRC_HPP_FILES)" ]; then \
+			for file in $(SRC_HPP_FILES); do \
+				echo "Checking $$file..."; \
+				$(CLANG_TIDY) $$file -- $(CXXFLAGS) $(INCLUDE_FLAGS); \
+			done; \
+		fi; \
 		if [ -n "$(HPP_FILES)" ]; then \
 			for file in $(HPP_FILES); do \
+				echo "Checking $$file..."; \
+				if [[ "$$file" == *"metal_backend.hpp" ]]; then \
+					echo "Skipping Metal backend (requires Objective-C++ context)"; \
+				else \
+					$(CLANG_TIDY) $$file -- $(CXXFLAGS) $(INCLUDE_FLAGS); \
+				fi; \
+			done; \
+		fi; \
+		if [ -n "$(TEST_HPP_FILES)" ]; then \
+			for file in $(TEST_HPP_FILES); do \
 				echo "Checking $$file..."; \
 				$(CLANG_TIDY) $$file -- $(CXXFLAGS) $(INCLUDE_FLAGS); \
 			done; \
@@ -315,7 +386,7 @@ check:
 	@echo "Running static analysis with cppcheck..."
 	@if command -v $(CPPCHECK) >/dev/null 2>&1; then \
 		$(CPPCHECK) --enable=all --std=c++17 \
-			--include-path=$(INCLUDE_DIR) \
+			-I$(INCLUDE_DIR) \
 			--suppress=missingIncludeSystem \
 			--suppress=unusedFunction \
 			$(SRC_DIR) $(INCLUDE_DIR) 2>/dev/null; \
