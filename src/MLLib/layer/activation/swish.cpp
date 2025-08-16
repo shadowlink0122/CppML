@@ -1,0 +1,60 @@
+#include "../../../../include/MLLib/layer/activation/swish.hpp"
+#include <cmath>
+#include <stdexcept>
+
+namespace MLLib {
+namespace layer {
+namespace activation {
+
+Swish::Swish(double beta) : beta_(beta) {
+  if (beta <= 0.0) {
+    throw std::invalid_argument("Beta must be positive");
+  }
+}
+
+NDArray Swish::forward(const NDArray& input) {
+  last_input_ = input;
+  forward_called_ = true;
+
+  NDArray output(input.shape());
+  const double* input_data = input.data();
+  double* output_data = output.data();
+
+  for (size_t i = 0; i < input.size(); ++i) {
+    double x = input_data[i];
+    double sigmoid_beta_x = 1.0 / (1.0 + std::exp(-beta_ * x));
+    output_data[i] = x * sigmoid_beta_x;
+  }
+
+  return output;
+}
+
+NDArray Swish::backward(const NDArray& grad_output) {
+  if (!forward_called_) {
+    throw std::runtime_error("Forward must be called before backward");
+  }
+
+  if (grad_output.shape() != last_input_.shape()) {
+    throw std::invalid_argument("Gradient output shape mismatch");
+  }
+
+  NDArray grad_input(grad_output.shape());
+  const double* grad_output_data = grad_output.data();
+  const double* input_data = last_input_.data();
+  double* grad_input_data = grad_input.data();
+
+  for (size_t i = 0; i < grad_output.size(); ++i) {
+    double x = input_data[i];
+    double sigmoid_beta_x = 1.0 / (1.0 + std::exp(-beta_ * x));
+    
+    // Derivative: sigmoid(beta*x) + x * sigmoid(beta*x) * (1 - sigmoid(beta*x)) * beta
+    double derivative = sigmoid_beta_x + x * sigmoid_beta_x * (1.0 - sigmoid_beta_x) * beta_;
+    grad_input_data[i] = grad_output_data[i] * derivative;
+  }
+
+  return grad_input;
+}
+
+}  // namespace activation
+}  // namespace layer
+}  // namespace MLLib
