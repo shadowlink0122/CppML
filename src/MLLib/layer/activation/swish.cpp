@@ -46,9 +46,11 @@ NDArray Swish::backward(const NDArray& grad_output) {
   for (size_t i = 0; i < grad_output.size(); ++i) {
     double x = input_data[i];
     double sigmoid_beta_x = 1.0 / (1.0 + std::exp(-beta_ * x));
-    
-    // Derivative: sigmoid(beta*x) + x * sigmoid(beta*x) * (1 - sigmoid(beta*x)) * beta
-    double derivative = sigmoid_beta_x + x * sigmoid_beta_x * (1.0 - sigmoid_beta_x) * beta_;
+
+    // Derivative: sigmoid(beta*x) + x * sigmoid(beta*x) * (1 - sigmoid(beta*x))
+    // * beta
+    double derivative =
+        sigmoid_beta_x + x * sigmoid_beta_x * (1.0 - sigmoid_beta_x) * beta_;
     grad_input_data[i] = grad_output_data[i] * derivative;
   }
 

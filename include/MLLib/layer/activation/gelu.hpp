@@ -14,7 +14,7 @@ namespace activation {
 /**
  * @class GELU
  * @brief Gaussian Error Linear Unit activation function
- * 
+ *
  * GELU is used in many state-of-the-art models like BERT and GPT.
  * Approximation: f(x) = 0.5 * x * (1 + tanh(sqrt(2/π) * (x + 0.044715 * x³)))
  */

@@ -13,7 +13,7 @@ namespace optimizer {
 /**
  * @class NAG
  * @brief Nesterov Accelerated Gradient optimizer
- * 
+ *
  * NAG is an improvement over momentum SGD that "looks ahead" by calculating
  * the gradient at the projected position rather than the current position.
  */
@@ -51,9 +51,9 @@ public:
   double get_momentum() const { return momentum_; }
 
 private:
-  double momentum_;           ///< Momentum factor
-  std::vector<NDArray> velocity_; ///< Momentum velocity for each parameter
-  bool velocity_initialized_; ///< Flag for lazy initialization
+  double momentum_;                ///< Momentum factor
+  std::vector<NDArray> velocity_;  ///< Momentum velocity for each parameter
+  bool velocity_initialized_;      ///< Flag for lazy initialization
 };
 
 }  // namespace optimizer

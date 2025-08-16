@@ -5,8 +5,7 @@ namespace MLLib {
 namespace optimizer {
 
 NAG::NAG(double learning_rate, double momentum)
-    : BaseOptimizer(learning_rate),
-      momentum_(momentum),
+    : BaseOptimizer(learning_rate), momentum_(momentum),
       velocity_initialized_(false) {
   if (learning_rate <= 0.0) {
     throw std::invalid_argument("Learning rate must be positive");
@@ -52,15 +51,17 @@ void NAG::update(const std::vector<NDArray*>& parameters,
       // NAG update:
       // v_t = momentum * v_{t-1} - learning_rate * gradient
       // param = param + momentum * v_t - learning_rate * gradient
-      
+
       double old_velocity = velocity_data[j];
-      velocity_data[j] = momentum_ * velocity_data[j] - learning_rate_ * grad_data[j];
-      
+      velocity_data[j] =
+          momentum_ * velocity_data[j] - learning_rate_ * grad_data[j];
+
       // Nesterov update: param = param + momentum * (v_t - v_{t-1}) + v_t
       // Simplified: param = param + momentum * v_t - momentum * v_{t-1} + v_t
       //           = param + momentum * v_t + v_t - momentum * v_{t-1}
       //           = param + (1 + momentum) * v_t - momentum * v_{t-1}
-      param_data[j] += (1.0 + momentum_) * velocity_data[j] - momentum_ * old_velocity;
+      param_data[j] +=
+          (1.0 + momentum_) * velocity_data[j] - momentum_ * old_velocity;
     }
   }
 }

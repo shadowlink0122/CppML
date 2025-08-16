@@ -14,7 +14,7 @@ namespace activation {
 /**
  * @class Swish
  * @brief Swish activation function (also known as SiLU)
- * 
+ *
  * Swish is a self-gated activation function: f(x) = x * sigmoid(beta * x)
  * When beta = 1, it's equivalent to SiLU (Sigmoid Linear Unit)
  */

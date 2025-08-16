@@ -13,7 +13,7 @@ namespace optimizer {
 /**
  * @class RMSprop
  * @brief Root Mean Square Propagation optimizer
- * 
+ *
  * RMSprop adapts the learning rate for each parameter by dividing by a running
  * average of the magnitudes of recent gradients for that parameter.
  */
@@ -25,8 +25,7 @@ public:
    * @param rho Exponential decay rate (default: 0.9)
    * @param epsilon Small constant for numerical stability (default: 1e-8)
    */
-  explicit RMSprop(double learning_rate = 0.001,
-                   double rho = 0.9,
+  explicit RMSprop(double learning_rate = 0.001, double rho = 0.9,
                    double epsilon = 1e-8);
 
   /**
@@ -48,11 +47,11 @@ public:
   void reset();
 
 private:
-  double rho_;                ///< Exponential decay rate
-  double epsilon_;            ///< Numerical stability constant
-  
-  std::vector<NDArray> v_;    ///< Exponential moving average of squared gradients
-  bool v_initialized_;        ///< Flag for lazy initialization
+  double rho_;      ///< Exponential decay rate
+  double epsilon_;  ///< Numerical stability constant
+
+  std::vector<NDArray> v_;  ///< Exponential moving average of squared gradients
+  bool v_initialized_;      ///< Flag for lazy initialization
 };
 
 }  // namespace optimizer

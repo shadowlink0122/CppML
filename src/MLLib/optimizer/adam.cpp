@@ -6,12 +6,8 @@ namespace MLLib {
 namespace optimizer {
 
 Adam::Adam(double learning_rate, double beta1, double beta2, double epsilon)
-    : BaseOptimizer(learning_rate),
-      beta1_(beta1),
-      beta2_(beta2),
-      epsilon_(epsilon),
-      timestep_(0),
-      moments_initialized_(false) {
+    : BaseOptimizer(learning_rate), beta1_(beta1), beta2_(beta2),
+      epsilon_(epsilon), timestep_(0), moments_initialized_(false) {
   if (learning_rate <= 0.0) {
     throw std::invalid_argument("Learning rate must be positive");
   }
@@ -71,16 +67,17 @@ void Adam::update(const std::vector<NDArray*>& parameters,
     for (size_t j = 0; j < param.size(); ++j) {
       // Update first moment
       m_data[j] = beta1_ * m_data[j] + (1.0 - beta1_) * grad_data[j];
-      
+
       // Update second moment
-      v_data[j] = beta2_ * v_data[j] + (1.0 - beta2_) * grad_data[j] * grad_data[j];
-      
+      v_data[j] =
+          beta2_ * v_data[j] + (1.0 - beta2_) * grad_data[j] * grad_data[j];
+
       // Bias-corrected first moment
       double m_hat = m_data[j] / bias_correction1;
-      
+
       // Bias-corrected second moment
       double v_hat = v_data[j] / bias_correction2;
-      
+
       // Update parameter
       param_data[j] -= learning_rate_ * m_hat / (std::sqrt(v_hat) + epsilon_);
     }
