@@ -10,8 +10,8 @@
 #include "MLLib/layer/activation/test_activation_integration.hpp"
 #include "MLLib/layer/test_layer_integration.hpp"
 #include "MLLib/loss/test_loss_integration.hpp"
-#include "MLLib/optimizer/test_optimizer_integration.hpp"
 #include "MLLib/optimizer/test_optimizer_activation_integration.hpp"
+#include "MLLib/optimizer/test_optimizer_integration.hpp"
 #include "MLLib/util/io/test_io_integration.hpp"
 #include "MLLib/util/misc/test_misc_integration.hpp"
 #include "MLLib/util/number/test_number_integration.hpp"
@@ -19,6 +19,7 @@
 #include "MLLib/util/system/test_system_integration.hpp"
 #include "MLLib/util/time/test_time_integration.hpp"
 
+#include <cstdio>
 #include <memory>
 #include <vector>
 
@@ -380,10 +381,10 @@ protected:
 int main() {
   using namespace MLLib::test;
 
-  std::cout << "=== MLLib Integration Test Suite ===" << std::endl;
-  std::cout << "Testing end-to-end functionality and workflows" << std::endl;
-  std::cout << "Output capture enabled for clean test reporting" << std::endl;
-  std::cout << std::endl;
+  printf("=== MLLib Integration Test Suite ===\n");
+  printf("Testing end-to-end functionality and workflows\n");
+  printf("Output capture enabled for clean test reporting\n");
+  printf("\n");
 
   bool all_tests_passed = true;
 
@@ -401,14 +402,12 @@ int main() {
     TestSuite learning_suite("Learning Convergence Tests");
     learning_suite.addTest(std::make_unique<XORLearningConvergenceTest>());
 
-    std::cout << "\nNote: Learning convergence tests may be non-deterministic"
-              << std::endl;
+    printf("\nNote: Learning convergence tests may be non-deterministic\n");
     bool suite_result = learning_suite.runAll();
     // Don't require learning tests to pass for CI
     if (!suite_result) {
-      std::cout << "Warning: Learning tests failed (non-deterministic - not CI "
-                   "blocking)"
-                << std::endl;
+      printf("Warning: Learning tests failed (non-deterministic - not CI "
+             "blocking)\n");
     }
   }
 
@@ -467,13 +466,20 @@ int main() {
 
   // Optimizer-Activation integration tests
   {
-    TestSuite optimizer_activation_suite("Optimizer-Activation Integration Tests");
-    optimizer_activation_suite.addTest(std::make_unique<SGDReLUIntegrationTest>());
-    optimizer_activation_suite.addTest(std::make_unique<SGDSigmoidIntegrationTest>());
-    optimizer_activation_suite.addTest(std::make_unique<SGDTanhIntegrationTest>());
-    optimizer_activation_suite.addTest(std::make_unique<AdamActivationIntegrationTest>());
-    optimizer_activation_suite.addTest(std::make_unique<OptimizerActivationPerformanceTest>());
-    optimizer_activation_suite.addTest(std::make_unique<GradientFlowIntegrationTest>());
+    TestSuite optimizer_activation_suite(
+        "Optimizer-Activation Integration Tests");
+    optimizer_activation_suite.addTest(
+        std::make_unique<SGDReLUIntegrationTest>());
+    optimizer_activation_suite.addTest(
+        std::make_unique<SGDSigmoidIntegrationTest>());
+    optimizer_activation_suite.addTest(
+        std::make_unique<SGDTanhIntegrationTest>());
+    optimizer_activation_suite.addTest(
+        std::make_unique<AdamActivationIntegrationTest>());
+    optimizer_activation_suite.addTest(
+        std::make_unique<OptimizerActivationPerformanceTest>());
+    optimizer_activation_suite.addTest(
+        std::make_unique<GradientFlowIntegrationTest>());
 
     bool suite_result = optimizer_activation_suite.runAll();
     all_tests_passed &= suite_result;
@@ -678,20 +684,23 @@ int main() {
   */
 
   // Final summary
-  std::cout << "\n" << std::string(60, '=') << std::endl;
-  std::cout << "INTEGRATION TEST SUMMARY" << std::endl;
-  std::cout << std::string(60, '=') << std::endl;
+  printf("\n");
+  for (int i = 0; i < 60; i++) printf("=");
+  printf("\n");
+  printf("INTEGRATION TEST SUMMARY\n");
+  for (int i = 0; i < 60; i++) printf("=");
+  printf("\n");
 
   if (all_tests_passed) {
-    std::cout << "🎉 ALL INTEGRATION TESTS PASSED! 🎉" << std::endl;
-    std::cout << "MLLib components work together correctly." << std::endl;
+    printf("🎉 ALL INTEGRATION TESTS PASSED! 🎉\n");
+    printf("MLLib components work together correctly.\n");
   } else {
-    std::cout << "❌ SOME INTEGRATION TESTS FAILED" << std::endl;
-    std::cout << "Please review the test output and fix integration issues."
-              << std::endl;
+    printf("❌ SOME INTEGRATION TESTS FAILED\n");
+    printf("Please review the test output and fix integration issues.\n");
   }
 
-  std::cout << std::string(60, '=') << std::endl;
+  for (int i = 0; i < 60; i++) printf("=");
+  printf("\n");
 
   return all_tests_passed ? 0 : 1;
 }
