@@ -653,35 +653,45 @@ samples: $(LIB_TARGET)
 	@if [ -d "$(SAMPLE_DIR)" ]; then \
 		echo "Building samples..."; \
 		mkdir -p $(BUILD_DIR)/samples; \
+		mkdir -p $(BUILD_DIR)/samples/gpu; \
+		mkdir -p $(BUILD_DIR)/samples/nn; \
+		mkdir -p $(BUILD_DIR)/samples/autoencoder; \
 		SAMPLE_SUCCESS=true; \
-		for sample in $(SAMPLE_DIR)/*.cpp; do \
-			if [ -f "$$sample" ]; then \
-				name=$$(basename $$sample .cpp); \
-				\
-				echo "Building sample: $$name"; \
-				SAMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET)"; \
-				if [ "$(shell uname)" = "Darwin" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
-					echo "Building with Metal support for sample: $$name"; \
-					SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
-				fi; \
-				if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
-					echo "Building with CUDA support for sample: $$name"; \
-					SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD $(LDFLAGS)"; \
-				else \
-					echo "Building without CUDA support for sample: $$name"; \
-					if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
-						SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+		\
+		for subdir in gpu nn autoencoder; do \
+			if [ -d "$(SAMPLE_DIR)/$$subdir" ]; then \
+				echo "Building $$subdir samples..."; \
+				for sample in $(SAMPLE_DIR)/$$subdir/*.cpp; do \
+					if [ -f "$$sample" ]; then \
+						name=$$(basename $$sample .cpp); \
+						relative_path=$$(echo $$sample | sed 's|$(SAMPLE_DIR)/||'); \
+						\
+						echo "Building sample: $$relative_path"; \
+						SAMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET)"; \
+						if [ "$(shell uname)" = "Darwin" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
+							echo "Building with Metal support for sample: $$name"; \
+							SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+						fi; \
+						if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+							echo "Building with CUDA support for sample: $$name"; \
+							SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD $(LDFLAGS)"; \
+						else \
+							echo "Building without CUDA support for sample: $$name"; \
+							if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+								SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+							fi; \
+							if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+								SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+							fi; \
+						fi; \
+						if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$subdir/$$name; then \
+							echo "✓ Built sample: $$relative_path"; \
+						else \
+							echo "❌ Failed to build sample: $$relative_path"; \
+							SAMPLE_SUCCESS=false; \
+						fi; \
 					fi; \
-					if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
-						SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
-					fi; \
-				fi; \
-				if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$name; then \
-					echo "✓ Built sample: $$name"; \
-				else \
-					echo "❌ Failed to build sample: $$name"; \
-					SAMPLE_SUCCESS=false; \
-				fi; \
+				done; \
 			fi; \
 		done; \
 		if [ "$$SAMPLE_SUCCESS" = "true" ]; then \
@@ -699,8 +709,20 @@ samples: $(LIB_TARGET)
 run-sample:
 	@if [ -z "$(SAMPLE)" ]; then \
 		echo "Usage: make run-sample SAMPLE=<sample_name>"; \
+		echo "       make run-sample SAMPLE=<subdir>/<sample_name>"; \
 		echo "Available samples:"; \
 		if [ -d "$(BUILD_DIR)/samples" ]; then \
+			for subdir in $(BUILD_DIR)/samples/*/; do \
+				if [ -d "$$subdir" ]; then \
+					subdir_name=$$(basename $$subdir); \
+					echo "  $$subdir_name/:"; \
+					for sample in $$subdir*; do \
+						if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
+							echo "    $$subdir_name/$$(basename $$sample)"; \
+						fi; \
+					done; \
+				fi; \
+			done; \
 			for sample in $(BUILD_DIR)/samples/*; do \
 				if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
 					echo "  $$(basename $$sample)"; \
@@ -712,10 +734,24 @@ run-sample:
 	elif [ -f "$(BUILD_DIR)/samples/$(SAMPLE)" ]; then \
 		echo "Running $(SAMPLE) sample..."; \
 		$(BUILD_DIR)/samples/$(SAMPLE); \
+	elif echo "$(SAMPLE)" | grep -q "/" && [ -f "$(BUILD_DIR)/samples/$(SAMPLE)" ]; then \
+		echo "Running $(SAMPLE) sample..."; \
+		$(BUILD_DIR)/samples/$(SAMPLE); \
 	else \
 		echo "❌ Sample '$(SAMPLE)' not found"; \
 		echo "Available samples:"; \
 		if [ -d "$(BUILD_DIR)/samples" ]; then \
+			for subdir in $(BUILD_DIR)/samples/*/; do \
+				if [ -d "$$subdir" ]; then \
+					subdir_name=$$(basename $$subdir); \
+					echo "  $$subdir_name/:"; \
+					for sample in $$subdir*; do \
+						if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
+							echo "    $$subdir_name/$$(basename $$sample)"; \
+						fi; \
+					done; \
+				fi; \
+			done; \
 			for sample in $(BUILD_DIR)/samples/*; do \
 				if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
 					echo "  $$(basename $$sample)"; \
@@ -728,17 +764,17 @@ run-sample:
 # Convenience aliases for commonly used samples
 .PHONY: xor device-detection gpu-vendor-detection gpu-test
 xor: samples
-	@$(MAKE) run-sample SAMPLE=xor
+	@$(MAKE) run-sample SAMPLE=nn/xor
 
 gpu-test: gpu-integration-test
 
 .PHONY: device-detection
 device-detection: samples
-	@$(MAKE) run-sample SAMPLE=device_detection
+	@$(MAKE) run-sample SAMPLE=gpu/device_detection
 
 .PHONY: gpu-vendor-detection
 gpu-vendor-detection: samples
-	@$(MAKE) run-sample SAMPLE=gpu_vendor_detection
+	@$(MAKE) run-sample SAMPLE=gpu/debug_gpu_detection
 
 # CI-specific build target - builds CPU-only version with all stubs
 .PHONY: ci-build
