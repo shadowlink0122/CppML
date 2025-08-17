@@ -1,10 +1,10 @@
 /**
  * @file device_detection.cpp
  * @brief Device detection sample program
- * 
+ *
  * This sample demonstrates how to:
  * - Detect available GPUs from different vendors
- * - Get primary GPU vendor information  
+ * - Get primary GPU vendor information
  * - Check vendor-specific GPU availability
  * - Configure GPU devices for computation
  */
@@ -83,9 +83,9 @@ int main() {
     bool success =
         MLLib::Device::setDeviceWithValidation(MLLib::DeviceType::GPU, true);
     printf("GPU device validation: %s\n", success ? "SUCCESS" : "FAILED");
-    printf(
-        "Current Device after GPU set: %s\n",
-        MLLib::Device::getDeviceTypeString(MLLib::Device::getCurrentDevice()));
+    printf("Current Device after GPU set: %s\n",
+           MLLib::Device::getDeviceTypeString(
+               MLLib::Device::getCurrentDevice()));
   }
 
   printf("\n=== Device Detection Sample Complete ===\n");
