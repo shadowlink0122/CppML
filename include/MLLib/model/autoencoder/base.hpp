@@ -4,6 +4,8 @@
 #include "../../layer/base.hpp"
 #include "../../loss/base.hpp"
 #include "../../optimizer/base.hpp"
+#include "../base_model.hpp"
+#include "../model_io.hpp"
 #include "../sequential.hpp"
 #include <memory>
 #include <vector>
@@ -22,11 +24,11 @@ namespace autoencoder {
  * @brief Types of autoencoders
  */
 enum class AutoencoderType {
-  BASIC,        ///< Basic autoencoder
-  DENOISING,    ///< Denoising autoencoder
-  VARIATIONAL,  ///< Variational autoencoder
-  SPARSE,       ///< Sparse autoencoder
-  CONVOLUTIONAL ///< Convolutional autoencoder
+  BASIC,         ///< Basic autoencoder
+  DENOISING,     ///< Denoising autoencoder
+  VARIATIONAL,   ///< Variational autoencoder
+  SPARSE,        ///< Sparse autoencoder
+  CONVOLUTIONAL  ///< Convolutional autoencoder
 };
 
 /**
@@ -37,11 +39,11 @@ struct AutoencoderConfig {
   std::vector<int> encoder_dims;  ///< Encoder layer dimensions
   std::vector<int> decoder_dims;  ///< Decoder layer dimensions
   int latent_dim;                 ///< Latent space dimension
-  double noise_factor = 0.0;     ///< Noise factor for denoising (0.0 = no noise)
-  double sparsity_penalty = 0.0; ///< Sparsity penalty coefficient
-  bool use_batch_norm = false;   ///< Use batch normalization
-  DeviceType device = DeviceType::CPU; ///< Computation device
-  
+  double noise_factor = 0.0;  ///< Noise factor for denoising (0.0 = no noise)
+  double sparsity_penalty = 0.0;        ///< Sparsity penalty coefficient
+  bool use_batch_norm = false;          ///< Use batch normalization
+  DeviceType device = DeviceType::CPU;  ///< Computation device
+
   /**
    * @brief Create a basic autoencoder config
    * @param input_dim Input dimension
@@ -49,9 +51,9 @@ struct AutoencoderConfig {
    * @param hidden_dims Hidden layer dimensions (symmetric)
    * @return AutoencoderConfig
    */
-  static AutoencoderConfig basic(int input_dim, int latent_dim, 
-                                const std::vector<int>& hidden_dims = {});
-  
+  static AutoencoderConfig basic(int input_dim, int latent_dim,
+                                 const std::vector<int>& hidden_dims = {});
+
   /**
    * @brief Create a denoising autoencoder config
    * @param input_dim Input dimension
@@ -60,16 +62,16 @@ struct AutoencoderConfig {
    * @param hidden_dims Hidden layer dimensions
    * @return AutoencoderConfig
    */
-  static AutoencoderConfig denoising(int input_dim, int latent_dim, 
-                                    double noise_factor = 0.1,
-                                    const std::vector<int>& hidden_dims = {});
+  static AutoencoderConfig denoising(int input_dim, int latent_dim,
+                                     double noise_factor = 0.1,
+                                     const std::vector<int>& hidden_dims = {});
 };
 
 /**
  * @class BaseAutoencoder
  * @brief Base class for all autoencoder implementations
  */
-class BaseAutoencoder {
+class BaseAutoencoder : public BaseModel {
 public:
   /**
    * @brief Constructor
@@ -113,13 +115,12 @@ public:
    * @param validation_data Optional validation data
    * @param callback Optional training callback
    */
-  virtual void train(const std::vector<NDArray>& training_data,
-                    loss::BaseLoss& loss,
-                    optimizer::BaseOptimizer& optimizer,
-                    int epochs = 100,
-                    int batch_size = 32,
-                    const std::vector<NDArray>* validation_data = nullptr,
-                    std::function<void(int, double, double)> callback = nullptr);
+  virtual void
+  train(const std::vector<NDArray>& training_data, loss::BaseLoss& loss,
+        optimizer::BaseOptimizer& optimizer, int epochs = 100,
+        int batch_size = 32,
+        const std::vector<NDArray>* validation_data = nullptr,
+        std::function<void(int, double, double)> callback = nullptr);
 
   /**
    * @brief Calculate reconstruction error
@@ -127,8 +128,8 @@ public:
    * @param metric Error metric ("mse", "mae", "rmse")
    * @return Reconstruction error
    */
-  virtual double reconstruction_error(const NDArray& input, 
-                                    const std::string& metric = "mse");
+  virtual double reconstruction_error(const NDArray& input,
+                                      const std::string& metric = "mse");
 
   /**
    * @brief Get latent dimension
@@ -152,24 +153,7 @@ public:
    * @brief Set training mode
    * @param training True for training, false for inference
    */
-  virtual void set_training(bool training);
-
-  /**
-   * @brief Save model to files
-   * @param base_path Base path for saving (without extension)
-   * @param save_json Save JSON metadata
-   * @param save_binary Save binary weights
-   */
-  virtual void save(const std::string& base_path, 
-                   bool save_json = true, 
-                   bool save_binary = true);
-
-  /**
-   * @brief Load model from files
-   * @param base_path Base path for loading (without extension)
-   * @return True if successful
-   */
-  virtual bool load(const std::string& base_path);
+  virtual void set_training(bool training) override;
 
   /**
    * @brief Get encoder model
@@ -183,11 +167,52 @@ public:
    */
   const Sequential& get_decoder() const { return *decoder_; }
 
+  // ISerializableModel interface implementation
+  SerializationMetadata get_serialization_metadata() const override;
+  std::unordered_map<std::string, std::vector<uint8_t>>
+  serialize() const override;
+  bool deserialize(const std::unordered_map<std::string, std::vector<uint8_t>>&
+                       data) override;
+  std::string get_config_string() const override;
+  bool set_config_from_string(const std::string& config_str) override;
+
+  /**
+   * @brief Save model using generic model I/O
+   * @param filepath Path to save file
+   * @param format Save format
+   * @return True if successful
+   */
+  bool save(const std::string& filepath) const;
+
+  /**
+   * @brief Load model using generic model I/O
+   * @param filepath Path to load file
+   * @param format Load format
+   * @return True if successful
+   */
+  bool load(const std::string& filepath);
+
+  /**
+   * @brief Save model to files (legacy method)
+   * @param base_path Base path for saving (without extension)
+   * @param save_json Save JSON metadata
+   * @param save_binary Save binary weights
+   */
+  virtual void save_legacy(const std::string& base_path, bool save_json = true,
+                           bool save_binary = true);
+
+  /**
+   * @brief Load model from files (legacy method)
+   * @param base_path Base path for loading (without extension)
+   * @return True if successful
+   */
+  virtual bool load_legacy(const std::string& base_path);
+
 protected:
-  AutoencoderConfig config_;                    ///< Model configuration
-  std::unique_ptr<Sequential> encoder_;         ///< Encoder network
-  std::unique_ptr<Sequential> decoder_;         ///< Decoder network
-  
+  AutoencoderConfig config_;             ///< Model configuration
+  std::unique_ptr<Sequential> encoder_;  ///< Encoder network
+  std::unique_ptr<Sequential> decoder_;  ///< Decoder network
+
   /**
    * @brief Build encoder network
    */
@@ -221,6 +246,21 @@ protected:
    * @brief Initialize the autoencoder models
    */
   void initialize();
+
+  /**
+   * @brief Serialize autoencoder-specific data
+   * @return Serialized data map
+   */
+  virtual std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
+  serialize_impl() const;
+
+  /**
+   * @brief Deserialize autoencoder-specific data
+   * @param data Serialized data map
+   * @return True if successful
+   */
+  virtual bool deserialize_impl(
+      const std::unordered_map<std::string, std::vector<uint8_t>>& data);
 };
 
 }  // namespace autoencoder

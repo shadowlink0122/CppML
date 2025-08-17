@@ -10,8 +10,7 @@ namespace layer {
 
 Dense::Dense(size_t input_size, size_t output_size, bool use_bias)
     : input_size_(input_size), output_size_(output_size), use_bias_(use_bias) {
-  // Temporarily disable initialization to fix segfault
-  // initialize_parameters();
+  initialize_parameters();
 }
 
 NDArray Dense::forward(const NDArray& input) {

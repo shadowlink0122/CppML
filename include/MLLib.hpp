@@ -50,11 +50,11 @@
 #include "MLLib/model/sequential.hpp"
 
 // Autoencoder models
-#include "MLLib/model/autoencoder/base.hpp"
-#include "MLLib/model/autoencoder/dense.hpp"
-#include "MLLib/model/autoencoder/denoising.hpp"
-#include "MLLib/model/autoencoder/variational.hpp"
 #include "MLLib/model/autoencoder/anomaly_detector.hpp"
+#include "MLLib/model/autoencoder/base.hpp"
+#include "MLLib/model/autoencoder/denoising.hpp"
+#include "MLLib/model/autoencoder/dense.hpp"
+#include "MLLib/model/autoencoder/variational.hpp"
 
 // Optimization
 #include "MLLib/optimizer/adam.hpp"

@@ -16,12 +16,12 @@ namespace autoencoder {
  * @brief Configuration for variational autoencoder
  */
 struct VAEConfig {
-  double kl_weight = 1.0;              ///< KL divergence weight (beta in beta-VAE)
-  double kl_anneal_start = 0.0;        ///< KL annealing start value
-  double kl_anneal_rate = 0.0001;      ///< KL annealing rate
-  bool use_kl_annealing = false;       ///< Use KL annealing
-  std::string prior_type = "gaussian"; ///< Prior distribution type
-  bool reparameterize = true;          ///< Use reparameterization trick
+  double kl_weight = 1.0;          ///< KL divergence weight (beta in beta-VAE)
+  double kl_anneal_start = 0.0;    ///< KL annealing start value
+  double kl_anneal_rate = 0.0001;  ///< KL annealing rate
+  bool use_kl_annealing = false;   ///< Use KL annealing
+  std::string prior_type = "gaussian";  ///< Prior distribution type
+  bool reparameterize = true;           ///< Use reparameterization trick
 };
 
 /**
@@ -29,10 +29,10 @@ struct VAEConfig {
  * @brief Output from VAE encoding
  */
 struct VAEOutput {
-  NDArray mean;        ///< Mean of latent distribution
-  NDArray log_var;     ///< Log variance of latent distribution  
-  NDArray sample;      ///< Sampled latent vector
-  double kl_loss;      ///< KL divergence loss
+  NDArray mean;     ///< Mean of latent distribution
+  NDArray log_var;  ///< Log variance of latent distribution
+  NDArray sample;   ///< Sampled latent vector
+  double kl_loss;   ///< KL divergence loss
 };
 
 /**
@@ -47,7 +47,7 @@ public:
    * @param vae_config VAE-specific configuration
    */
   VariationalAutoencoder(const AutoencoderConfig& config,
-                        const VAEConfig& vae_config = {});
+                         const VAEConfig& vae_config = {});
 
   /**
    * @brief Constructor with explicit parameters
@@ -58,15 +58,17 @@ public:
    * @param device Computation device
    */
   VariationalAutoencoder(int input_dim, int latent_dim,
-                        const std::vector<int>& hidden_dims = {},
-                        double kl_weight = 1.0,
-                        DeviceType device = DeviceType::CPU);
+                         const std::vector<int>& hidden_dims = {},
+                         double kl_weight = 1.0,
+                         DeviceType device = DeviceType::CPU);
 
   /**
    * @brief Get autoencoder type
    * @return VARIATIONAL type
    */
-  AutoencoderType get_type() const override { return AutoencoderType::VARIATIONAL; }
+  AutoencoderType get_type() const override {
+    return AutoencoderType::VARIATIONAL;
+  }
 
   /**
    * @brief Encode input to latent distribution parameters
@@ -97,8 +99,8 @@ public:
    * @return Interpolated data points
    */
   std::vector<NDArray> interpolate(const NDArray& start_point,
-                                  const NDArray& end_point,
-                                  int num_steps = 10);
+                                   const NDArray& end_point,
+                                   int num_steps = 10);
 
   /**
    * @brief Train the VAE
@@ -110,13 +112,12 @@ public:
    * @param validation_data Optional validation data
    * @param callback Optional training callback (epoch, recon_loss, kl_loss)
    */
-  void train(const std::vector<NDArray>& training_data,
-            loss::BaseLoss& loss,
-            optimizer::BaseOptimizer& optimizer,
-            int epochs = 100,
-            int batch_size = 32,
-            const std::vector<NDArray>* validation_data = nullptr,
-            std::function<void(int, double, double)> callback = nullptr) override;
+  void
+  train(const std::vector<NDArray>& training_data, loss::BaseLoss& loss,
+        optimizer::BaseOptimizer& optimizer, int epochs = 100,
+        int batch_size = 32,
+        const std::vector<NDArray>* validation_data = nullptr,
+        std::function<void(int, double, double)> callback = nullptr) override;
 
   /**
    * @brief Calculate VAE loss (reconstruction + KL divergence)
@@ -127,11 +128,9 @@ public:
    * @param recon_loss Base reconstruction loss
    * @return Total VAE loss
    */
-  double calculate_vae_loss(const NDArray& input,
-                           const NDArray& reconstruction,
-                           const NDArray& mean,
-                           const NDArray& log_var,
-                           loss::BaseLoss& recon_loss);
+  double calculate_vae_loss(const NDArray& input, const NDArray& reconstruction,
+                            const NDArray& mean, const NDArray& log_var,
+                            loss::BaseLoss& recon_loss);
 
   /**
    * @brief Get current KL weight (with annealing)
@@ -162,11 +161,10 @@ public:
    * @param device Computation device
    * @return VariationalAutoencoder instance for images
    */
-  static std::unique_ptr<VariationalAutoencoder> create_for_images(
-    int height, int width, int channels = 1,
-    int latent_dim = 64,
-    double kl_weight = 1.0,
-    DeviceType device = DeviceType::CPU);
+  static std::unique_ptr<VariationalAutoencoder>
+  create_for_images(int height, int width, int channels = 1,
+                    int latent_dim = 64, double kl_weight = 1.0,
+                    DeviceType device = DeviceType::CPU);
 
   /**
    * @brief Create beta-VAE with controllable disentanglement
@@ -177,11 +175,10 @@ public:
    * @param device Computation device
    * @return VariationalAutoencoder instance (beta-VAE)
    */
-  static std::unique_ptr<VariationalAutoencoder> create_beta_vae(
-    int input_dim, int latent_dim,
-    double beta = 4.0,
-    const std::vector<int>& hidden_dims = {},
-    DeviceType device = DeviceType::CPU);
+  static std::unique_ptr<VariationalAutoencoder>
+  create_beta_vae(int input_dim, int latent_dim, double beta = 4.0,
+                  const std::vector<int>& hidden_dims = {},
+                  DeviceType device = DeviceType::CPU);
 
 protected:
   /**

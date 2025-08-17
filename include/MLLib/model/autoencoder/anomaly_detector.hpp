@@ -17,12 +17,13 @@ namespace autoencoder {
  * @brief Configuration for anomaly detection
  */
 struct AnomalyConfig {
-  double threshold_percentile = 95.0;     ///< Percentile for threshold calculation
-  std::string threshold_method = "percentile"; ///< "percentile", "std", "manual"
-  double manual_threshold = 0.0;          ///< Manual threshold value
-  std::string error_metric = "mse";       ///< Error metric ("mse", "mae", "rmse")
-  bool adaptive_threshold = false;        ///< Use adaptive thresholding
-  int window_size = 100;                  ///< Window size for adaptive threshold
+  double threshold_percentile = 95.0;  ///< Percentile for threshold calculation
+  std::string threshold_method =
+      "percentile";                  ///< "percentile", "std", "manual"
+  double manual_threshold = 0.0;     ///< Manual threshold value
+  std::string error_metric = "mse";  ///< Error metric ("mse", "mae", "rmse")
+  bool adaptive_threshold = false;   ///< Use adaptive thresholding
+  int window_size = 100;             ///< Window size for adaptive threshold
 };
 
 /**
@@ -30,16 +31,16 @@ struct AnomalyConfig {
  * @brief Results from anomaly detection
  */
 struct AnomalyResults {
-  std::vector<double> reconstruction_errors; ///< Reconstruction errors
-  std::vector<bool> anomaly_flags;          ///< True for anomalies
-  double threshold;                         ///< Used threshold
-  
+  std::vector<double> reconstruction_errors;  ///< Reconstruction errors
+  std::vector<bool> anomaly_flags;            ///< True for anomalies
+  double threshold;                           ///< Used threshold
+
   // Performance metrics (if ground truth provided)
   int true_positives = 0;
   int false_positives = 0;
   int true_negatives = 0;
   int false_negatives = 0;
-  
+
   double precision = 0.0;
   double recall = 0.0;
   double f1_score = 0.0;
@@ -58,20 +59,21 @@ public:
    * @param anomaly_config Anomaly detection configuration
    */
   AnomalyDetector(const AutoencoderConfig& config,
-                 const AnomalyConfig& anomaly_config = {});
+                  const AnomalyConfig& anomaly_config = {});
 
   /**
    * @brief Constructor with explicit parameters
    * @param input_dim Input dimension
    * @param latent_dim Latent dimension
    * @param hidden_dims Hidden layer dimensions
-   * @param threshold_percentile Percentile for threshold (95.0 = 95th percentile)
+   * @param threshold_percentile Percentile for threshold (95.0 = 95th
+   * percentile)
    * @param device Computation device
    */
   AnomalyDetector(int input_dim, int latent_dim,
-                 const std::vector<int>& hidden_dims = {},
-                 double threshold_percentile = 95.0,
-                 DeviceType device = DeviceType::CPU);
+                  const std::vector<int>& hidden_dims = {},
+                  double threshold_percentile = 95.0,
+                  DeviceType device = DeviceType::CPU);
 
   /**
    * @brief Get autoencoder type
@@ -89,13 +91,12 @@ public:
    * @param validation_data Optional normal validation data
    * @param callback Optional training callback
    */
-  void train_on_normal(const std::vector<NDArray>& normal_data,
-                      loss::BaseLoss& loss,
-                      optimizer::BaseOptimizer& optimizer,
-                      int epochs = 100,
-                      int batch_size = 32,
-                      const std::vector<NDArray>* validation_data = nullptr,
-                      std::function<void(int, double, double)> callback = nullptr);
+  void
+  train_on_normal(const std::vector<NDArray>& normal_data, loss::BaseLoss& loss,
+                  optimizer::BaseOptimizer& optimizer, int epochs = 100,
+                  int batch_size = 32,
+                  const std::vector<NDArray>* validation_data = nullptr,
+                  std::function<void(int, double, double)> callback = nullptr);
 
   /**
    * @brief Calculate and set anomaly threshold based on normal data
@@ -109,8 +110,9 @@ public:
    * @param ground_truth Optional ground truth labels for evaluation
    * @return Anomaly detection results
    */
-  AnomalyResults detect_anomalies(const std::vector<NDArray>& test_data,
-                                 const std::vector<bool>* ground_truth = nullptr);
+  AnomalyResults
+  detect_anomalies(const std::vector<NDArray>& test_data,
+                   const std::vector<bool>* ground_truth = nullptr);
 
   /**
    * @brief Check if single sample is anomalous
@@ -159,12 +161,12 @@ public:
    * @param device Computation device
    * @return AnomalyDetector instance for sensor data
    */
-  static std::unique_ptr<AnomalyDetector> create_for_sensors(
-    int num_sensors,
-    int latent_dim = 0, // 0 = auto-calculate
-    double compression_ratio = 4.0,
-    double threshold_percentile = 95.0,
-    DeviceType device = DeviceType::CPU);
+  static std::unique_ptr<AnomalyDetector>
+  create_for_sensors(int num_sensors,
+                     int latent_dim = 0,  // 0 = auto-calculate
+                     double compression_ratio = 4.0,
+                     double threshold_percentile = 95.0,
+                     DeviceType device = DeviceType::CPU);
 
   /**
    * @brief Create anomaly detector for time series data
@@ -175,11 +177,11 @@ public:
    * @param device Computation device
    * @return AnomalyDetector instance for time series
    */
-  static std::unique_ptr<AnomalyDetector> create_for_timeseries(
-    int window_size, int num_features = 1,
-    int latent_dim = 0, // 0 = auto-calculate
-    double threshold_percentile = 95.0,
-    DeviceType device = DeviceType::CPU);
+  static std::unique_ptr<AnomalyDetector>
+  create_for_timeseries(int window_size, int num_features = 1,
+                        int latent_dim = 0,  // 0 = auto-calculate
+                        double threshold_percentile = 95.0,
+                        DeviceType device = DeviceType::CPU);
 
   /**
    * @brief Save anomaly detector with threshold
@@ -187,16 +189,15 @@ public:
    * @param save_json Save JSON metadata
    * @param save_binary Save binary weights
    */
-  void save(const std::string& base_path, 
-           bool save_json = true, 
-           bool save_binary = true) override;
+  void save(const std::string& base_path, bool save_json = true,
+            bool save_binary = true);
 
   /**
    * @brief Load anomaly detector with threshold
    * @param base_path Base path for loading
    * @return True if successful
    */
-  bool load(const std::string& base_path) override;
+  bool load(const std::string& base_path);
 
 private:
   AnomalyConfig anomaly_config_;
@@ -223,7 +224,7 @@ private:
    * @param ground_truth Ground truth labels
    */
   void calculate_performance_metrics(AnomalyResults& results,
-                                   const std::vector<bool>& ground_truth);
+                                     const std::vector<bool>& ground_truth);
 
   /**
    * @brief Update adaptive threshold

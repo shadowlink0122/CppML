@@ -30,9 +30,9 @@ public:
    * @param hidden_dims Hidden layer dimensions (for encoder)
    * @param device Computation device
    */
-  DenseAutoencoder(int input_dim, int latent_dim, 
-                  const std::vector<int>& hidden_dims = {},
-                  DeviceType device = DeviceType::CPU);
+  DenseAutoencoder(int input_dim, int latent_dim,
+                   const std::vector<int>& hidden_dims = {},
+                   DeviceType device = DeviceType::CPU);
 
   /**
    * @brief Get autoencoder type
@@ -48,10 +48,9 @@ public:
    * @param device Computation device
    * @return DenseAutoencoder instance
    */
-  static std::unique_ptr<DenseAutoencoder> create_simple(
-    int input_dim, int latent_dim, 
-    double compression_ratio = 4.0,
-    DeviceType device = DeviceType::CPU);
+  static std::unique_ptr<DenseAutoencoder>
+  create_simple(int input_dim, int latent_dim, double compression_ratio = 4.0,
+                DeviceType device = DeviceType::CPU);
 
   /**
    * @brief Create a deep dense autoencoder
@@ -61,10 +60,9 @@ public:
    * @param device Computation device
    * @return DenseAutoencoder instance
    */
-  static std::unique_ptr<DenseAutoencoder> create_deep(
-    int input_dim, int latent_dim,
-    int num_layers = 3,
-    DeviceType device = DeviceType::CPU);
+  static std::unique_ptr<DenseAutoencoder>
+  create_deep(int input_dim, int latent_dim, int num_layers = 3,
+              DeviceType device = DeviceType::CPU);
 
 private:
   /**

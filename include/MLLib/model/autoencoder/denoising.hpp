@@ -17,10 +17,10 @@ namespace autoencoder {
  * @brief Types of noise for denoising autoencoders
  */
 enum class NoiseType {
-  GAUSSIAN,    ///< Gaussian noise
-  SALT_PEPPER, ///< Salt and pepper noise
-  DROPOUT,     ///< Dropout noise
-  UNIFORM      ///< Uniform noise
+  GAUSSIAN,     ///< Gaussian noise
+  SALT_PEPPER,  ///< Salt and pepper noise
+  DROPOUT,      ///< Dropout noise
+  UNIFORM       ///< Uniform noise
 };
 
 /**
@@ -28,10 +28,10 @@ enum class NoiseType {
  * @brief Configuration for denoising autoencoder
  */
 struct DenoisingConfig {
-  NoiseType noise_type = NoiseType::GAUSSIAN; ///< Type of noise to add
-  double noise_factor = 0.1;                  ///< Noise intensity
-  double dropout_rate = 0.2;                  ///< Dropout rate for dropout noise
-  bool validate_on_clean = true;              ///< Validate on clean data
+  NoiseType noise_type = NoiseType::GAUSSIAN;  ///< Type of noise to add
+  double noise_factor = 0.1;                   ///< Noise intensity
+  double dropout_rate = 0.2;      ///< Dropout rate for dropout noise
+  bool validate_on_clean = true;  ///< Validate on clean data
 };
 
 /**
@@ -46,7 +46,7 @@ public:
    * @param denoising_config Denoising-specific configuration
    */
   DenoisingAutoencoder(const AutoencoderConfig& config,
-                      const DenoisingConfig& denoising_config = {});
+                       const DenoisingConfig& denoising_config = {});
 
   /**
    * @brief Constructor with explicit parameters
@@ -58,16 +58,18 @@ public:
    * @param device Computation device
    */
   DenoisingAutoencoder(int input_dim, int latent_dim,
-                      const std::vector<int>& hidden_dims = {},
-                      double noise_factor = 0.1,
-                      NoiseType noise_type = NoiseType::GAUSSIAN,
-                      DeviceType device = DeviceType::CPU);
+                       const std::vector<int>& hidden_dims = {},
+                       double noise_factor = 0.1,
+                       NoiseType noise_type = NoiseType::GAUSSIAN,
+                       DeviceType device = DeviceType::CPU);
 
   /**
    * @brief Get autoencoder type
    * @return DENOISING type
    */
-  AutoencoderType get_type() const override { return AutoencoderType::DENOISING; }
+  AutoencoderType get_type() const override {
+    return AutoencoderType::DENOISING;
+  }
 
   /**
    * @brief Train the denoising autoencoder
@@ -79,13 +81,12 @@ public:
    * @param validation_data Optional clean validation data
    * @param callback Optional training callback
    */
-  void train(const std::vector<NDArray>& clean_data,
-            loss::BaseLoss& loss,
-            optimizer::BaseOptimizer& optimizer,
-            int epochs = 100,
-            int batch_size = 32,
-            const std::vector<NDArray>* validation_data = nullptr,
-            std::function<void(int, double, double)> callback = nullptr) override;
+  void
+  train(const std::vector<NDArray>& clean_data, loss::BaseLoss& loss,
+        optimizer::BaseOptimizer& optimizer, int epochs = 100,
+        int batch_size = 32,
+        const std::vector<NDArray>* validation_data = nullptr,
+        std::function<void(int, double, double)> callback = nullptr) override;
 
   /**
    * @brief Denoise input data
@@ -100,9 +101,9 @@ public:
    * @param noisy_data Noisy input data
    * @return Metrics (PSNR, SSIM, MSE)
    */
-  std::map<std::string, double> evaluate_denoising(
-    const std::vector<NDArray>& clean_data,
-    const std::vector<NDArray>& noisy_data);
+  std::map<std::string, double>
+  evaluate_denoising(const std::vector<NDArray>& clean_data,
+                     const std::vector<NDArray>& noisy_data);
 
   /**
    * @brief Set noise configuration
@@ -114,7 +115,9 @@ public:
    * @brief Get current noise configuration
    * @return Current denoising configuration
    */
-  const DenoisingConfig& get_denoising_config() const { return denoising_config_; }
+  const DenoisingConfig& get_denoising_config() const {
+    return denoising_config_;
+  }
 
   /**
    * @brief Create denoising autoencoder for images
@@ -126,11 +129,10 @@ public:
    * @param device Computation device
    * @return DenoisingAutoencoder instance for images
    */
-  static std::unique_ptr<DenoisingAutoencoder> create_for_images(
-    int height, int width, int channels = 1,
-    int latent_dim = 64,
-    double noise_factor = 0.1,
-    DeviceType device = DeviceType::CPU);
+  static std::unique_ptr<DenoisingAutoencoder>
+  create_for_images(int height, int width, int channels = 1,
+                    int latent_dim = 64, double noise_factor = 0.1,
+                    DeviceType device = DeviceType::CPU);
 
 protected:
   /**
