@@ -107,10 +107,12 @@ jobs:
           echo "✅ Static analysis completed"
         fi
 
-  build-test:
-    name: 🏗️ Build Test
+  build:
+    name: 🏗️ Build Library
     runs-on: ubuntu-latest
     needs: [format-validation, code-quality]
+    outputs:
+      build-hash: ${{ steps.build-info.outputs.build-hash }}
     
     steps:
     - name: Checkout code
@@ -136,19 +138,35 @@ jobs:
         echo "Makefile check:"
         head -20 Makefile
         
-    - name: Test library build
+    - name: Build library
       run: |
-        echo "🏗️ Testing library build..."
+        echo "🏗️ Building library..."
         make clean || echo "Clean completed"
         echo "Starting build process..."
         make -d 2>&1 | head -50 || echo "Build started"
         make
         echo "✅ Library build successful"
         
-    - name: Verify build output
+    - name: Build test executables
+      run: |
+        echo "🔧 Building test executables..."
+        make build-tests
+        echo "✅ Test executables built"
+        
+    - name: Generate build info
+      id: build-info
+      run: |
+        echo "📊 Generating build information..."
+        BUILD_HASH=$(find src include -type f -name "*.cpp" -o -name "*.hpp" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1 | head -c 8)
+        echo "build-hash=$BUILD_HASH" >> $GITHUB_OUTPUT
+        echo "Build hash: $BUILD_HASH"
+        
+    - name: Verify build artifacts
       run: |
         echo "🔍 Verifying build artifacts..."
         ls -la build/ || echo "Build directory not found"
+        
+        # Check library file
         if [ -f "build/libMLLib.a" ]; then
           echo "✅ Library file created successfully"
           file build/libMLLib.a
@@ -158,43 +176,70 @@ jobs:
           find . -name "*.a" 2>/dev/null || echo "No .a files found anywhere"
           exit 1
         fi
+        
+        # Check test executables
+        echo "🧪 Test executables:"
+        find build -name "*test*" -type f | head -10
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts-${{ steps.build-info.outputs.build-hash }}
+        path: |
+          build/
+          !build/**/*.o
+          !build/**/tmp/
+        retention-days: 1
+        if-no-files-found: error
 
   unit-tests:
     name: 🧪 Unit Tests
     runs-on: ubuntu-latest
-    needs: build-test
+    needs: build
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Install build dependencies
-      run: |
-        sudo apt-get update -q
-        sudo apt-get install -y build-essential make clang
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts-${{ needs.build.outputs.build-hash }}
+        path: .
         
-    - name: Build and run unit tests
+    - name: Verify downloaded artifacts
       run: |
-        echo "🧪 Building and running unit tests..."
-        make unit-test
-        echo "✅ All unit tests passed (21/21)"
+        echo "📦 Verifying downloaded build artifacts..."
+        ls -la build/ || echo "Build directory not found"
+        
+        if [ -f "build/libMLLib.a" ]; then
+          echo "✅ Library artifact downloaded successfully"
+          file build/libMLLib.a
+        else
+          echo "❌ Library artifact missing"
+          exit 1
+        fi
+        
+    - name: Run unit tests
+      run: |
+        echo "🧪 Running unit tests with pre-built artifacts..."
+        make unit-test-run-only
+        echo "✅ All unit tests passed"
 
   integration-tests:
     name: 🔄 Integration Tests
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: [build, unit-tests]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Install build dependencies
+    - name: Install build dependencies (needed for test execution)
       run: |
         sudo apt-get update -q
-        sudo apt-get install -y build-essential make clang
-        echo "✅ Build tools installed"
-        gcc --version
-        clang++ --version
+        sudo apt-get install -y build-essential make
+        echo "✅ Runtime tools installed for test execution"
         
     - name: Run simple integration tests
       run: |
@@ -236,7 +281,7 @@ jobs:
   summary:
     name: 📋 CI Summary
     runs-on: ubuntu-latest
-    needs: [format-validation, code-quality, build-test, unit-tests, integration-tests]
+    needs: [format-validation, code-quality, build, unit-tests, integration-tests]
     if: always()
     
     steps:
@@ -246,14 +291,14 @@ jobs:
         echo "====================="
         echo "Format Validation: ${{ needs.format-validation.result }}"
         echo "Code Quality Checks: ${{ needs.code-quality.result }}"
-        echo "Build Test: ${{ needs.build-test.result }}"
+        echo "Build: ${{ needs.build.result }}"
         echo "Unit Tests: ${{ needs.unit-tests.result }}"
         echo "Integration Tests: ${{ needs.integration-tests.result }}"
         echo ""
         
         if [ "${{ needs.format-validation.result }}" = "success" ] && \
            [ "${{ needs.code-quality.result }}" = "success" ] && \
-           [ "${{ needs.build-test.result }}" = "success" ] && \
+           [ "${{ needs.build.result }}" = "success" ] && \
            [ "${{ needs.unit-tests.result }}" = "success" ] && \
            [ "${{ needs.integration-tests.result }}" = "success" ]; then
           echo "✅ All CI checks passed successfully!"

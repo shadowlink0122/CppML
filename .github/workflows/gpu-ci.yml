@@ -140,11 +140,13 @@ jobs:
         echo "  - GPU unit tests (with fallback simulation)"
         echo "  - GPU integration tests"
 
-  # CPU-based GPU testing (tests the fallback system)
-  gpu-fallback-test:
-    name: 🖥️ GPU Fallback Testing
+  # Build artifacts for GPU testing
+  gpu-build:
+    name: 🏗️ GPU Build
     runs-on: ubuntu-latest
     needs: [config, gpu-availability-check]
+    outputs:
+      build-hash: ${{ steps.build-info.outputs.build-hash }}
     
     steps:
     - name: Checkout code
@@ -159,20 +161,74 @@ jobs:
         g++ --version
         clang++ --version
         
-    - name: Build library (CPU-only mode)
+    - name: Build library (CPU-only mode for artifacts)
       run: |
-        echo "🏗️ Building library in CPU-only mode..."
+        echo "🏗️ Building library in CPU-only mode for artifact sharing..."
         make clean
         make
         echo "✅ Library built successfully (CPU-only)"
         
+    - name: Build test executables
+      run: |
+        echo "🔧 Building test executables for GPU testing..."
+        make build-tests
+        echo "✅ GPU test executables built"
+        
+    - name: Generate build info
+      id: build-info
+      run: |
+        echo "📊 Generating build information..."
+        BUILD_HASH=$(find src include -type f -name "*.cpp" -o -name "*.hpp" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1 | head -c 8)
+        echo "build-hash=$BUILD_HASH" >> $GITHUB_OUTPUT
+        echo "Build hash: $BUILD_HASH"
+        
+    - name: Upload GPU build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: gpu-build-artifacts-${{ steps.build-info.outputs.build-hash }}
+        path: |
+          build/
+          !build/**/*.o
+          !build/**/tmp/
+        retention-days: 1
+        if-no-files-found: error
+
+  # CPU-based GPU testing with artifacts
+  gpu-fallback-test:
+    name: 🖥️ GPU Fallback Testing
+    runs-on: ubuntu-latest
+    needs: [config, gpu-availability-check, gpu-build]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: gpu-build-artifacts-${{ needs.gpu-build.outputs.build-hash }}
+        path: .
+        
+    - name: Verify downloaded artifacts
+      run: |
+        echo "� Verifying downloaded GPU build artifacts..."
+        ls -la build/ || echo "Build directory not found"
+        
+        if [ -f "build/libMLLib.a" ]; then
+          echo "✅ Library artifact downloaded successfully"
+          file build/libMLLib.a
+        else
+          echo "❌ Library artifact missing"
+          exit 1
+        fi
+        
     - name: Test GPU unit tests (fallback mode)
       run: |
-        echo "🧪 Running GPU unit tests in fallback mode..."
+        echo "🧪 Running GPU unit tests in fallback mode with pre-built artifacts..."
         echo "This tests the GPU validation and CPU fallback system"
         
-        # Run unit tests including GPU tests
-        make unit-test
+        # Run unit tests including GPU tests (using pre-built artifacts)
+        make unit-test-run-only
         
         echo "✅ GPU unit tests completed (6 test classes)"
         echo "  - GPU availability detection tested"
@@ -182,10 +238,10 @@ jobs:
         
     - name: Test GPU integration (fallback mode)
       run: |
-        echo "🔄 Running GPU integration tests in fallback mode..."
+        echo "🔄 Running GPU integration tests in fallback mode with pre-built artifacts..."
         
-        # Run integration tests
-        make integration-test
+        # Run integration tests (using pre-built artifacts)
+        make integration-test-run-only
         
         echo "✅ GPU integration tests completed (4 test classes)"
         echo "  - GPU-CPU fallback integration verified"
@@ -197,7 +253,7 @@ jobs:
   gpu-hardware-test:
     name: 🚀 GPU Hardware Testing
     runs-on: ubuntu-latest  # Use available runner
-    needs: [config, gpu-availability-check, gpu-fallback-test]
+    needs: [config, gpu-availability-check, gpu-build, gpu-fallback-test]
     # Run when GPU hardware testing is enabled via any method
     if: needs.config.outputs.enable-gpu-hardware == 'true'
     
@@ -567,7 +623,7 @@ jobs:
   gpu-simulation-test:
     name: 🧪 GPU Simulation Testing
     runs-on: ubuntu-latest
-    needs: [config, gpu-availability-check, gpu-fallback-test]
+    needs: [config, gpu-availability-check, gpu-build, gpu-fallback-test]
     # Run simulation tests unless hardware testing is specifically requested
     if: needs.config.outputs.test-type != 'hardware-only'
     

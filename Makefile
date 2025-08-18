@@ -211,7 +211,7 @@ CLANG_TIDY = clang-tidy
 CPPCHECK = cppcheck
 
 # Phony targets for main build, clean, test, and samples
-.PHONY: all clean debug test gpu-integration-test samples run-sample xor device-detection gpu-vendor-detection gpu-test help install build-tools gpu-check
+.PHONY: all clean debug test gpu-integration-test samples run-sample xor device-detection gpu-vendor-detection gpu-test help install build-tools gpu-check build-tests unit-test-run-only simple-integration-test-run-only integration-test-run-only
 
 # Default target
 .PHONY: all
@@ -507,6 +507,78 @@ gpu-integration-test: $(LIB_TARGET)
 		echo "ℹ️  GPU integration tests not found"; \
 	fi
 
+# Build only test executables (for CI artifact optimization)
+.PHONY: build-tests
+build-tests: $(LIB_TARGET)
+	@echo "Building test executables only (for CI artifacts)..."
+	@mkdir -p $(BUILD_DIR)/tests
+	@if [ -f "$(TEST_DIR)/unit/unit_test_main.cpp" ]; then \
+		echo "Compiling unit test executable..."; \
+		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib -pthread"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			echo "Building with Metal support for unit tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			echo "Building with CUDA support for tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		else \
+			echo "Building without CUDA support for tests..."; \
+			if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+			fi; \
+			if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+			fi; \
+		fi; \
+		$$COMPILE_CMD -o $(BUILD_DIR)/tests/unit_tests || { echo "❌ Failed to build unit tests"; exit 1; }; \
+		echo "✅ Unit test executable built"; \
+	fi
+	@if [ -f "$(TEST_DIR)/integration/simple_integration_test.cpp" ]; then \
+		echo "Compiling simple integration test executable..."; \
+		SIMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -I$(TEST_DIR) -o $(BUILD_DIR)/simple_integration_test tests/integration/simple_integration_test.cpp -L$(BUILD_DIR) -lMLLib"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			echo "Building with Metal support for simple integration tests..."; \
+			SIMPLE_COMPILE_CMD="$$SIMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			SIMPLE_COMPILE_CMD="$$SIMPLE_COMPILE_CMD $(LDFLAGS)"; \
+		fi; \
+		$$SIMPLE_COMPILE_CMD || { echo "❌ Failed to build simple integration tests"; exit 1; }; \
+		echo "✅ Simple integration test executable built"; \
+	fi
+	@if [ -f "$(TEST_DIR)/integration/integration_test_main.cpp" ]; then \
+		echo "Compiling integration test executable..."; \
+		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
+		INTEGRATION_COMPILE_CMD="$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -I$(TEST_DIR) $$INTEGRATION_FILES -L$(BUILD_DIR) -lMLLib -pthread"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			INTEGRATION_COMPILE_CMD="$$INTEGRATION_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			INTEGRATION_COMPILE_CMD="$$INTEGRATION_COMPILE_CMD $(LDFLAGS)"; \
+		fi; \
+		$$INTEGRATION_COMPILE_CMD -o $(BUILD_DIR)/tests/integration_tests || { echo "❌ Failed to build integration tests"; exit 1; }; \
+		echo "✅ Integration test executable built"; \
+	fi
+	@echo "✅ All test executables built for CI artifacts"
+
+# Run unit tests only (using pre-built executables)
+.PHONY: unit-test-run-only
+unit-test-run-only:
+	@echo "Running unit tests with pre-built executables..."
+	@if [ -f "$(BUILD_DIR)/tests/unit_tests" ]; then \
+		if $(BUILD_DIR)/tests/unit_tests; then \
+			echo "✅ Unit tests passed"; \
+		else \
+			echo "❌ Unit tests failed"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Unit test executable not found. Run 'make build-tests' first."; \
+		exit 1; \
+	fi
+
 # Run unit tests only
 .PHONY: unit-test
 unit-test: $(LIB_TARGET)
@@ -546,6 +618,38 @@ unit-test: $(LIB_TARGET)
 		fi; \
 	else \
 		echo "ℹ️  Unit tests not found"; \
+	fi
+
+# Run simple integration tests only (using pre-built executables)
+.PHONY: simple-integration-test-run-only
+simple-integration-test-run-only:
+	@echo "Running simple integration tests with pre-built executable..."
+	@if [ -f "$(BUILD_DIR)/simple_integration_test" ]; then \
+		if $(BUILD_DIR)/simple_integration_test; then \
+			echo "✅ Simple integration tests passed"; \
+		else \
+			echo "❌ Simple integration tests failed"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Simple integration test executable not found. Run 'make build-tests' first."; \
+		exit 1; \
+	fi
+
+# Run integration tests only (using pre-built executables)
+.PHONY: integration-test-run-only
+integration-test-run-only:
+	@echo "Running integration tests with pre-built executable..."
+	@if [ -f "$(BUILD_DIR)/tests/integration_tests" ]; then \
+		if $(BUILD_DIR)/tests/integration_tests; then \
+			echo "✅ Integration tests passed"; \
+		else \
+			echo "❌ Integration tests failed"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Integration test executable not found. Run 'make build-tests' first."; \
+		exit 1; \
 	fi
 
 # Run simple integration tests
@@ -799,13 +903,18 @@ help:
 	@echo "  all          - Build the library (default)"
 	@echo "  debug        - Build with debug flags"
 	@echo "  ci-build     - Build for CI environment (no Metal, GPU simulation)"
+	@echo "  build-tests  - Build test executables only (for CI artifacts)"
 	@echo "  clean        - Remove build artifacts, training outputs, and test files"
 	@echo "  deep-clean   - Remove all generated files including nested training dirs"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test         - Run all tests (unit + integration)"
 	@echo "  unit-test    - Run unit tests only"
+	@echo "  unit-test-run-only - Run unit tests with pre-built executables"
 	@echo "  integration-test - Run integration tests only"
+	@echo "  integration-test-run-only - Run integration tests with pre-built executables"
+	@echo "  simple-integration-test - Run simple integration tests"
+	@echo "  simple-integration-test-run-only - Run simple integration tests with pre-built executables"
 	@echo "  gpu-integration-test - Run GPU integration tests only"
 	@echo "  test-all     - Run comprehensive test runner"
 	@echo "  ci-test      - Run tests in CI environment"
