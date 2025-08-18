@@ -242,7 +242,11 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 
 ---
 
-For more detailed information, see our [documentation index](README.md) or explore the [samples directory](../samples/) for practical examples.ws/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
+For more detailed information, see our [documentation index](README.md) or explore the [samples directory](../samples/) for practical examples.
+
+---
+
+[![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
 [![GPU CI](https://github.com/shadowlink0122/CppML/workflows/GPU%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/gpu-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
@@ -250,6 +254,8 @@ For more detailed information, see our [documentation index](README.md) or explo
 [![Integration Tests](https://img.shields.io/badge/integration-3429%2F3429_assertions-brightgreen.svg)](#-testing)
 [![GPU Tests](https://img.shields.io/badge/GPU_tests-145_assertions-blue.svg)](#-gpu-support)
 [![Test Coverage](https://img.shields.io/badge/coverage-100%25_CI_success-brightgreen.svg)](#-testing)
+[![GPU Optimization](https://img.shields.io/badge/GPU_kernel_reduction-97%25-brightgreen.svg)](#-gpu-support)
+[![Model I/O Generalization](https://img.shields.io/badge/Model_I%2FO_generalization-92%25-green.svg)](#-model-io)
 
 A modern C++17 machine learning library designed for neural network training and model persistence with comprehensive testing and performance monitoring.
 

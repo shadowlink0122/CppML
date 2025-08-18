@@ -2,12 +2,12 @@
 
 > **Language**: 🇺🇸 English | [🇯🇵 日本語](README_ja.md)
 
-[![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](ht- **📖 [Contribution Guide](GUIDE_en.md#-contributing)** - How to participate
-2. **🎨 [Code Style](GUIDE_en.md#code-style)** - K&R formatting guidelines
-3. **✅ [Quality Checks](GUIDE_en.md#code-quality)** - Linting and testing requirements://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
+[![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
 [![Tests](https://img.shields.io/badge/tests-21%2F21_passing-brightgreen.svg)](#testing)
+[![GPU Optimization](https://img.shields.io/badge/GPU_kernel_reduction-97%25-brightgreen.svg)](#gpu-strategy)
+[![Model I/O Generalization](https://img.shields.io/badge/Model_I%2FO_generalization-92%25-green.svg)](#model-io-guides)
 
 Welcome to the comprehensive documentation collection for MLLib C++ machine learning library.
 

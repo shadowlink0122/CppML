@@ -1,5 +1,11 @@
 # MLLib Activation Layers - ModelIOとGPU対応状況レポート
 
+> **Language**: [🇺🇸 English](ACTIVATION_LAYERS_STATUS_en.md) | 🇯🇵 日本語
+
+[![活性化関数](https://img.shields.io/badge/活性化関数-7%2F7_実装済み-brightgreen.svg)](#対応状況サマリー)
+[![GPU最適化](https://img.shields.io/badge/GPUカーネル削減-97%25-brightgreen.svg)](#gpu対応状況)
+[![テストカバレッジ](https://img.shields.io/badge/tests-100%25_passing-brightgreen.svg)](#テスト結果)
+
 ## 📋 対応状況サマリー
 
 ### ✅ ModelIO対応（拡張完了）

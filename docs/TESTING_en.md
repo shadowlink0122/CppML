@@ -2,7 +2,12 @@
 
 > **Language**: 🇺🇸 English | [🇯🇵 日本語](TESTING_ja.md)
 
-Comprehensive testing system documentation for MLLib.
+[![Tests](https://img.shields.io/badge/tests-21%2F21_unit_tests-brightgreen.svg)](#unit-tests)
+[![Integration Tests](https://img.shields.io/badge/integration-3429%2F3429_assertions-brightgreen.svg)](#integration-tests)
+[![GPU Tests](https://img.shields.io/badge/GPU_tests-145_assertions-blue.svg)](#gpu-testing)
+[![Test Coverage](https://img.shields.io/badge/coverage-100%25_CI_success-brightgreen.svg)](#test-coverage)
+
+Comprehensive testing system documentation for MLLib with complete test coverage and performance monitoring.
 
 ## 🧪 Testing Overview
 

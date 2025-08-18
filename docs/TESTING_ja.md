@@ -2,7 +2,12 @@
 
 > **Language**: [🇺🇸 English](TESTING_en.md) | 🇯🇵 日本語
 
-MLLibの包括的なテストシステムのドキュメントです。
+[![テスト](https://img.shields.io/badge/tests-21%2F21_unit_tests-brightgreen.svg)](#単体テスト)
+[![結合テスト](https://img.shields.io/badge/integration-3429%2F3429_assertions-brightgreen.svg)](#結合テスト)
+[![GPUテスト](https://img.shields.io/badge/GPU_tests-145_assertions-blue.svg)](#gpuテスト)
+[![テストカバレッジ](https://img.shields.io/badge/coverage-100%25_CI_success-brightgreen.svg)](#テストカバレッジ)
+
+MLLibの包括的なテストシステムのドキュメントです。完全なテストカバレッジとパフォーマンス監視機能を提供します。
 
 ## 🧪 テスト概要
 
