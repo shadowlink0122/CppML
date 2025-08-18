@@ -3,6 +3,7 @@
 #include "base_model.hpp"
 #include "sequential.hpp"
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -54,13 +55,24 @@ public:
     static_assert(std::is_base_of_v<ISerializableModel, ModelClass>,
                   "ModelClass must inherit from ISerializableModel");
 
-    // Suppress unused parameter warnings
-    (void)filepath;
-    (void)format;
+    // Load model data from file
+    auto model_data = load_model_data(filepath, format);
+    if (!model_data) {
+      std::cerr << "Failed to load model data from: " << filepath << std::endl;
+      return nullptr;
+    }
 
-    // For now, return nullptr as placeholder
-    // Real implementation would deserialize based on ModelClass type
-    return nullptr;
+    // Create empty model instance
+    auto model = std::make_unique<ModelClass>();
+
+    // Deserialize the model from loaded data
+    if (!model->deserialize(*model_data)) {
+      std::cerr << "Failed to deserialize model from: " << filepath
+                << std::endl;
+      return nullptr;
+    }
+
+    return model;
   }
 
   /**

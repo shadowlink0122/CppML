@@ -181,6 +181,9 @@ ifeq ($(CUDA_AVAILABLE),false)
     endif
 endif
 
+# Add new auto-serialization system files
+# CPP_FILES += src/MLLib/model/serialization_manager.cpp  # Disabled for now
+
 # Remove duplicates from CPP_FILES to prevent linker errors
 CPP_FILES := $(sort $(CPP_FILES))
 MM_FILES := $(sort $(MM_FILES))
@@ -655,15 +658,14 @@ samples: $(LIB_TARGET)
 	@if [ -d "$(SAMPLE_DIR)" ]; then \
 		echo "Building samples..."; \
 		mkdir -p $(BUILD_DIR)/samples; \
-		mkdir -p $(BUILD_DIR)/samples/gpu; \
-		mkdir -p $(BUILD_DIR)/samples/nn; \
-		mkdir -p $(BUILD_DIR)/samples/autoencoder; \
 		SAMPLE_SUCCESS=true; \
 		\
-		for subdir in gpu nn autoencoder; do \
-			if [ -d "$(SAMPLE_DIR)/$$subdir" ]; then \
-				echo "Building $$subdir samples..."; \
-				for sample in $(SAMPLE_DIR)/$$subdir/*.cpp; do \
+		for subdir in $(SAMPLE_DIR)/*/; do \
+			if [ -d "$$subdir" ]; then \
+				subdir_name=$$(basename $$subdir); \
+				echo "Building $$subdir_name samples..."; \
+				mkdir -p $(BUILD_DIR)/samples/$$subdir_name; \
+				for sample in $$subdir*.cpp; do \
 					if [ -f "$$sample" ]; then \
 						name=$$(basename $$sample .cpp); \
 						relative_path=$$(echo $$sample | sed 's|$(SAMPLE_DIR)/||'); \
@@ -686,7 +688,7 @@ samples: $(LIB_TARGET)
 								SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
 							fi; \
 						fi; \
-						if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$subdir/$$name; then \
+						if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$subdir_name/$$name; then \
 							echo "✅ Built sample: $$relative_path"; \
 						else \
 							echo "❌ Failed to build sample: $$relative_path"; \

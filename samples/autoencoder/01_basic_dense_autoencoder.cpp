@@ -133,7 +133,7 @@ int main() {
 
     // 7. Save model using new GenericModelIO
     printf("\n7. Saving trained model using GenericModelIO...\n");
-    std::string model_path = "basic_dense_autoencoder";
+    std::string model_path = "saved_models/basic_dense_autoencoder";
 
     try {
       // Save in different formats using the new generic architecture

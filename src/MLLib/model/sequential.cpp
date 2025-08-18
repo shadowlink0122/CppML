@@ -2,6 +2,7 @@
 #include "../../../include/MLLib/layer/dense.hpp"
 #include "../../../include/MLLib/model/model_io.hpp"
 #include <algorithm>
+#include <cstring>
 #include <initializer_list>
 #include <iostream>
 #include <stdexcept>
@@ -261,7 +262,33 @@ Sequential::serialize() const {
 
       layer_data.push_back(use_bias ? 1 : 0);
 
-      // TODO: Serialize weights and biases
+      // Serialize weights and biases to the same data buffer
+      const auto& weights = dense_layer->get_weights();
+
+      // Append weights data size
+      size_t weights_size = weights.size() * sizeof(double);
+      uint8_t* size_bytes = reinterpret_cast<uint8_t*>(&weights_size);
+      layer_data.insert(layer_data.end(), size_bytes,
+                        size_bytes + sizeof(size_t));
+
+      // Append weights data
+      const uint8_t* weights_bytes =
+          reinterpret_cast<const uint8_t*>(weights.data());
+      layer_data.insert(layer_data.end(), weights_bytes,
+                        weights_bytes + weights_size);
+
+      // Serialize biases if present
+      if (use_bias) {
+        const auto& bias = dense_layer->get_bias();
+        size_t bias_size = bias.size() * sizeof(double);
+        uint8_t* bias_size_bytes = reinterpret_cast<uint8_t*>(&bias_size);
+        layer_data.insert(layer_data.end(), bias_size_bytes,
+                          bias_size_bytes + sizeof(size_t));
+
+        const uint8_t* bias_bytes =
+            reinterpret_cast<const uint8_t*>(bias.data());
+        layer_data.insert(layer_data.end(), bias_bytes, bias_bytes + bias_size);
+      }
     } else {
       // Other layer types (activation, etc.)
       layer_data.push_back(0);  // Generic layer type = 0
@@ -341,7 +368,43 @@ bool Sequential::deserialize(
           std::make_shared<layer::Dense>(input_size, output_size, use_bias);
       layers_.push_back(dense_layer);
 
-      // TODO: Deserialize weights and biases
+      // Deserialize weights and biases
+      size_t expected_size =
+          1 + 2 * sizeof(size_t) + 1 + sizeof(size_t);  // Minimum size
+      if (layer_data.size() >= expected_size) {
+        size_t offset = 1 + 2 * sizeof(size_t) + 1;  // Skip to weights size
+
+        // Read weights size
+        size_t weights_size =
+            *reinterpret_cast<const size_t*>(&layer_data[offset]);
+        offset += sizeof(size_t);
+
+        if (offset + weights_size <= layer_data.size()) {
+          // Create NDArray for weights and copy data
+          size_t weights_count = weights_size / sizeof(double);
+          std::vector<size_t> weights_shape = {input_size, output_size};
+          NDArray weights(weights_shape);
+
+          std::memcpy(weights.data(), &layer_data[offset], weights_size);
+          dense_layer->set_weights(weights);
+          offset += weights_size;
+
+          // Read biases if present
+          if (use_bias && offset + sizeof(size_t) <= layer_data.size()) {
+            size_t bias_size =
+                *reinterpret_cast<const size_t*>(&layer_data[offset]);
+            offset += sizeof(size_t);
+
+            if (offset + bias_size <= layer_data.size()) {
+              std::vector<size_t> bias_shape = {output_size};
+              NDArray bias(bias_shape);
+
+              std::memcpy(bias.data(), &layer_data[offset], bias_size);
+              dense_layer->set_biases(bias);
+            }
+          }
+        }
+      }
     } else {
       // Generic layer - would need to identify specific type
       std::cerr << "Unsupported layer type: " << static_cast<int>(layer_type)

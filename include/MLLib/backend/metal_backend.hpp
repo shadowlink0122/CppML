@@ -58,11 +58,14 @@ public:
   static void relu(const double* input, double* output, size_t size);
   static void sigmoid(const double* input, double* output, size_t size);
   static void tanh_activation(const double* input, double* output, size_t size);
-  
+
   // Extended activation functions
-  static void leaky_relu(const double* input, double* output, size_t size, double alpha = 0.01);
-  static void gelu(const double* input, double* output, size_t size, bool approximate = false);
-  static void elu(const double* input, double* output, size_t size, double alpha = 1.0);
+  static void leaky_relu(const double* input, double* output, size_t size,
+                         double alpha = 0.01);
+  static void gelu(const double* input, double* output, size_t size,
+                   bool approximate = false);
+  static void elu(const double* input, double* output, size_t size,
+                  double alpha = 1.0);
   static void swish(const double* input, double* output, size_t size);
   static void softmax(const double* input, double* output, size_t size);
 

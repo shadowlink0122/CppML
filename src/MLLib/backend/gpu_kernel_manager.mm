@@ -21,8 +21,8 @@ bool GPUKernelManager::initialized_ = false;
 
 #ifdef WITH_METAL
 std::unordered_map<std::string, GPUKernelManager::MetalKernel> GPUKernelManager::metal_kernels_;
-id<MTLDevice> GPUKernelManager::device_ = nil;
-id<MTLCommandQueue> GPUKernelManager::command_queue_ = nil;
+void* GPUKernelManager::device_ = nullptr;
+void* GPUKernelManager::command_queue_ = nullptr;
 #endif
 
 std::unordered_map<std::string, ActivationKernelRegistry::ActivationDef> ActivationKernelRegistry::activations_;
@@ -46,11 +46,12 @@ void GPUKernelManager::executeUnaryKernel(
         size_t bufferSize = size * sizeof(float);
         
         // Create buffers
-        id<MTLBuffer> inputBuffer = [device_ newBufferWithBytes:input_float.data()
+        id<MTLDevice> device = (__bridge id<MTLDevice>)device_;
+        id<MTLBuffer> inputBuffer = [device newBufferWithBytes:input_float.data()
                                                         length:bufferSize
                                                        options:MTLResourceStorageModeShared];
         
-        id<MTLBuffer> outputBuffer = [device_ newBufferWithLength:bufferSize
+        id<MTLBuffer> outputBuffer = [device newBufferWithLength:bufferSize
                                                           options:MTLResourceStorageModeShared];
         
         std::vector<id<MTLBuffer>> buffers = {inputBuffer, outputBuffer};
@@ -59,15 +60,21 @@ void GPUKernelManager::executeUnaryKernel(
         std::vector<id<MTLBuffer>> paramBuffers;
         for (const auto& param : params) {
             float paramFloat = static_cast<float>(param);
-            id<MTLBuffer> paramBuffer = [device_ newBufferWithBytes:&paramFloat
+            id<MTLBuffer> paramBuffer = [device newBufferWithBytes:&paramFloat
                                                             length:sizeof(float)
                                                            options:MTLResourceStorageModeShared];
             paramBuffers.push_back(paramBuffer);
             buffers.push_back(paramBuffer);
         }
         
+        // Convert buffers to void* pointers for executeMetalKernel
+        std::vector<void*> void_buffers;
+        for (auto& buffer : buffers) {
+            void_buffers.push_back((__bridge void*)buffer);
+        }
+        
         // Execute kernel
-        executeMetalKernel(kernel_name, buffers, size);
+        executeMetalKernel(kernel_name, void_buffers, size);
         
         // Convert result back to double
         float* result = (float*)[outputBuffer contents];
@@ -99,15 +106,16 @@ void GPUKernelManager::executeBinaryKernel(
         size_t bufferSize = size * sizeof(float);
         
         // Create buffers
-        id<MTLBuffer> input1Buffer = [device_ newBufferWithBytes:input1_float.data()
+        id<MTLDevice> device = (__bridge id<MTLDevice>)device_;
+        id<MTLBuffer> input1Buffer = [device newBufferWithBytes:input1_float.data()
                                                          length:bufferSize
                                                         options:MTLResourceStorageModeShared];
         
-        id<MTLBuffer> input2Buffer = [device_ newBufferWithBytes:input2_float.data()
+        id<MTLBuffer> input2Buffer = [device newBufferWithBytes:input2_float.data()
                                                          length:bufferSize
                                                         options:MTLResourceStorageModeShared];
         
-        id<MTLBuffer> outputBuffer = [device_ newBufferWithLength:bufferSize
+        id<MTLBuffer> outputBuffer = [device newBufferWithLength:bufferSize
                                                           options:MTLResourceStorageModeShared];
         
         std::vector<id<MTLBuffer>> buffers = {input1Buffer, input2Buffer, outputBuffer};
@@ -115,14 +123,20 @@ void GPUKernelManager::executeBinaryKernel(
         // Add parameter buffers if needed
         for (const auto& param : params) {
             float paramFloat = static_cast<float>(param);
-            id<MTLBuffer> paramBuffer = [device_ newBufferWithBytes:&paramFloat
+            id<MTLBuffer> paramBuffer = [device newBufferWithBytes:&paramFloat
                                                             length:sizeof(float)
                                                            options:MTLResourceStorageModeShared];
             buffers.push_back(paramBuffer);
         }
         
+        // Convert buffers to void* pointers for executeMetalKernel
+        std::vector<void*> void_buffers;
+        for (auto& buffer : buffers) {
+            void_buffers.push_back((__bridge void*)buffer);
+        }
+        
         // Execute kernel
-        executeMetalKernel(kernel_name, buffers, size);
+        executeMetalKernel(kernel_name, void_buffers, size);
         
         // Convert result back to double
         float* result = (float*)[outputBuffer contents];
@@ -145,14 +159,17 @@ void GPUKernelManager::initializeBuiltinKernels() {
     
 #ifdef WITH_METAL
     // Initialize Metal device and command queue
-    device_ = MTLCreateSystemDefaultDevice();
-    if (!device_) {
+    id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+    if (!device) {
         throw std::runtime_error("Metal device not available");
     }
-    command_queue_ = [device_ newCommandQueue];
-    if (!command_queue_) {
+    device_ = (__bridge_retained void*)device;
+    
+    id<MTLCommandQueue> command_queue = [device newCommandQueue];
+    if (!command_queue) {
         throw std::runtime_error("Failed to create Metal command queue");
     }
+    command_queue_ = (__bridge_retained void*)command_queue;
 #endif
 
     // Initialize activation functions
@@ -167,7 +184,8 @@ void GPUKernelManager::compileMetalKernel(const std::string& name, const std::st
         NSString* nsSource = [NSString stringWithUTF8String:source.c_str()];
         NSError* error = nil;
         
-        id<MTLLibrary> library = [device_ newLibraryWithSource:nsSource options:nil error:&error];
+        id<MTLDevice> device = (__bridge id<MTLDevice>)device_;
+        id<MTLLibrary> library = [device newLibraryWithSource:nsSource options:nil error:&error];
         if (!library) {
             throw std::runtime_error("Failed to compile kernel: " + name + 
                                    " Error: " + std::string([[error description] UTF8String]));
@@ -179,32 +197,35 @@ void GPUKernelManager::compileMetalKernel(const std::string& name, const std::st
             throw std::runtime_error("Failed to find function: " + name + "_kernel");
         }
         
-        id<MTLComputePipelineState> pipeline = [device_ newComputePipelineStateWithFunction:function error:&error];
+        id<MTLComputePipelineState> pipeline = [device newComputePipelineStateWithFunction:function error:&error];
         if (!pipeline) {
             throw std::runtime_error("Failed to create pipeline for: " + name +
                                    " Error: " + std::string([[error description] UTF8String]));
         }
         
-        MetalKernel kernel = {pipeline, source, param_count};
+        MetalKernel kernel = {(__bridge_retained void*)pipeline, source, param_count};
         metal_kernels_[name] = kernel;
     }
 }
 
-void GPUKernelManager::executeMetalKernel(const std::string& name, const std::vector<id<MTLBuffer>>& buffers, size_t size) {
+void GPUKernelManager::executeMetalKernel(const std::string& name, const std::vector<void*>& buffers, size_t size) {
     auto it = metal_kernels_.find(name);
     if (it == metal_kernels_.end()) {
         throw std::runtime_error("Kernel not found: " + name);
     }
     
     @autoreleasepool {
-        id<MTLCommandBuffer> commandBuffer = [command_queue_ commandBuffer];
+        id<MTLCommandQueue> command_queue = (__bridge id<MTLCommandQueue>)command_queue_;
+        id<MTLCommandBuffer> commandBuffer = [command_queue commandBuffer];
         id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
         
-        [encoder setComputePipelineState:it->second.pipeline];
+        id<MTLComputePipelineState> pipeline = (__bridge id<MTLComputePipelineState>)it->second.pipeline;
+        [encoder setComputePipelineState:pipeline];
         
         // Set buffers
         for (size_t i = 0; i < buffers.size(); ++i) {
-            [encoder setBuffer:buffers[i] offset:0 atIndex:i];
+            id<MTLBuffer> buffer = (__bridge id<MTLBuffer>)buffers[i];
+            [encoder setBuffer:buffer offset:0 atIndex:i];
         }
         
         // Calculate thread configuration
@@ -237,7 +258,14 @@ void GPUKernelManager::convertFromFloat(const float* data, double* output, size_
 void GPUKernelManager::cleanup() {
 #ifdef WITH_METAL
     metal_kernels_.clear();
-    device_ = nil;
+    if (device_) {
+        CFRelease(device_);
+        device_ = nullptr;
+    }
+    if (command_queue_) {
+        CFRelease(command_queue_);
+        command_queue_ = nullptr;
+    }
     command_queue_ = nil;
 #endif
     initialized_ = false;
@@ -276,7 +304,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // ReLU
     registerActivation({
         "relu",
-        "max(0.0f, input)",
+        "max(0.0f, input[index])",
         {},
         false
     });
@@ -284,7 +312,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // Sigmoid  
     registerActivation({
         "sigmoid",
-        "1.0f / (1.0f + exp(-input))",
+        "1.0f / (1.0f + exp(-input[index]))",
         {},
         false
     });
@@ -292,7 +320,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // Tanh
     registerActivation({
         "tanh",
-        "tanh(input)",
+        "tanh(input[index])",
         {},
         false
     });
@@ -300,7 +328,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // LeakyReLU
     registerActivation({
         "leaky_relu", 
-        "input > 0.0f ? input : alpha * input",
+        "input[index] > 0.0f ? input[index] : alpha * input[index]",
         {"alpha"},
         true
     });
@@ -308,7 +336,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // GELU
     registerActivation({
         "gelu",
-        "0.5f * input * (1.0f + tanh(0.7978845608f * (input + 0.044715f * input * input * input)))",
+        "0.5f * input[index] * (1.0f + tanh(0.7978845608f * (input[index] + 0.044715f * input[index] * input[index] * input[index])))",
         {},
         false
     });
@@ -316,7 +344,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // GELU Approximate
     registerActivation({
         "gelu_approx",
-        "0.5f * input * (1.0f + tanh(0.7978845608f * (input + 0.044715f * input * input * input)))",
+        "0.5f * input[index] * (1.0f + tanh(0.7978845608f * (input[index] + 0.044715f * input[index] * input[index] * input[index])))",
         {},
         false
     });
@@ -324,7 +352,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // Softmax (requires special handling for normalization)
     registerActivation({
         "softmax_element",
-        "exp(input - max_val) / sum_exp",  // Will need special 2-pass implementation
+        "exp(input[index] - max_val) / sum_exp",  // Will need special 2-pass implementation
         {"max_val", "sum_exp"},
         true
     });
@@ -332,7 +360,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // ELU
     registerActivation({
         "elu",
-        "input > 0.0f ? input : alpha * (exp(input) - 1.0f)",
+        "input[index] > 0.0f ? input[index] : alpha * (exp(input[index]) - 1.0f)",
         {"alpha"},
         true
     });
@@ -340,7 +368,7 @@ void ActivationKernelRegistry::initializeBuiltinActivations() {
     // Swish
     registerActivation({
         "swish",
-        "input / (1.0f + exp(-input))",
+        "input[index] / (1.0f + exp(-input[index]))",
         {},
         false
     });
@@ -361,7 +389,7 @@ kernel void )" << name << R"(_kernel(device const float* input [[buffer(0)]],
     
     // Add parameter buffers
     for (size_t i = 0; i < param_names.size(); ++i) {
-        oss << "\n                       device const float* " << param_names[i] 
+        oss << "\n                       device const float* " << param_names[i] << "_buffer"
             << " [[buffer(" << (i + 2) << ")]],";
     }
     
@@ -371,7 +399,7 @@ kernel void )" << name << R"(_kernel(device const float* input [[buffer(0)]],
     
     // Add parameter declarations
     for (const auto& param_name : param_names) {
-        oss << "    float " << param_name << " = " << param_name << "[0];\n";
+        oss << "    float " << param_name << " = " << param_name << "_buffer[0];\n";
     }
     
     oss << "    output[index] = " << expression << ";\n";

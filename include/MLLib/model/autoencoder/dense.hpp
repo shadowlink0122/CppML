@@ -18,6 +18,11 @@ namespace autoencoder {
 class DenseAutoencoder : public BaseAutoencoder {
 public:
   /**
+   * @brief Default constructor (for deserialization)
+   */
+  DenseAutoencoder();
+
+  /**
    * @brief Constructor with configuration
    * @param config Autoencoder configuration
    */

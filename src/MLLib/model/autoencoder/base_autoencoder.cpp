@@ -6,6 +6,7 @@
 #include "MLLib/util/misc/random.hpp"
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -44,6 +45,15 @@ AutoencoderConfig::denoising(int input_dim, int latent_dim, double noise_factor,
 }
 
 // BaseAutoencoder implementation
+BaseAutoencoder::BaseAutoencoder()
+    : BaseModel(ModelType::AUTOENCODER_DENSE), config_() {
+  // Default minimal configuration
+  config_.encoder_dims = {1, 1};
+  config_.decoder_dims = {1, 1};
+  config_.latent_dim = 1;
+  config_.device = DeviceType::CPU;
+}
+
 BaseAutoencoder::BaseAutoencoder(const AutoencoderConfig& config)
     : BaseModel(ModelType::AUTOENCODER_DENSE), config_(config) {
   initialize();

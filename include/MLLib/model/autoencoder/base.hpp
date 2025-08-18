@@ -38,11 +38,14 @@ enum class AutoencoderType {
 struct AutoencoderConfig {
   std::vector<int> encoder_dims;  ///< Encoder layer dimensions
   std::vector<int> decoder_dims;  ///< Decoder layer dimensions
-  int latent_dim;                 ///< Latent space dimension
+  int latent_dim = 1;             ///< Latent space dimension
   double noise_factor = 0.0;  ///< Noise factor for denoising (0.0 = no noise)
   double sparsity_penalty = 0.0;        ///< Sparsity penalty coefficient
   bool use_batch_norm = false;          ///< Use batch normalization
   DeviceType device = DeviceType::CPU;  ///< Computation device
+
+  /// Default constructor
+  AutoencoderConfig() = default;
 
   /**
    * @brief Create a basic autoencoder config
@@ -73,6 +76,11 @@ struct AutoencoderConfig {
  */
 class BaseAutoencoder : public BaseModel {
 public:
+  /**
+   * @brief Default constructor (for deserialization)
+   */
+  BaseAutoencoder();
+
   /**
    * @brief Constructor
    * @param config Autoencoder configuration
@@ -242,6 +250,7 @@ protected:
    */
   std::vector<NDArray*> get_gradients();
 
+protected:
   /**
    * @brief Initialize the autoencoder models
    */

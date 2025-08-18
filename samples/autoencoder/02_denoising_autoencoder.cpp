@@ -175,7 +175,7 @@ int main() {
 
     // 7. Save model using GenericModelIO
     printf("\n7. Saving denoising model using GenericModelIO...\n");
-    std::string model_path = "denoising_autoencoder_28x28";
+    std::string model_path = "saved_models/denoising_autoencoder_28x28";
 
     try {
       // Save using new generic model I/O system
