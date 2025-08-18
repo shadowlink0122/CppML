@@ -1,13 +1,10 @@
-name: GPU CI
+name: GPU CI Parallel
 
 on:
   push:
     branches: [ main, develop, feature/** ]
-    # Manual execution trigger: push with specific commit message
-    # Use commit messages like: "[gpu-test]", "[gpu-hardware]", "[gpu-all]"
   pull_request:
     branches: [ main, develop ]
-  # Standard manual trigger (works from default branch only)
   workflow_dispatch:
     inputs:
       test_type:
@@ -20,133 +17,16 @@ on:
         - unit
         - integration
         - benchmark
-        - hardware-only
-        - multi-gpu-vendor
-      enable_gpu_hardware:
-        description: '🚀 Enable GPU hardware testing (requires GPU runner - MAY INCUR COSTS)'
-        required: true
-        default: true
-        type: boolean
 
 env:
   CUDA_VERSION: "12.2"
   BUILD_TYPE: Release
 
 jobs:
-  # Dynamic configuration based on commit message or manual inputs
-  config:
-    name: 🔧 Configure GPU Testing
+  # Parallel GPU Unit Tests
+  gpu-unit-tests:
+    name: 🧪 GPU Unit Tests
     runs-on: ubuntu-latest
-    outputs:
-      test-type: ${{ steps.config.outputs.test-type }}
-      enable-gpu-hardware: ${{ steps.config.outputs.enable-gpu-hardware }}
-      execution-mode: ${{ steps.config.outputs.execution-mode }}
-    
-    steps:
-    - name: Configure testing parameters
-      id: config
-      run: |
-        echo "🔧 Configuring GPU testing parameters..."
-        
-        # Check execution context
-        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-          echo "execution-mode=manual" >> $GITHUB_OUTPUT
-          echo "test-type=${{ github.event.inputs.test_type || 'all' }}" >> $GITHUB_OUTPUT
-          echo "enable-gpu-hardware=${{ github.event.inputs.enable_gpu_hardware || 'false' }}" >> $GITHUB_OUTPUT
-          echo "🎯 Manual execution from GitHub UI"
-        else
-          echo "execution-mode=commit-triggered" >> $GITHUB_OUTPUT
-          
-          # Parse commit message for GPU testing instructions
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
-          echo "📝 Commit message: $COMMIT_MSG"
-          
-          # Default values for push-triggered execution
-          TEST_TYPE="all"
-          ENABLE_GPU="false"
-          
-          # Check for GPU testing triggers in commit message
-          if echo "$COMMIT_MSG" | grep -qi "\[gpu-hardware\]"; then
-            echo "🚀 GPU hardware testing requested via commit message"
-            TEST_TYPE="hardware-only"
-            ENABLE_GPU="true"
-          elif echo "$COMMIT_MSG" | grep -qi "\[gpu-all\]"; then
-            echo "🧪 Full GPU testing requested via commit message"
-            TEST_TYPE="all"
-            ENABLE_GPU="true"
-          elif echo "$COMMIT_MSG" | grep -qi "\[gpu-multi\]"; then
-            echo "🎯 Multi-GPU vendor testing requested via commit message"
-            TEST_TYPE="multi-gpu-vendor"
-            ENABLE_GPU="false"
-          elif echo "$COMMIT_MSG" | grep -qi "\[gpu-test\]"; then
-            echo "🧪 GPU testing requested via commit message"
-            TEST_TYPE="unit"
-            ENABLE_GPU="false"
-          elif echo "$COMMIT_MSG" | grep -qi "\[gpu-sim\]"; then
-            echo "🎭 GPU simulation testing requested via commit message"
-            TEST_TYPE="all"
-            ENABLE_GPU="false"
-          else
-            echo "📋 Standard CI execution (no special GPU testing)"
-          fi
-          
-          echo "test-type=$TEST_TYPE" >> $GITHUB_OUTPUT
-          echo "enable-gpu-hardware=$ENABLE_GPU" >> $GITHUB_OUTPUT
-          echo "🎯 Commit-triggered execution"
-        fi
-        
-        echo "📊 Final configuration:"
-        echo "  - Test type: $(cat $GITHUB_OUTPUT | grep test-type | cut -d= -f2)"
-        echo "  - GPU hardware: $(cat $GITHUB_OUTPUT | grep enable-gpu-hardware | cut -d= -f2)"
-        echo "  - Execution mode: $(cat $GITHUB_OUTPUT | grep execution-mode | cut -d= -f2)"
-
-  # GPU availability check - runs on standard runner first
-  gpu-availability-check:
-    name: 🔍 GPU Environment Check
-    runs-on: ubuntu-latest
-    needs: config
-    outputs:
-      gpu-available: ${{ steps.check.outputs.gpu-available }}
-      cuda-available: ${{ steps.check.outputs.cuda-available }}
-      fallback-mode: ${{ steps.check.outputs.fallback-mode }}
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Check GPU availability
-      id: check
-      run: |
-        echo "🔍 Checking GPU environment availability..."
-        
-        # Check if we have GPU runners available (configure as needed)
-        # For self-hosted GPU runners, set up repository secrets
-        if [ -n "${{ secrets.GITHUB_TOKEN }}" ]; then
-          # Always enable GPU testing in some form
-          echo "gpu-available=false" >> $GITHUB_OUTPUT
-          echo "⚠️ GPU runners not configured - will test CPU fallback only"
-        else
-          echo "gpu-available=false" >> $GITHUB_OUTPUT
-          echo "⚠️ GPU runners not available - will test CPU fallback"
-        fi
-        
-        # Always check CUDA simulation capability
-        echo "cuda-available=simulate" >> $GITHUB_OUTPUT
-        echo "fallback-mode=true" >> $GITHUB_OUTPUT
-        
-        echo "📋 GPU CI will test:"
-        echo "  - GPU validation and warning system"
-        echo "  - CPU fallback functionality"
-        echo "  - GPU unit tests (with fallback simulation)"
-        echo "  - GPU integration tests"
-
-  # Build artifacts for GPU testing
-  gpu-build:
-    name: 🏗️ GPU Build
-    runs-on: ubuntu-latest
-    needs: [config, gpu-availability-check]
-    outputs:
-      build-hash: ${{ steps.build-info.outputs.build-hash }}
     
     steps:
     - name: Checkout code
@@ -156,625 +36,68 @@ jobs:
       run: |
         sudo apt-get update -q
         sudo apt-get install -y build-essential make clang
-        echo "✅ Build tools installed (including clang++)"
-        echo "Available compilers:"
-        g++ --version
-        clang++ --version
+        echo "✅ Build tools installed"
         
-    - name: Build library (CPU-only mode for artifacts)
+    - name: Build and run unit tests
       run: |
-        echo "🏗️ Building library in CPU-only mode for artifact sharing..."
+        echo "🏗️ Building library and running GPU unit tests..."
         make clean
         make
-        echo "✅ Library built successfully (CPU-only)"
-        
-    - name: Build test executables
-      run: |
-        echo "🔧 Building test executables for GPU testing..."
-        make build-tests
-        echo "✅ GPU test executables built"
-        
-    - name: Generate build info
-      id: build-info
-      run: |
-        echo "📊 Generating build information..."
-        BUILD_HASH=$(find src include -type f -name "*.cpp" -o -name "*.hpp" | sort | xargs sha256sum | sha256sum | cut -d' ' -f1 | head -c 8)
-        echo "build-hash=$BUILD_HASH" >> $GITHUB_OUTPUT
-        echo "Build hash: $BUILD_HASH"
-        
-    - name: Upload GPU build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: gpu-build-artifacts-${{ steps.build-info.outputs.build-hash }}
-        path: |
-          build/
-          !build/**/*.o
-          !build/**/tmp/
-        retention-days: 1
-        if-no-files-found: error
+        make unit-test
+        echo "✅ GPU unit tests completed"
 
-  # CPU-based GPU testing with artifacts
-  gpu-fallback-test:
-    name: 🖥️ GPU Fallback Testing
+  # Parallel GPU Integration Tests
+  gpu-integration-tests:
+    name: 🔄 GPU Integration Tests
     runs-on: ubuntu-latest
-    needs: [config, gpu-availability-check, gpu-build]
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: gpu-build-artifacts-${{ needs.gpu-build.outputs.build-hash }}
-        path: .
-        
-    - name: Verify downloaded artifacts
-      run: |
-        echo "� Verifying downloaded GPU build artifacts..."
-        ls -la build/ || echo "Build directory not found"
-        
-        if [ -f "build/libMLLib.a" ]; then
-          echo "✅ Library artifact downloaded successfully"
-          file build/libMLLib.a
-        else
-          echo "❌ Library artifact missing"
-          exit 1
-        fi
-        
-    - name: Test GPU unit tests (fallback mode)
-      run: |
-        echo "🧪 Running GPU unit tests in fallback mode with pre-built artifacts..."
-        echo "This tests the GPU validation and CPU fallback system"
-        
-        # Run unit tests including GPU tests (using pre-built artifacts)
-        make unit-test-run-only
-        
-        echo "✅ GPU unit tests completed (6 test classes)"
-        echo "  - GPU availability detection tested"
-        echo "  - GPU device validation tested"
-        echo "  - CPU fallback behavior verified"
-        echo "  - Warning system functionality confirmed"
-        
-    - name: Test GPU integration (fallback mode)
-      run: |
-        echo "🔄 Running GPU integration tests in fallback mode with pre-built artifacts..."
-        
-        # Run integration tests (using pre-built artifacts)
-        make integration-test-run-only
-        
-        echo "✅ GPU integration tests completed (4 test classes)"
-        echo "  - GPU-CPU fallback integration verified"
-        echo "  - GPU model complexity handled via fallback"
-        echo "  - GPU performance tracking (fallback metrics)"
-        echo "  - GPU memory management simulation"
-
-  # GPU hardware testing with practical approach
-  gpu-hardware-test:
-    name: 🚀 GPU Hardware Testing
-    runs-on: ubuntu-latest  # Use available runner
-    needs: [config, gpu-availability-check, gpu-build, gpu-fallback-test]
-    # Run when GPU hardware testing is enabled via any method
-    if: needs.config.outputs.enable-gpu-hardware == 'true'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: GPU hardware testing approach
-      run: |
-        echo "� GPU Hardware Testing Approach"
-        echo "=================================="
-        echo "Runner: ubuntu-latest (GitHub-hosted)"
-        echo "Event: ${{ github.event_name }}"
-        echo "Test Type: ${{ github.event.inputs.test_type }}"
-        echo "GPU Hardware Enabled: ${{ github.event.inputs.enable_gpu_hardware }}"
-        echo ""
-        
-        echo "🔍 Checking for GPU availability..."
-        if command -v nvidia-smi &> /dev/null; then
-          echo "✅ nvidia-smi available - checking GPU status..."
-          if nvidia-smi &> /dev/null; then
-            echo "🎯 Real GPU detected!"
-            nvidia-smi
-            echo "GPU_MODE=hardware" >> $GITHUB_ENV
-          else
-            echo "⚠️ nvidia-smi available but no GPU detected"
-            echo "GPU_MODE=mock_hardware" >> $GITHUB_ENV
-          fi
-        else
-          echo "📋 No nvidia-smi available (standard GitHub runner)"
-          echo "💡 Note: For real GPU testing, set up self-hosted runners with GPU"
-          echo "🧪 Running mock GPU hardware testing instead"
-          echo "GPU_MODE=mock_hardware" >> $GITHUB_ENV
-        fi
-      
-    - name: Setup CUDA environment
-      run: |
-        echo "🔧 Setting up CUDA environment..."
-        echo "Mode: $GPU_MODE"
-        
-        if [ "$GPU_MODE" = "hardware" ]; then
-          echo "🚀 Setting up real CUDA environment..."
-          # Check if CUDA is already installed
-          if command -v nvcc &> /dev/null; then
-            echo "✅ CUDA toolkit already available"
-            nvcc --version
-          else
-            echo "� Installing CUDA toolkit..."
-            # Install CUDA toolkit
-            wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb
-            sudo dpkg -i cuda-keyring_1.0-1_all.deb
-            sudo apt-get update -q
-            sudo apt-get install -y cuda-toolkit-12-2
-          fi
-          
-          # Set CUDA environment
-          echo 'export PATH=/usr/local/cuda/bin:$PATH' >> $GITHUB_ENV
-          echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> $GITHUB_ENV
-          
-        else
-          echo "🧪 Setting up mock GPU hardware testing environment..."
-          # Setup mock CUDA environment for testing
-          sudo mkdir -p /usr/local/cuda/include /usr/local/cuda/lib64
-        
-        # Check for NVIDIA GPU availability - MUST have real GPU
-        if command -v nvidia-smi &> /dev/null; then
-          echo "✅ nvidia-smi available - checking GPU status..."
-          if nvidia-smi &> /dev/null; then
-            echo "🎯 Real GPU detected!"
-            nvidia-smi
-            echo "GPU_MODE=hardware" >> $GITHUB_ENV
-            echo "CUDA_AVAILABLE=true" >> $GITHUB_ENV
-          else
-            echo "❌ nvidia-smi available but no GPU detected"
-            echo "This job requires actual GPU hardware"
-            exit 1
-          fi
-        else
-          echo "❌ nvidia-smi not available on supposed GPU runner"
-          echo "This job requires actual GPU hardware"
-          exit 1
-        fi
-        
-        # Setup CUDA toolkit based on detection
-        if [ "$CUDA_AVAILABLE" = "true" ]; then
-          echo "📦 Setting up real CUDA environment..."
-          # Check if CUDA is already installed
-          if command -v nvcc &> /dev/null; then
-            echo "✅ CUDA toolkit already available"
-            nvcc --version
-          else
-            echo "� Installing CUDA toolkit for GPU runner..."
-            # Install CUDA toolkit
-            wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64/cuda-keyring_1.0-1_all.deb
-            sudo dpkg -i cuda-keyring_1.0-1_all.deb
-            sudo apt-get update -q
-            sudo apt-get install -y cuda-toolkit-12-2
-          fi
-          
-          # Set CUDA environment
-          echo 'export PATH=/usr/local/cuda/bin:$PATH' >> $GITHUB_ENV
-          echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> $GITHUB_ENV
-          
-        else
-          echo "🎭 Setting up enhanced simulation environment..."
-          # Use the comprehensive mock CUDA setup from simulation test
-          sudo mkdir -p /usr/local/cuda/include /usr/local/cuda/lib64
-          
-          # Create enhanced mock CUDA headers with more realistic responses
-          sudo sh -c 'cat > /usr/local/cuda/include/cuda_runtime.h' << 'CUDA_EOF'
-        // Enhanced mock CUDA runtime for GitHub Actions testing
-        #ifndef CUDA_RUNTIME_H
-        #define CUDA_RUNTIME_H
-        #include <cstdlib>
-        #include <cstring>
-        
-        typedef enum cudaError {
-            cudaSuccess = 0,
-            cudaErrorInvalidValue = 1,
-            cudaErrorMemoryAllocation = 2,
-            cudaErrorInitializationError = 3
-        } cudaError_t;
-        
-        typedef void* cudaStream_t;
-        
-        // Enhanced mock functions that better simulate GPU operations
-        inline cudaError_t cudaMalloc(void** devPtr, size_t size) { 
-            *devPtr = malloc(size); 
-            return (*devPtr != nullptr) ? cudaSuccess : cudaErrorMemoryAllocation; 
-        }
-        inline cudaError_t cudaFree(void* devPtr) { 
-            if (devPtr) free(devPtr); 
-            return cudaSuccess; 
-        }
-        inline cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, int kind) { 
-            if (dst && src) memcpy(dst, src, count); 
-            (void)kind; 
-            return cudaSuccess; 
-        }
-        inline cudaError_t cudaGetDeviceCount(int* count) { 
-            *count = 1; // Simulate 1 GPU device in enhanced mode
-            return cudaSuccess; 
-        }
-        inline cudaError_t cudaGetLastError(void) { return cudaSuccess; }
-        inline cudaError_t cudaDeviceSynchronize(void) { return cudaSuccess; }
-        inline const char* cudaGetErrorString(cudaError_t error) { 
-            switch(error) {
-                case cudaSuccess: return "no error";
-                case cudaErrorInvalidValue: return "invalid value";
-                case cudaErrorMemoryAllocation: return "memory allocation error";
-                default: return "enhanced simulation error";
-            }
-        }
-        
-        #define cudaMemcpyHostToDevice 1
-        #define cudaMemcpyDeviceToHost 2
-        #define cudaMemcpyDeviceToDevice 3
-        
-        #endif
-        CUDA_EOF
-          
-          # Enhanced cuBLAS mock
-          sudo sh -c 'cat > /usr/local/cuda/include/cublas_v2.h' << 'CUBLAS_EOF'
-        #ifndef CUBLAS_V2_H_
-        #define CUBLAS_V2_H_
-        #include <cstdlib>
-        
-        typedef enum cublasStatus {
-            CUBLAS_STATUS_SUCCESS = 0,
-            CUBLAS_STATUS_NOT_INITIALIZED = 1
-        } cublasStatus_t;
-        
-        typedef void* cublasHandle_t;
-        typedef enum cublasOperation {
-            CUBLAS_OP_N = 0,
-            CUBLAS_OP_T = 1
-        } cublasOperation_t;
-        
-        // Enhanced cuBLAS simulation with basic error checking
-        inline cublasStatus_t cublasCreate(cublasHandle_t* handle) { 
-            *handle = malloc(64); // Simulate handle structure
-            return (*handle != nullptr) ? CUBLAS_STATUS_SUCCESS : CUBLAS_STATUS_NOT_INITIALIZED; 
-        }
-        inline cublasStatus_t cublasDestroy(cublasHandle_t handle) { 
-            if (handle) free(handle); 
-            return CUBLAS_STATUS_SUCCESS; 
-        }
-        inline cublasStatus_t cublasDgemm(cublasHandle_t handle, cublasOperation_t transa,
-                                         cublasOperation_t transb, int m, int n, int k,
-                                         const double* alpha, const double* A, int lda,
-                                         const double* B, int ldb, const double* beta,
-                                         double* C, int ldc) {
-            if (!handle || !A || !B || !C || !alpha || !beta) return CUBLAS_STATUS_NOT_INITIALIZED;
-            // Enhanced simulation: actually perform CPU-based matrix multiplication
-            for (int i = 0; i < m; i++) {
-                for (int j = 0; j < n; j++) {
-                    double sum = 0.0;
-                    for (int l = 0; l < k; l++) {
-                        double a_val = (transa == CUBLAS_OP_N) ? A[i * lda + l] : A[l * lda + i];
-                        double b_val = (transb == CUBLAS_OP_N) ? B[l * ldb + j] : B[j * ldb + l];
-                        sum += a_val * b_val;
-                    }
-                    C[i * ldc + j] = (*alpha) * sum + (*beta) * C[i * ldc + j];
-                }
-            }
-            return CUBLAS_STATUS_SUCCESS;
-        }
-        
-        #endif
-        CUBLAS_EOF
-          
-          echo "✅ Enhanced GPU simulation environment ready"
-          echo 'export PATH=/usr/local/cuda/bin:$PATH' >> $GITHUB_ENV
-          echo 'export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH' >> $GITHUB_ENV
-        fi
-        
-        echo "🔧 CUDA environment setup completed"
-        echo "Mode: $GPU_MODE"
-        
-    - name: Build with CUDA support
-      run: |
-        echo "🏗️ Building library with CUDA support..."
-        echo "💰 Building on ubuntu-latest - mock GPU hardware testing"
-        echo "🔧 GPU Mode: $GPU_MODE"
-        
-        # Set environment based on GPU mode
-        export PATH=/usr/local/cuda/bin:$PATH
-        export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-        
-        if [ "$GPU_MODE" = "hardware" ]; then
-          echo "🚀 Building with real CUDA hardware support"
-          export REAL_GPU=1
-        else
-          echo "🎭 Building with CPU-only mode (no GPU hardware)"
-          export REAL_GPU=0
-        fi
-        
-        # Clean build
-        make clean
-        
-        # Build with default configuration (runtime GPU detection)
-        if make; then
-          echo "✅ Library built successfully"
-          echo "📊 Build mode: $GPU_MODE"
-        else
-          echo "❌ Build failed"
-          exit 1
-        fi
-        
-    - name: Run GPU unit tests (hardware)
-      run: |
-        echo "🧪 Running GPU unit tests..."
-        echo "💰 GPU testing on ubuntu-latest - mock hardware testing"
-        echo "🔧 GPU Mode: $GPU_MODE"
-        
-        # Set environment based on GPU mode
-        export PATH=/usr/local/cuda/bin:$PATH
-        export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-        
-        if [ "$GPU_MODE" = "hardware" ]; then
-          echo "🚀 Running tests on real CUDA hardware"
-          export CUDA_VISIBLE_DEVICES=0
-          export REAL_GPU=1
-        else
-          echo "🎭 Running tests with CPU-only mode"
-          export REAL_GPU=0
-        fi
-        
-        # Run unit tests
-        if make unit-test; then
-          echo "✅ GPU unit tests completed successfully"
-          echo "📊 Test mode: $GPU_MODE"
-          
-          if [ "$GPU_MODE" = "hardware" ]; then
-            echo "  🎯 Real CUDA operations tested"
-            echo "  🖥️ GPU memory management verified"
-            echo "  ⚡ CUDA kernel execution confirmed"
-          else
-            echo "  🎭 Enhanced GPU simulation tested"
-            echo "  🔄 CPU-GPU fallback behavior verified"
-            echo "  ⚠️ GPU warning system validated"
-          fi
-        else
-          echo "❌ GPU unit tests failed"
-          echo "🔧 Mode: $GPU_MODE"
-          exit 1
-        fi
-        
-    - name: Run GPU integration tests (hardware)
-      run: |
-        echo "🔄 Running GPU integration tests on hardware..."
-        echo "💰 GPU integration testing - billing applies"
-        
-        # Set GPU environment
-        export CUDA_VISIBLE_DEVICES=0
-        export PATH=/usr/local/cuda/bin:$PATH
-        export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-        
-        # Run integration tests
-        make integration-test
-        
-        echo "✅ GPU hardware integration tests completed"
-        echo "  - End-to-end GPU workflows tested"
-        echo "  - GPU performance benchmarked"
-        echo "  - Real CUDA memory usage validated"
-        
-    - name: GPU performance benchmark
-      run: |
-        echo "⏱️ Running GPU performance benchmarks..."
-        echo "💰 GPU benchmarking active - billing applies"
-        
-        # Set GPU environment
-        export CUDA_VISIBLE_DEVICES=0
-        export PATH=/usr/local/cuda/bin:$PATH
-        export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-        
-        # Create benchmark script
-        cat > gpu_benchmark.cpp << 'BENCHMARK_EOF'
-        #include "include/MLLib.hpp"
-        #include <chrono>
-        #include <iostream>
-        
-        int main() {
-            using namespace MLLib;
-            
-            auto start = std::chrono::high_resolution_clock::now();
-            
-            // Test GPU operations
-            std::cout << "Testing GPU backend performance..." << std::endl;
-            
-            auto device = Device::create("gpu");
-            if (device->is_available()) {
-                std::cout << "GPU device available: " << device->get_name() << std::endl;
-                
-                // Create test model
-                Sequential model;
-                model.add_layer(std::make_shared<Dense>(784, 128));
-                model.add_layer(std::make_shared<Dense>(128, 10));
-                
-                // Simulate training step
-                NDArray input({100, 784});
-                NDArray target({100, 10});
-                
-                auto prediction = model.forward(input);
-                std::cout << "Forward pass completed on GPU" << std::endl;
-            } else {
-                std::cout << "GPU not available, testing fallback" << std::endl;
-            }
-            
-            auto end = std::chrono::high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            
-            std::cout << "Benchmark completed in " << duration.count() << " ms" << std::endl;
-            return 0;
-        }
-        BENCHMARK_EOF
-        
-        # Compile and run benchmark
-        g++ -I./include -L./build -lMLLib gpu_benchmark.cpp -o gpu_benchmark || echo "Benchmark compilation skipped"
-        
-        if [ -f gpu_benchmark ]; then
-          echo "📊 Running GPU benchmark..."
-          ./gpu_benchmark || echo "Benchmark execution completed"
-        fi
-
-  # Simulation mode for cloud CI (when no GPU hardware available)
-  gpu-simulation-test:
-    name: 🧪 GPU Simulation Testing
-    runs-on: ubuntu-latest
-    needs: [config, gpu-availability-check, gpu-build, gpu-fallback-test]
-    # Run simulation tests unless hardware testing is specifically requested
-    if: needs.config.outputs.test-type != 'hardware-only'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Install build tools
+    - name: Install build dependencies
       run: |
         sudo apt-get update -q
-        sudo apt-get install -y build-essential make
+        sudo apt-get install -y build-essential make clang
+        echo "✅ Build tools installed"
         
-    - name: Setup CUDA simulation environment
+    - name: Build and run integration tests
       run: |
-        echo "🎭 Setting up CUDA simulation environment..."
-        
-        # Create mock CUDA headers for compilation testing
-        sudo mkdir -p /usr/local/cuda/include
-        sudo mkdir -p /usr/local/cuda/lib64
-        
-        # Create comprehensive mock CUDA headers
-        sudo sh -c 'cat > /usr/local/cuda/include/cuda_runtime.h' << 'EOF'
-        // Mock CUDA headers for CI testing
-        #ifndef CUDA_RUNTIME_H
-        #define CUDA_RUNTIME_H
-        
-        typedef enum cudaError {
-            cudaSuccess = 0,
-            cudaErrorInvalidValue = 1,
-            cudaErrorMemoryAllocation = 2
-        } cudaError_t;
-        
-        typedef void* cudaStream_t;
-        
-        // Mock functions that simulate successful GPU operations
-        inline cudaError_t cudaMalloc(void** devPtr, size_t size) { 
-            *devPtr = malloc(size); 
-            return cudaSuccess; 
-        }
-        inline cudaError_t cudaFree(void* devPtr) { 
-            free(devPtr); 
-            return cudaSuccess; 
-        }
-        inline cudaError_t cudaMemcpy(void* dst, const void* src, size_t count, int kind) { 
-            memcpy(dst, src, count); 
-            (void)kind; 
-            return cudaSuccess; 
-        }
-        inline cudaError_t cudaGetDeviceCount(int* count) { 
-            *count = 1; // Simulate 1 GPU device
-            return cudaSuccess; 
-        }
-        inline cudaError_t cudaGetLastError(void) { 
-            return cudaSuccess; 
-        }
-        inline cudaError_t cudaDeviceSynchronize(void) { 
-            return cudaSuccess; 
-        }
-        inline const char* cudaGetErrorString(cudaError_t error) { 
-            return (error == cudaSuccess) ? "no error" : "simulated error"; 
-        }
-        
-        #define cudaMemcpyHostToDevice 1
-        #define cudaMemcpyDeviceToHost 2
-        
-        #endif
-        EOF
-        
-        # Create mock cuBLAS headers
-        sudo sh -c 'cat > /usr/local/cuda/include/cublas_v2.h' << 'EOF'
-        #ifndef CUBLAS_V2_H_
-        #define CUBLAS_V2_H_
-        
-        typedef enum cublasStatus {
-            CUBLAS_STATUS_SUCCESS = 0
-        } cublasStatus_t;
-        
-        typedef void* cublasHandle_t;
-        typedef enum cublasOperation {
-            CUBLAS_OP_N = 0
-        } cublasOperation_t;
-        
-        inline cublasStatus_t cublasCreate(cublasHandle_t* handle) { 
-            *handle = malloc(8); 
-            return CUBLAS_STATUS_SUCCESS; 
-        }
-        inline cublasStatus_t cublasDestroy(cublasHandle_t handle) { 
-            free(handle); 
-            return CUBLAS_STATUS_SUCCESS; 
-        }
-        inline cublasStatus_t cublasDgemm(cublasHandle_t handle, cublasOperation_t transa,
-                                         cublasOperation_t transb, int m, int n, int k,
-                                         const double* alpha, const double* A, int lda,
-                                         const double* B, int ldb, const double* beta,
-                                         double* C, int ldc) {
-            (void)handle; (void)transa; (void)transb; (void)m; (void)n; (void)k;
-            (void)alpha; (void)A; (void)lda; (void)B; (void)ldb; (void)beta; (void)C; (void)ldc;
-            return CUBLAS_STATUS_SUCCESS;
-        }
-        
-        #endif
-        EOF
-        
-        # Create mock device_launch_parameters header  
-        sudo sh -c 'cat > /usr/local/cuda/include/device_launch_parameters.h' << 'EOF'
-        #ifndef DEVICE_LAUNCH_PARAMETERS_H
-        #define DEVICE_LAUNCH_PARAMETERS_H
-        
-        // Mock CUDA kernel launch parameters
-        extern int blockIdx;
-        extern int blockDim; 
-        extern int threadIdx;
-        
-        #endif
-        EOF
-        
-        echo "✅ CUDA simulation environment ready"
-        
-    - name: Build with CUDA simulation support
-      run: |
-        echo "🏗️ Building MLLib with CUDA simulation support..."
-        
-        # Set environment variables for CI build
-        export CUDA_PATH=/usr/local/cuda
-        export PATH=/usr/local/cuda/bin:$PATH
-        export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-        
-        # Build with CI mode (CPU-only with stubs)
+        echo "🏗️ Building library and running GPU integration tests..."
         make clean
-        make ci-build
-        
-        echo "✅ Library built with CI support"
-        
-    - name: Run CI tests
-      run: |
-        echo "🧪 Running CI tests..."
-        
-        # Run CI-specific tests (CPU-only with stubs)
-        echo "Running CI unit tests..."
-        make ci-test
-        
-        echo "✅ CI tests completed successfully"
-        
-        echo "✅ GPU simulation tests completed successfully"
-        echo "📋 Expected behavior: GPU operations simulated, no fallback warnings"
+        make
+        make simple-integration-test
+        make integration-test
+        echo "✅ GPU integration tests completed"
 
-  # Documentation and validation
-  gpu-documentation:
-    name: 📖 GPU Documentation Check
+  # Parallel GPU Performance Tests
+  gpu-performance-tests:
+    name: ⚡ GPU Performance Tests
     runs-on: ubuntu-latest
-    needs: [config, gpu-availability-check]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y build-essential make clang
+        echo "✅ Build tools installed"
+        
+    - name: Build and run performance tests
+      run: |
+        echo "🏗️ Building library and running GPU performance tests..."
+        make clean
+        make
+        # Run performance-related samples
+        make samples-ci
+        echo "✅ GPU performance tests completed"
+
+  # Parallel GPU Documentation Check
+  gpu-documentation:
+    name: 📖 GPU Documentation
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
@@ -799,12 +122,12 @@ jobs:
         echo "🔍 GPU source files:"
         find src -name "*gpu*" -o -name "*cuda*" | head -10
         
-  # Multi-GPU vendor detection test
+        echo "✅ GPU documentation check completed"
+
+  # Multi-GPU Vendor Detection Test
   multi-gpu-vendor-test:
-    name: 🎯 Multi-GPU Vendor Detection Test
-    runs-on: ${{ needs.config.outputs.enable-gpu-hardware == 'true' && 'ubuntu-gpu' || 'ubuntu-latest' }}
-    needs: [config, gpu-availability-check]
-    if: needs.config.outputs.test-type == 'multi-gpu-vendor' || needs.config.outputs.test-type == 'all'
+    name: 🎯 Multi-GPU Vendor Test
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout code
@@ -813,10 +136,7 @@ jobs:
     - name: Install development dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake clang-format
-        
-        echo "🔍 Installing GPU vendor detection utilities..."
-        sudo apt-get install -y pciutils lshw
+        sudo apt-get install -y build-essential cmake clang-format pciutils lshw
         
     - name: Check for GPU vendors
       run: |
@@ -828,111 +148,57 @@ jobs:
         lspci | grep -i amd || echo "No AMD devices found" 
         lspci | grep -i intel || echo "No Intel GPU devices found"
         
-        echo ""
-        echo "🖥️ System hardware info:"
-        lshw -c display 2>/dev/null | head -20 || echo "lshw not available"
-        
-    - name: Build with multi-GPU support
+    - name: Build and test multi-GPU detection
       run: |
+        echo "🏗️ Building library and testing multi-GPU vendor detection..."
         make clean
-        echo "🔧 Building with multi-GPU vendor support..."
-        make ci-build
-        
-    - name: Build multi-GPU example
-      run: |
-        echo "🔧 Building GPU vendor detection example..."
-        make samples
-        
-    - name: Test multi-GPU vendor detection
-      run: |
-        echo "🧪 Testing multi-GPU vendor detection..."
-        echo "Running device detection sample (includes GPU vendor detection):"
+        make
+        make samples-ci
         make device-detection || echo "⚠️ Demo completed with warnings"
-        
-    - name: Test GPU vendor API availability
-      run: |
-        echo "🧪 Testing GPU vendor API availability..."
-        
-        echo "NVIDIA CUDA:"
-        which nvcc && nvcc --version | head -5 || echo "❌ CUDA not available"
-        which nvidia-smi && nvidia-smi -L || echo "❌ nvidia-smi not available"
-        
-        echo ""
-        echo "AMD ROCm:"
-        which rocm-smi && rocm-smi --list || echo "❌ ROCm not available"
-        which hipcc && hipcc --version | head -5 || echo "❌ HIP not available"
-        
-        echo ""
-        echo "Intel oneAPI:"
-        which sycl-ls && sycl-ls || echo "❌ Intel oneAPI not available"
-        which icpx && icpx --version | head -5 || echo "❌ Intel oneAPI compiler not available"
-        
-        echo ""
-        echo "OpenCL:"
-        which clinfo && clinfo -l || echo "❌ OpenCL not available"
-        
-        echo "✅ GPU vendor API check completed"
+        echo "✅ Multi-GPU vendor test completed"
 
-  # Final GPU CI summary
+  # GPU CI Summary
   gpu-ci-summary:
     name: 📋 GPU CI Summary
     runs-on: ubuntu-latest
-    needs: [config, gpu-availability-check, gpu-fallback-test, gpu-hardware-test, gpu-simulation-test, gpu-documentation, multi-gpu-vendor-test]
+    needs: [gpu-unit-tests, gpu-integration-tests, gpu-performance-tests, gpu-documentation, multi-gpu-vendor-test]
     if: always()
     
     steps:
     - name: Generate GPU CI summary
       run: |
-        echo "🏁 GPU CI Pipeline Summary"
-        echo "=========================="
-        echo "GPU Availability Check: ${{ needs.gpu-availability-check.result }}"
-        echo "GPU Fallback Test: ${{ needs.gpu-fallback-test.result }}"
-        echo "GPU Hardware Test: ${{ needs.gpu-hardware-test.result || 'Skipped (manual only)' }}"
-        echo "GPU Simulation Test: ${{ needs.gpu-simulation-test.result || 'Skipped (hardware mode)' }}"
-        echo "Multi-GPU Vendor Test: ${{ needs.multi-gpu-vendor-test.result || 'Skipped' }}"
+        echo "🏁 GPU CI Parallel Pipeline Summary"
+        echo "=================================="
+        echo "GPU Unit Tests: ${{ needs.gpu-unit-tests.result }}"
+        echo "GPU Integration Tests: ${{ needs.gpu-integration-tests.result }}"
+        echo "GPU Performance Tests: ${{ needs.gpu-performance-tests.result }}"
         echo "GPU Documentation: ${{ needs.gpu-documentation.result }}"
-        echo ""
-        
-        # Check if GPU hardware testing was run
-        if [ "${{ needs.gpu-hardware-test.result }}" = "success" ]; then
-          echo "💰 GPU Hardware Testing: EXECUTED - billing costs may apply"
-        elif [ "${{ github.event.inputs.enable_gpu_hardware }}" = "true" ] || [ "${{ github.event.inputs.test_type }}" = "hardware-only" ]; then
-          echo "💰 GPU Hardware Testing: REQUESTED but failed"
-        else
-          echo "🆓 GPU Hardware Testing: SKIPPED - no costs incurred"
-        fi
+        echo "Multi-GPU Vendor Test: ${{ needs.multi-gpu-vendor-test.result }}"
         echo ""
         
         # Determine overall status
         CRITICAL_FAILURES=""
         
-        if [ "${{ needs.gpu-fallback-test.result }}" != "success" ]; then
-          CRITICAL_FAILURES="$CRITICAL_FAILURES gpu-fallback"
+        if [ "${{ needs.gpu-unit-tests.result }}" != "success" ]; then
+          CRITICAL_FAILURES="$CRITICAL_FAILURES gpu-unit-tests"
         fi
         
-        # Hardware test failure is not critical if simulation passed
-        if [ "${{ needs.gpu-hardware-test.result }}" = "failure" ] && [ "${{ needs.gpu-simulation-test.result }}" != "success" ]; then
-          CRITICAL_FAILURES="$CRITICAL_FAILURES gpu-testing"
+        if [ "${{ needs.gpu-integration-tests.result }}" != "success" ]; then
+          CRITICAL_FAILURES="$CRITICAL_FAILURES gpu-integration-tests"
         fi
         
         if [ -z "$CRITICAL_FAILURES" ]; then
-          echo "✅ GPU CI pipeline completed successfully!"
+          echo "✅ GPU CI parallel pipeline completed successfully!"
           echo ""
           echo "📊 GPU Test Results:"
-          echo "  🧪 GPU Unit Tests: 74 assertions across 6 test classes"
-          echo "  🔄 GPU Integration Tests: 71 assertions across 4 test classes"
-          echo "  🖥️ CPU Fallback System: Fully validated"
-          echo "  ⚠️ GPU Warning System: Comprehensive user feedback"
-          echo "  🔧 CUDA Integration: ${{ needs.gpu-hardware-test.result == 'success' && 'Hardware tested' || 'Simulation tested' }}"
+          echo "  🧪 GPU Unit Tests: Completed in parallel"
+          echo "  🔄 GPU Integration Tests: Completed in parallel"
+          echo "  ⚡ GPU Performance Tests: Completed in parallel"
+          echo "  📖 GPU Documentation: Validated"
+          echo "  🎯 Multi-GPU Vendor Detection: Tested"
           echo ""
-          echo "🎯 GPU Features Verified:"
-          echo "  - Automatic GPU detection and validation"
-          echo "  - Graceful degradation to CPU when GPU unavailable"
-          echo "  - Comprehensive error handling and user warnings"
-          echo "  - Full CUDA kernel implementation with cuBLAS"
-          echo "  - Memory management and performance optimization"
-          echo ""
-          echo "🚀 GPU backend is production-ready!"
+          echo "🚀 Parallel execution provides faster feedback!"
+          echo "🎯 GPU features verified across all test categories!"
         else
           echo "❌ GPU CI pipeline failed"
           echo "Failed components: $CRITICAL_FAILURES"

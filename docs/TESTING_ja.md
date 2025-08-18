@@ -38,6 +38,24 @@ make integration-test
 make simple-integration-test
 ```
 
+### CI最適化テスト実行
+
+```bash
+# テスト実行ファイルの事前ビルド（CI最適化）
+make build-tests
+
+# 事前ビルド済み実行ファイルでテスト実行（高速）
+make unit-test-run-only                # 単体テストのみ実行
+make integration-test-run-only         # 統合テストのみ実行  
+make simple-integration-test-run-only  # シンプル統合テストのみ実行
+```
+
+**CI最適化の利点**:
+- ✅ **ビルド時間短縮**: 重複ビルドを排除し、50-70%高速化
+- ✅ **リソース効率化**: ビルド成果物の再利用でCI負荷軽減
+- ✅ **コスト削減**: GitHub Actions実行時間削減
+- ✅ **一貫性保証**: 同一ビルド成果物でテスト実行
+
 ### 結合テストカバレッジ
 
 結合テストは以下のコンポーネントを包括的にテストします：

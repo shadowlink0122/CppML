@@ -5,11 +5,10 @@
 
 #pragma once
 
-#ifdef WITH_METAL
-
 #include "../ndarray.hpp"
 #include "backend.hpp"
 
+#ifdef WITH_METAL
 #ifdef __OBJC__
 #import <Metal/Metal.h>
 #import <MetalKit/MetalKit.h>
@@ -20,6 +19,7 @@ typedef void* MTLDevice;
 typedef void* MTLCommandQueue;
 typedef void* MTLLibrary;
 typedef void* MTLComputePipelineState;
+#endif
 #endif
 
 namespace MLLib {
@@ -76,7 +76,7 @@ public:
   static std::string getDeviceName(int device);
 
 private:
-#ifdef __OBJC__
+#if defined(WITH_METAL) && defined(__OBJC__)
   static id<MTLDevice> device_;
   static id<MTLCommandQueue> command_queue_;
   static id<MTLLibrary> library_;
@@ -92,5 +92,3 @@ private:
 
 }  // namespace Backend
 }  // namespace MLLib
-
-#endif  // WITH_METAL

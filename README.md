@@ -47,6 +47,12 @@ make test                    # Run all tests (unit + integration)
 make unit-test               # Run unit tests (21/21 passing)
 make integration-test        # Run integration tests (3429/3429 assertions)
 make simple-integration-test # Run simple integration tests
+
+# CI-optimized testing (for faster execution)
+make build-tests             # Build test executables only (for CI artifacts)
+make unit-test-run-only      # Run unit tests with pre-built executables
+make integration-test-run-only # Run integration tests with pre-built executables
+
 make samples                 # Build all sample programs
 make xor                     # Run XOR neural network example
 make device-detection        # Run GPU device detection sample
