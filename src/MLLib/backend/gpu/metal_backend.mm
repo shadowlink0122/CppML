@@ -18,10 +18,6 @@ id<MTLCommandQueue> MetalBackend::command_queue_ = nil;
 id<MTLLibrary> MetalBackend::library_ = nil;
 bool MetalBackend::initialized_ = false;
 
-id<MTLComputePipelineState> MetalBackend::relu_pipeline_ = nil;
-id<MTLComputePipelineState> MetalBackend::sigmoid_pipeline_ = nil;
-id<MTLComputePipelineState> MetalBackend::tanh_pipeline_ = nil;
-
 // Stub implementations
 bool MetalBackend::isAvailable() { return false; }
 void MetalBackend::initialize() {}
@@ -37,29 +33,38 @@ void MetalBackend::matmul(const double*, const double*, double*, int, int, int) 
 void MetalBackend::relu(const double*, double*, size_t) {}
 void MetalBackend::sigmoid(const double*, double*, size_t) {}
 void MetalBackend::tanh_activation(const double*, double*, size_t) {}
-
-} // namespace Backend
-} // namespace MLLib
+void MetalBackend::leaky_relu(const double*, double*, size_t, double) {}
+void MetalBackend::gelu(const double*, double*, size_t, bool) {}
+void MetalBackend::elu(const double*, double*, size_t, double) {}
+void MetalBackend::swish(const double*, double*, size_t) {}
+void MetalBackend::softmax(const double*, double*, size_t) {}
+int MetalBackend::getDeviceCount() { return 0; }
+void MetalBackend::setDevice(int) {}
+std::string MetalBackend::getDeviceName(int) { return "Stub"; }
+void MetalBackend::synchronize() {}
 
 #else
 // Normal Metal implementation
 #include "../../../../include/MLLib/backend/metal_backend.hpp"
+#include "../../../../include/MLLib/backend/gpu_kernel_manager.hpp"
 #include <iostream>
 #include <stdexcept>
+#include <algorithm>
 #import <Metal/Metal.h>
 #import <MetalPerformanceShaders/MetalPerformanceShaders.h>
 
 namespace MLLib {
 namespace Backend {
 
+// Forward declaration of ActivationKernelRegistry methods
+namespace {
+    void executeActivation(const std::string& name, const double* input, double* output, size_t size, const std::vector<double>& params = {});
+}
+
 id<MTLDevice> MetalBackend::device_ = nil;
 id<MTLCommandQueue> MetalBackend::command_queue_ = nil;
 id<MTLLibrary> MetalBackend::library_ = nil;
 bool MetalBackend::initialized_ = false;
-
-id<MTLComputePipelineState> MetalBackend::relu_pipeline_ = nil;
-id<MTLComputePipelineState> MetalBackend::sigmoid_pipeline_ = nil;
-id<MTLComputePipelineState> MetalBackend::tanh_pipeline_ = nil;
 
 bool MetalBackend::isAvailable() {
     return MTLCreateSystemDefaultDevice() != nil;
@@ -96,6 +101,9 @@ void MetalBackend::initialize() {
         // Skip kernel initialization for now - use runtime compilation
         // initializeKernels();
         
+        // TODO: Initialize the generic GPU kernel manager when linking is resolved
+        // GPUKernelManager::initializeBuiltinKernels();
+        
         initialized_ = true;
         printf("Metal backend initialized successfully (runtime compilation mode)\n");
         printf("Device: %s\n", device_.name.UTF8String);
@@ -106,6 +114,8 @@ void MetalBackend::cleanup() {
     if (!initialized_) return;
     
     @autoreleasepool {
+        // TODO: Re-enable when pipeline variables are properly defined
+        /*
         if (relu_pipeline_) {
             [relu_pipeline_ release];
             relu_pipeline_ = nil;
@@ -118,6 +128,7 @@ void MetalBackend::cleanup() {
             [tanh_pipeline_ release];
             tanh_pipeline_ = nil;
         }
+        */
         if (library_) {
             [library_ release];
             library_ = nil;
@@ -136,7 +147,8 @@ void MetalBackend::cleanup() {
 }
 
 void MetalBackend::initializeKernels() {
-    @autoreleasepool {
+    // TODO: Re-enable when pipeline variables are properly defined in header
+    /*
         NSError* error = nil;
         
         // Metal Shading Language kernel source
@@ -191,6 +203,7 @@ void MetalBackend::initializeKernels() {
         [sigmoidFunction release];
         [tanhFunction release];
     }
+    */
 }
 
 void* MetalBackend::allocateMemory(size_t size) {
@@ -352,200 +365,84 @@ void MetalBackend::matmul(const double* A, const double* B, double* C,
 }
 
 void MetalBackend::relu(const double* input, double* output, size_t size) {
-    if (!initialized_) {
-        initialize();
-    }
-    
-    @autoreleasepool {
-        // Create buffers
-        size_t bufferSize = size * sizeof(float);
-        
-        // Convert double to float for Metal compatibility
-        std::vector<float> input_float(size);
-        for (size_t i = 0; i < size; ++i) {
-            input_float[i] = static_cast<float>(input[i]);
-        }
-        
-        id<MTLBuffer> inputBuffer = [device_ newBufferWithBytes:input_float.data()
-                                                        length:bufferSize
-                                                       options:MTLResourceStorageModeShared];
-        
-        id<MTLBuffer> outputBuffer = [device_ newBufferWithLength:bufferSize
-                                                          options:MTLResourceStorageModeShared];
-        
-        // Create compute command
-        id<MTLCommandBuffer> commandBuffer = [command_queue_ commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
-        
-        // Use runtime kernel compilation if pipeline not available
-        if (!relu_pipeline_) {
-            NSString* kernelSource = @R"(
-                #include <metal_stdlib>
-                using namespace metal;
-                
-                kernel void relu_kernel(device const float* input [[buffer(0)]],
-                                       device float* output [[buffer(1)]],
-                                       uint index [[thread_position_in_grid]]) {
-                    output[index] = max(0.0f, input[index]);
-                }
-            )";
-            
-            NSError* error = nil;
-            id<MTLLibrary> kernelLib = [device_ newLibraryWithSource:kernelSource options:nil error:&error];
-            id<MTLFunction> function = [kernelLib newFunctionWithName:@"relu_kernel"];
-            relu_pipeline_ = [device_ newComputePipelineStateWithFunction:function error:&error];
-        }
-        
-        [encoder setComputePipelineState:relu_pipeline_];
-        [encoder setBuffer:inputBuffer offset:0 atIndex:0];
-        [encoder setBuffer:outputBuffer offset:0 atIndex:1];
-        
-        MTLSize threadgroupSize = MTLSizeMake(256, 1, 1);
-        MTLSize numThreadgroups = MTLSizeMake((size + 255) / 256, 1, 1);
-        
-        [encoder dispatchThreadgroups:numThreadgroups threadsPerThreadgroup:threadgroupSize];
-        [encoder endEncoding];
-        
-        [commandBuffer commit];
-        [commandBuffer waitUntilCompleted];
-        
-        // Convert result back to double
-        float* result = (float*)[outputBuffer contents];
-        for (size_t i = 0; i < size; ++i) {
-            output[i] = static_cast<double>(result[i]);
-        }
+    // TODO: Implement using ActivationKernelRegistry when linking is resolved
+    // For now, use CPU fallback
+    for (size_t i = 0; i < size; ++i) {
+        output[i] = std::max(0.0, input[i]);
     }
 }
 
 void MetalBackend::sigmoid(const double* input, double* output, size_t size) {
-    if (!initialized_) {
-        initialize();
-    }
-    
-    @autoreleasepool {
-        // Create buffers
-        size_t bufferSize = size * sizeof(float);
-        
-        // Convert double to float for Metal compatibility
-        std::vector<float> input_float(size);
-        for (size_t i = 0; i < size; ++i) {
-            input_float[i] = static_cast<float>(input[i]);
-        }
-        
-        id<MTLBuffer> inputBuffer = [device_ newBufferWithBytes:input_float.data()
-                                                        length:bufferSize
-                                                       options:MTLResourceStorageModeShared];
-        
-        id<MTLBuffer> outputBuffer = [device_ newBufferWithLength:bufferSize
-                                                          options:MTLResourceStorageModeShared];
-        
-        // Create compute command
-        id<MTLCommandBuffer> commandBuffer = [command_queue_ commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
-        
-        // Use runtime kernel compilation if pipeline not available
-        if (!sigmoid_pipeline_) {
-            NSString* kernelSource = @R"(
-                #include <metal_stdlib>
-                using namespace metal;
-                
-                kernel void sigmoid_kernel(device const float* input [[buffer(0)]],
-                                          device float* output [[buffer(1)]],
-                                          uint index [[thread_position_in_grid]]) {
-                    output[index] = 1.0f / (1.0f + exp(-input[index]));
-                }
-            )";
-            
-            NSError* error = nil;
-            id<MTLLibrary> kernelLib = [device_ newLibraryWithSource:kernelSource options:nil error:&error];
-            id<MTLFunction> function = [kernelLib newFunctionWithName:@"sigmoid_kernel"];
-            sigmoid_pipeline_ = [device_ newComputePipelineStateWithFunction:function error:&error];
-        }
-        
-        [encoder setComputePipelineState:sigmoid_pipeline_];
-        [encoder setBuffer:inputBuffer offset:0 atIndex:0];
-        [encoder setBuffer:outputBuffer offset:0 atIndex:1];
-        
-        MTLSize threadgroupSize = MTLSizeMake(256, 1, 1);
-        MTLSize numThreadgroups = MTLSizeMake((size + 255) / 256, 1, 1);
-        
-        [encoder dispatchThreadgroups:numThreadgroups threadsPerThreadgroup:threadgroupSize];
-        [encoder endEncoding];
-        
-        [commandBuffer commit];
-        [commandBuffer waitUntilCompleted];
-        
-        // Convert result back to double
-        float* result = (float*)[outputBuffer contents];
-        for (size_t i = 0; i < size; ++i) {
-            output[i] = static_cast<double>(result[i]);
-        }
+    // TODO: Implement using ActivationKernelRegistry when linking is resolved
+    // For now, use CPU fallback
+    for (size_t i = 0; i < size; ++i) {
+        output[i] = 1.0 / (1.0 + std::exp(-input[i]));
     }
 }
 
 void MetalBackend::tanh_activation(const double* input, double* output, size_t size) {
-    if (!initialized_) {
-        initialize();
+    // TODO: Implement using ActivationKernelRegistry when linking is resolved
+    // For now, use CPU fallback
+    for (size_t i = 0; i < size; ++i) {
+        output[i] = std::tanh(input[i]);
+    }
+}
+
+void MetalBackend::leaky_relu(const double* input, double* output, size_t size, double alpha) {
+    // TODO: Implement using ActivationKernelRegistry when linking is resolved
+    // For now, use CPU fallback
+    for (size_t i = 0; i < size; ++i) {
+        output[i] = input[i] > 0.0 ? input[i] : alpha * input[i];
+    }
+}
+
+void MetalBackend::gelu(const double* input, double* output, size_t size, bool approximate) {
+    // TODO: Implement using ActivationKernelRegistry when linking is resolved
+    // For now, use CPU fallback
+    for (size_t i = 0; i < size; ++i) {
+        if (approximate) {
+            double x = input[i];
+            output[i] = 0.5 * x * (1.0 + std::tanh(0.7978845608 * (x + 0.044715 * x * x * x)));
+        } else {
+            double x = input[i];
+            output[i] = 0.5 * x * (1.0 + std::erf(x / 1.4142135623));
+        }
+    }
+}
+
+void MetalBackend::elu(const double* input, double* output, size_t size, double alpha) {
+    // TODO: Implement using ActivationKernelRegistry when linking is resolved
+    // For now, use CPU fallback
+    for (size_t i = 0; i < size; ++i) {
+        output[i] = input[i] > 0.0 ? input[i] : alpha * (std::exp(input[i]) - 1.0);
+    }
+}
+
+void MetalBackend::swish(const double* input, double* output, size_t size) {
+    // TODO: Implement using ActivationKernelRegistry when linking is resolved
+    // For now, use CPU fallback
+    for (size_t i = 0; i < size; ++i) {
+        output[i] = input[i] / (1.0 + std::exp(-input[i]));
+    }
+}
+
+void MetalBackend::softmax(const double* input, double* output, size_t size) {
+    // Softmax requires special 2-pass implementation
+    // Pass 1: Find maximum value
+    double max_val = *std::max_element(input, input + size);
+    
+    // Pass 2: Compute exp and sum
+    std::vector<double> exp_values(size);
+    double sum_exp = 0.0;
+    
+    for (size_t i = 0; i < size; ++i) {
+        exp_values[i] = std::exp(input[i] - max_val);
+        sum_exp += exp_values[i];
     }
     
-    @autoreleasepool {
-        // Create buffers
-        size_t bufferSize = size * sizeof(float);
-        
-        // Convert double to float for Metal compatibility
-        std::vector<float> input_float(size);
-        for (size_t i = 0; i < size; ++i) {
-            input_float[i] = static_cast<float>(input[i]);
-        }
-        
-        id<MTLBuffer> inputBuffer = [device_ newBufferWithBytes:input_float.data()
-                                                        length:bufferSize
-                                                       options:MTLResourceStorageModeShared];
-        
-        id<MTLBuffer> outputBuffer = [device_ newBufferWithLength:bufferSize
-                                                          options:MTLResourceStorageModeShared];
-        
-        // Create compute command
-        id<MTLCommandBuffer> commandBuffer = [command_queue_ commandBuffer];
-        id<MTLComputeCommandEncoder> encoder = [commandBuffer computeCommandEncoder];
-        
-        // Use runtime kernel compilation if pipeline not available
-        if (!tanh_pipeline_) {
-            NSString* kernelSource = @R"(
-                #include <metal_stdlib>
-                using namespace metal;
-                
-                kernel void tanh_kernel(device const float* input [[buffer(0)]],
-                                       device float* output [[buffer(1)]],
-                                       uint index [[thread_position_in_grid]]) {
-                    output[index] = tanh(input[index]);
-                }
-            )";
-            
-            NSError* error = nil;
-            id<MTLLibrary> kernelLib = [device_ newLibraryWithSource:kernelSource options:nil error:&error];
-            id<MTLFunction> function = [kernelLib newFunctionWithName:@"tanh_kernel"];
-            tanh_pipeline_ = [device_ newComputePipelineStateWithFunction:function error:&error];
-        }
-        
-        [encoder setComputePipelineState:tanh_pipeline_];
-        [encoder setBuffer:inputBuffer offset:0 atIndex:0];
-        [encoder setBuffer:outputBuffer offset:0 atIndex:1];
-        
-        MTLSize threadgroupSize = MTLSizeMake(256, 1, 1);
-        MTLSize numThreadgroups = MTLSizeMake((size + 255) / 256, 1, 1);
-        
-        [encoder dispatchThreadgroups:numThreadgroups threadsPerThreadgroup:threadgroupSize];
-        [encoder endEncoding];
-        
-        [commandBuffer commit];
-        [commandBuffer waitUntilCompleted];
-        
-        // Convert result back to double
-        float* result = (float*)[outputBuffer contents];
-        for (size_t i = 0; i < size; ++i) {
-            output[i] = static_cast<double>(result[i]);
-        }
+    // Pass 3: Normalize
+    for (size_t i = 0; i < size; ++i) {
+        output[i] = exp_values[i] / sum_exp;
     }
 }
 

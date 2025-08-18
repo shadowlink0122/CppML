@@ -169,6 +169,8 @@ endif
 ifeq ($(METAL_AVAILABLE),true)
     ifneq ($(findstring -DWITH_METAL,$(CXXFLAGS)),)
         MM_FILES += src/MLLib/backend/gpu/metal_backend.mm
+        # TODO: Re-enable when linking issues are resolved
+        # MM_FILES += src/MLLib/backend/gpu_kernel_manager.mm
     endif
 endif
 
