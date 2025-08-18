@@ -1,31 +1,136 @@
 #pragma once
 
+#include "base_model.hpp"
 #include "sequential.hpp"
 #include <fstream>
+#include <iostream>
 #include <memory>
 #include <string>
 
 /**
  * @file model_io.hpp
- * @brief Model serialization and deserialization functionality
+ * @brief Generic model serialization and deserialization functionality
  */
 
 namespace MLLib {
 namespace model {
 
 /**
- * @enum ModelFormat
+ * @enum SaveFormat
  * @brief Model file format options
  */
-enum class ModelFormat {
+enum class SaveFormat {
   BINARY,  ///< Binary format (compact, fast)
   JSON,    ///< JSON format (human readable, larger)
   CONFIG   ///< Configuration only (no parameters)
 };
 
 /**
+ * @class GenericModelIO
+ * @brief Handles generic model saving and loading operations
+ */
+class GenericModelIO {
+public:
+  /**
+   * @brief Save a model using the generic interface
+   * @param model Model implementing ISerializableModel
+   * @param filepath Output file path
+   * @param format Save format
+   * @return True if successful
+   */
+  static bool save_model(const ISerializableModel& model,
+                         const std::string& filepath, SaveFormat format);
+
+  /**
+   * @brief Load model of specific type (template function)
+   * @tparam ModelClass Specific model class to load (must inherit from
+   * ISerializableModel)
+   * @param filepath Input file path
+   * @param format Load format
+   * @return Loaded model or nullptr on failure
+   */
+  template <typename ModelClass>
+  static std::unique_ptr<ModelClass> load_model(const std::string& filepath,
+                                                SaveFormat format) {
+    static_assert(std::is_base_of_v<ISerializableModel, ModelClass>,
+                  "ModelClass must inherit from ISerializableModel");
+
+    // Load model data from file
+    auto model_data = load_model_data(filepath, format);
+    if (!model_data) {
+      std::cerr << "Failed to load model data from: " << filepath << std::endl;
+      return nullptr;
+    }
+
+    // Create empty model instance
+    auto model = std::make_unique<ModelClass>();
+
+    // Deserialize the model from loaded data
+    if (!model->deserialize(*model_data)) {
+      std::cerr << "Failed to deserialize model from: " << filepath
+                << std::endl;
+      return nullptr;
+    }
+
+    return model;
+  }
+
+  /**
+   * @brief Load model data from file
+   * @param filepath Input file path
+   * @param format Load format
+   * @return Loaded data or nullptr on failure
+   */
+  static std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
+  load_model_data(const std::string& filepath, SaveFormat format);
+
+private:
+  static bool create_directories(const std::string& path);
+
+  /**
+   * @brief Get filepath with appropriate extension for the format
+   * @param base_filepath Base filepath without extension
+   * @param format Save format to determine extension
+   * @return Filepath with appropriate extension
+   */
+  static std::string
+  get_filepath_with_extension(const std::string& base_filepath,
+                              SaveFormat format);
+
+  /**
+   * @brief Save model configuration only (no parameters)
+   * @param model Model to extract config from
+   * @param filepath File path to save to
+   * @return true if successful, false otherwise
+   */
+  static bool save_config(const ISerializableModel& model,
+                          const std::string& filepath);
+
+  /**
+   * @brief Load model metadata from file
+   * @param filepath File path to load metadata from
+   * @return Model metadata (type, version, etc.)
+   */
+  static std::unique_ptr<SerializationMetadata>
+  load_metadata(const std::string& filepath);
+
+  static bool save_binary(const ISerializableModel& model,
+                          const std::string& filepath);
+  static bool save_json(const ISerializableModel& model,
+                        const std::string& filepath);
+  static std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
+  load_binary(const std::string& filepath);
+  static std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
+  load_json(const std::string& filepath);
+
+  // Utility functions made public for ModelIO compatibility
+  static bool ensure_directory_exists(const std::string& filepath);
+};
+
+// Legacy support for existing Sequential models
+/**
  * @struct LayerInfo
- * @brief Layer configuration information for serialization
+ * @brief Layer configuration information for serialization (legacy)
  */
 struct LayerInfo {
   std::string type;        ///< Layer type (dense, relu, sigmoid, etc.)
@@ -41,7 +146,7 @@ struct LayerInfo {
 
 /**
  * @struct ModelConfig
- * @brief Model configuration for serialization
+ * @brief Model configuration for serialization (legacy)
  */
 struct ModelConfig {
   std::string model_type = "Sequential";
@@ -54,32 +159,33 @@ struct ModelConfig {
 
 /**
  * @class ModelIO
- * @brief Handles model saving and loading operations
+ * @brief Handles Sequential model saving and loading operations (legacy
+ * support)
  */
 class ModelIO {
 public:
   /**
-   * @brief Save model to file
+   * @brief Save Sequential model to file (legacy)
    * @param model Model to save
    * @param filepath File path to save to
-   * @param format Save format (binary, json, or config)
+   * @param format Save format
    * @return true if successful, false otherwise
    */
   static bool save_model(const Sequential& model, const std::string& filepath,
-                         ModelFormat format = ModelFormat::BINARY);
+                         SaveFormat format = SaveFormat::BINARY);
 
   /**
-   * @brief Load model from file
+   * @brief Load Sequential model from file (legacy)
    * @param filepath File path to load from
-   * @param format Load format (binary, json, or config)
+   * @param format Load format
    * @return Loaded model (nullptr if failed)
    */
   static std::unique_ptr<Sequential>
   load_model(const std::string& filepath,
-             ModelFormat format = ModelFormat::BINARY);
+             SaveFormat format = SaveFormat::BINARY);
 
   /**
-   * @brief Save model configuration only (no parameters)
+   * @brief Save model configuration only (legacy)
    * @param model Model to extract config from
    * @param filepath File path to save to
    * @return true if successful, false otherwise
@@ -87,127 +193,39 @@ public:
   static bool save_config(const Sequential& model, const std::string& filepath);
 
   /**
-   * @brief Load model configuration and create empty model
+   * @brief Load model configuration and create empty model (legacy)
    * @param filepath File path to load config from
    * @return Model with architecture but no trained parameters
    */
   static std::unique_ptr<Sequential> load_config(const std::string& filepath);
 
-  /**
-   * @brief Save only model parameters
-   * @param model Model to save parameters from
-   * @param filepath File path to save to
-   * @return true if successful, false otherwise
-   */
-  static bool save_parameters(const Sequential& model,
-                              const std::string& filepath);
-
-  /**
-   * @brief Load parameters into existing model
-   * @param model Model to load parameters into
-   * @param filepath File path to load parameters from
-   * @return true if successful, false otherwise
-   */
-  static bool load_parameters(Sequential& model, const std::string& filepath);
-
-  /**
-   * @brief Convert string format to ModelFormat enum
-   * @param format_str Format string ("binary", "json", "config")
-   * @return ModelFormat enum value
-   */
-  static ModelFormat string_to_format(const std::string& format_str);
-
-  /**
-   * @brief Convert ModelFormat enum to string
-   * @param format ModelFormat enum value
-   * @return Format string
-   */
-  static std::string format_to_string(ModelFormat format);
+  // Utility methods
+  static SaveFormat string_to_format(const std::string& format_str);
+  static std::string format_to_string(SaveFormat format);
 
 private:
-  /**
-   * @brief Extract model configuration from Sequential model
-   * @param model Model to extract from
-   * @return Model configuration
-   */
   static ModelConfig extract_config(const Sequential& model);
-
-  /**
-   * @brief Create model from configuration
-   * @param config Model configuration
-   * @return Created model
-   */
   static std::unique_ptr<Sequential>
   create_from_config(const ModelConfig& config);
 
-  /**
-   * @brief Save in binary format
-   */
   static bool save_binary(const Sequential& model, const std::string& filepath);
-
-  /**
-   * @brief Load from binary format
-   */
   static std::unique_ptr<Sequential> load_binary(const std::string& filepath);
-
-  /**
-   * @brief Save in JSON format
-   */
   static bool save_json(const Sequential& model, const std::string& filepath);
-
-  /**
-   * @brief Load from JSON format
-   */
   static std::unique_ptr<Sequential> load_json(const std::string& filepath);
 
-  /**
-   * @brief Write binary data
-   */
+  // Legacy helper functions
   static void write_binary_data(std::ofstream& file, const void* data,
                                 size_t size);
-
-  /**
-   * @brief Read binary data
-   */
   static bool read_binary_data(std::ifstream& file, void* data, size_t size);
-
-  /**
-   * @brief Write NDArray to binary file
-   */
   static void write_ndarray(std::ofstream& file, const NDArray& array);
-
-  /**
-   * @brief Read NDArray from binary file
-   */
   static NDArray read_ndarray(std::ifstream& file);
-
-  /**
-   * @brief Create directory recursively (like mkdir -p)
-   * @param path Directory path to create
-   * @return true if successful or already exists, false otherwise
-   */
   static bool create_directories(const std::string& path);
-
-  /**
-   * @brief Get directory path from file path
-   * @param filepath Full file path
-   * @return Directory path (empty if no directory)
-   */
   static std::string get_directory_path(const std::string& filepath);
-
-  /**
-   * @brief Check if directory exists
-   * @param path Directory path to check
-   * @return true if directory exists, false otherwise
-   */
   static bool directory_exists(const std::string& path);
-
-  /**
-   * @brief Ensure directory exists for file path (create if necessary)
-   * @param filepath Full file path
-   * @return true if directory exists or was created successfully
-   */
   static bool ensure_directory_exists(const std::string& filepath);
+  static std::string
+  get_filepath_with_extension(const std::string& base_filepath,
+                              SaveFormat format);
 };
 
 }  // namespace model

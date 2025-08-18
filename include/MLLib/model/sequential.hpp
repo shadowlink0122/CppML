@@ -4,6 +4,7 @@
 #include "../layer/base.hpp"
 #include "../loss/base.hpp"
 #include "../optimizer/base.hpp"
+#include "base_model.hpp"
 #include <functional>
 #include <initializer_list>
 #include <memory>
@@ -21,7 +22,7 @@ namespace model {
  * @class Sequential
  * @brief Sequential neural network model
  */
-class Sequential {
+class Sequential : public BaseModel {
 public:
   /**
    * @brief Constructor
@@ -104,7 +105,7 @@ public:
    * @brief Set training mode for all layers
    * @param training True for training mode, false for inference
    */
-  void set_training(bool training);
+  void set_training(bool training) override;
 
   /**
    * @brief Get number of layers
@@ -133,6 +134,15 @@ public:
   std::vector<std::shared_ptr<layer::BaseLayer>>& get_layers() {
     return layers_;
   }
+
+  // ISerializableModel interface implementation
+  SerializationMetadata get_serialization_metadata() const override;
+  std::unordered_map<std::string, std::vector<uint8_t>>
+  serialize() const override;
+  bool deserialize(const std::unordered_map<std::string, std::vector<uint8_t>>&
+                       data) override;
+  std::string get_config_string() const override;
+  bool set_config_from_string(const std::string& config_str) override;
 
 private:
   std::vector<std::shared_ptr<layer::BaseLayer>> layers_;

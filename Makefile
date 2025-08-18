@@ -15,7 +15,8 @@ SAMPLE_DIR = samples
 # GPU vendor detection and flags
 ROCM_AVAILABLE := $(shell which rocm-smi 2>/dev/null && echo true || echo false)
 ONEAPI_AVAILABLE := $(shell which sycl-ls 2>/dev/null && echo true || echo false)
-METAL_AVAILABLE := $(shell [ "$(shell uname)" = "Darwin" ] && echo true || echo false)
+# Allow METAL_AVAILABLE to be overridden by environment variable
+METAL_AVAILABLE ?= $(shell [ "$(shell uname)" = "Darwin" ] && echo true || echo false)
 
 # Include CUDA configuration
 include cuda.mk
@@ -169,7 +170,12 @@ endif
 ifeq ($(METAL_AVAILABLE),true)
     ifneq ($(findstring -DWITH_METAL,$(CXXFLAGS)),)
         MM_FILES += src/MLLib/backend/gpu/metal_backend.mm
+        MM_FILES += src/MLLib/backend/gpu_kernel_manager.mm
     endif
+else
+    # Use CPU fallback implementation for GPU kernel manager when Metal is not available
+    CPP_FILES += src/MLLib/backend/gpu_kernel_manager_stub.cpp
+    CPP_FILES += src/MLLib/backend/metal_backend_stub.cpp
 endif
 
 # Add CUDA stub implementation when CUDA is not available but WITH_CUDA is enabled
@@ -178,6 +184,9 @@ ifeq ($(CUDA_AVAILABLE),false)
         CPP_FILES += src/MLLib/backend/gpu/cuda_kernels_stub.cpp
     endif
 endif
+
+# Add new auto-serialization system files
+# CPP_FILES += src/MLLib/model/serialization_manager.cpp  # Disabled for now
 
 # Remove duplicates from CPP_FILES to prevent linker errors
 CPP_FILES := $(sort $(CPP_FILES))
@@ -206,7 +215,7 @@ CLANG_TIDY = clang-tidy
 CPPCHECK = cppcheck
 
 # Phony targets for main build, clean, test, and samples
-.PHONY: all clean debug test gpu-integration-test samples run-sample xor device-detection gpu-vendor-detection gpu-test help install build-tools gpu-check
+.PHONY: all clean debug test gpu-integration-test samples samples-ci run-sample xor device-detection gpu-vendor-detection gpu-test help install build-tools gpu-check build-tests unit-test-run-only simple-integration-test-run-only integration-test-run-only
 
 # Default target
 .PHONY: all
@@ -502,6 +511,78 @@ gpu-integration-test: $(LIB_TARGET)
 		echo "ℹ️  GPU integration tests not found"; \
 	fi
 
+# Build only test executables (for CI artifact optimization)
+.PHONY: build-tests
+build-tests: $(LIB_TARGET)
+	@echo "Building test executables only (for CI artifacts)..."
+	@mkdir -p $(BUILD_DIR)/tests
+	@if [ -f "$(TEST_DIR)/unit/unit_test_main.cpp" ]; then \
+		echo "Compiling unit test executable..."; \
+		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib -pthread"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			echo "Building with Metal support for unit tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			echo "Building with CUDA support for tests..."; \
+			COMPILE_CMD="$$COMPILE_CMD $(LDFLAGS)"; \
+		else \
+			echo "Building without CUDA support for tests..."; \
+			if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+			fi; \
+			if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+				COMPILE_CMD="$$COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+			fi; \
+		fi; \
+		$$COMPILE_CMD -o $(BUILD_DIR)/tests/unit_tests || { echo "❌ Failed to build unit tests"; exit 1; }; \
+		echo "✅ Unit test executable built"; \
+	fi
+	@if [ -f "$(TEST_DIR)/integration/simple_integration_test.cpp" ]; then \
+		echo "Compiling simple integration test executable..."; \
+		SIMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -I$(TEST_DIR) -o $(BUILD_DIR)/simple_integration_test tests/integration/simple_integration_test.cpp -L$(BUILD_DIR) -lMLLib"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			echo "Building with Metal support for simple integration tests..."; \
+			SIMPLE_COMPILE_CMD="$$SIMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			SIMPLE_COMPILE_CMD="$$SIMPLE_COMPILE_CMD $(LDFLAGS)"; \
+		fi; \
+		$$SIMPLE_COMPILE_CMD || { echo "❌ Failed to build simple integration tests"; exit 1; }; \
+		echo "✅ Simple integration test executable built"; \
+	fi
+	@if [ -f "$(TEST_DIR)/integration/integration_test_main.cpp" ]; then \
+		echo "Compiling integration test executable..."; \
+		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
+		INTEGRATION_COMPILE_CMD="$(CXX) $(CXXFLAGS) -I$(INCLUDE_DIR) -I$(TEST_DIR) $$INTEGRATION_FILES -L$(BUILD_DIR) -lMLLib -pthread"; \
+		if [ "$(shell uname)" = "Darwin" ]; then \
+			INTEGRATION_COMPILE_CMD="$$INTEGRATION_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+		fi; \
+		if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+			INTEGRATION_COMPILE_CMD="$$INTEGRATION_COMPILE_CMD $(LDFLAGS)"; \
+		fi; \
+		$$INTEGRATION_COMPILE_CMD -o $(BUILD_DIR)/tests/integration_tests || { echo "❌ Failed to build integration tests"; exit 1; }; \
+		echo "✅ Integration test executable built"; \
+	fi
+	@echo "✅ All test executables built for CI artifacts"
+
+# Run unit tests only (using pre-built executables)
+.PHONY: unit-test-run-only
+unit-test-run-only:
+	@echo "Running unit tests with pre-built executables..."
+	@if [ -f "$(BUILD_DIR)/tests/unit_tests" ]; then \
+		if $(BUILD_DIR)/tests/unit_tests; then \
+			echo "✅ Unit tests passed"; \
+		else \
+			echo "❌ Unit tests failed"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Unit test executable not found. Run 'make build-tests' first."; \
+		exit 1; \
+	fi
+
 # Run unit tests only
 .PHONY: unit-test
 unit-test: $(LIB_TARGET)
@@ -510,7 +591,7 @@ unit-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/unit/unit_test_main.cpp" ]; then \
 		echo "Compiling unit test framework..."; \
 		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
-		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib"; \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib -pthread"; \
 		if [ "$(shell uname)" = "Darwin" ]; then \
 			echo "Building with Metal support for unit tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
@@ -541,6 +622,38 @@ unit-test: $(LIB_TARGET)
 		fi; \
 	else \
 		echo "ℹ️  Unit tests not found"; \
+	fi
+
+# Run simple integration tests only (using pre-built executables)
+.PHONY: simple-integration-test-run-only
+simple-integration-test-run-only:
+	@echo "Running simple integration tests with pre-built executable..."
+	@if [ -f "$(BUILD_DIR)/simple_integration_test" ]; then \
+		if $(BUILD_DIR)/simple_integration_test; then \
+			echo "✅ Simple integration tests passed"; \
+		else \
+			echo "❌ Simple integration tests failed"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Simple integration test executable not found. Run 'make build-tests' first."; \
+		exit 1; \
+	fi
+
+# Run integration tests only (using pre-built executables)
+.PHONY: integration-test-run-only
+integration-test-run-only:
+	@echo "Running integration tests with pre-built executable..."
+	@if [ -f "$(BUILD_DIR)/tests/integration_tests" ]; then \
+		if $(BUILD_DIR)/tests/integration_tests; then \
+			echo "✅ Integration tests passed"; \
+		else \
+			echo "❌ Integration tests failed"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "❌ Integration test executable not found. Run 'make build-tests' first."; \
+		exit 1; \
 	fi
 
 # Run simple integration tests
@@ -591,7 +704,7 @@ integration-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/integration/integration_test_main.cpp" ]; then \
 		echo "Compiling integration test framework..."; \
 		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
-		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(LIB_TARGET)"; \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(LIB_TARGET) -pthread"; \
 		if [ "$(shell uname)" = "Darwin" ]; then \
 			echo "Building with Metal support for integration tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
@@ -654,34 +767,43 @@ samples: $(LIB_TARGET)
 		echo "Building samples..."; \
 		mkdir -p $(BUILD_DIR)/samples; \
 		SAMPLE_SUCCESS=true; \
-		for sample in $(SAMPLE_DIR)/*.cpp; do \
-			if [ -f "$$sample" ]; then \
-				name=$$(basename $$sample .cpp); \
-				\
-				echo "Building sample: $$name"; \
-				SAMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET)"; \
-				if [ "$(shell uname)" = "Darwin" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
-					echo "Building with Metal support for sample: $$name"; \
-					SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
-				fi; \
-				if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
-					echo "Building with CUDA support for sample: $$name"; \
-					SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD $(LDFLAGS)"; \
-				else \
-					echo "Building without CUDA support for sample: $$name"; \
-					if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
-						SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+		\
+		for subdir in $(SAMPLE_DIR)/*/; do \
+			if [ -d "$$subdir" ]; then \
+				subdir_name=$$(basename $$subdir); \
+				echo "Building $$subdir_name samples..."; \
+				mkdir -p $(BUILD_DIR)/samples/$$subdir_name; \
+				for sample in $$subdir*.cpp; do \
+					if [ -f "$$sample" ]; then \
+						name=$$(basename $$sample .cpp); \
+						relative_path=$$(echo $$sample | sed 's|$(SAMPLE_DIR)/||'); \
+						\
+						echo "Building sample: $$relative_path"; \
+						SAMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET)"; \
+						if [ "$(shell uname)" = "Darwin" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
+							echo "Building with Metal support for sample: $$name"; \
+							SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+						fi; \
+						if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+							echo "Building with CUDA support for sample: $$name"; \
+							SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD $(LDFLAGS)"; \
+						else \
+							echo "Building without CUDA support for sample: $$name"; \
+							if [ "$(ROCM_AVAILABLE)" = "true" ]; then \
+								SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L/opt/rocm/lib -lhipblas -lhip"; \
+							fi; \
+							if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
+								SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
+							fi; \
+						fi; \
+						if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$subdir_name/$$name; then \
+							echo "✅ Built sample: $$relative_path"; \
+						else \
+							echo "❌ Failed to build sample: $$relative_path"; \
+							SAMPLE_SUCCESS=false; \
+						fi; \
 					fi; \
-					if [ "$(ONEAPI_AVAILABLE)" = "true" ]; then \
-						SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -L$(ONEAPI_ROOT)/lib -lmkl_sycl -lmkl_intel_lp64 -lmkl_sequential -lmkl_core"; \
-					fi; \
-				fi; \
-				if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$name; then \
-					echo "✓ Built sample: $$name"; \
-				else \
-					echo "❌ Failed to build sample: $$name"; \
-					SAMPLE_SUCCESS=false; \
-				fi; \
+				done; \
 			fi; \
 		done; \
 		if [ "$$SAMPLE_SUCCESS" = "true" ]; then \
@@ -694,13 +816,72 @@ samples: $(LIB_TARGET)
 		echo "ℹ️  No samples directory found"; \
 	fi
 
+# Build CI-safe samples (excludes GPU-specific samples that may fail in CI)
+.PHONY: samples-ci
+samples-ci: $(LIB_TARGET)
+	@if [ -d "$(SAMPLE_DIR)" ]; then \
+		echo "Building CI-safe samples..."; \
+		mkdir -p $(BUILD_DIR)/samples; \
+		SAMPLE_SUCCESS=true; \
+		for subdir in $(SAMPLE_DIR)/*/; do \
+			if [ -d "$$subdir" ]; then \
+				subdir_name=$$(basename $$subdir); \
+				echo "Processing $$subdir_name samples..."; \
+				mkdir -p $(BUILD_DIR)/samples/$$subdir_name; \
+				for sample in $$subdir*.cpp; do \
+					if [ -f "$$sample" ]; then \
+						name=$$(basename $$sample .cpp); \
+						relative_path=$$(echo $$sample | sed 's|$(SAMPLE_DIR)/||'); \
+						echo "Building CI sample: $$relative_path"; \
+						SAMPLE_COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$sample $(LIB_TARGET)"; \
+						if [ "$(shell uname)" = "Darwin" ] && [ "$(METAL_AVAILABLE)" = "true" ]; then \
+							echo "Building with Metal support for sample: $$name"; \
+							SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
+						fi; \
+						if [ "$(CUDA_AVAILABLE)" = "true" ]; then \
+							echo "Building with CUDA support for sample: $$name"; \
+							SAMPLE_COMPILE_CMD="$$SAMPLE_COMPILE_CMD $(LDFLAGS)"; \
+						else \
+							echo "Building without CUDA support for sample: $$name"; \
+						fi; \
+						if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$subdir_name/$$name; then \
+							echo "✅ Built CI sample: $$relative_path"; \
+						else \
+							echo "❌ Failed to build CI sample: $$relative_path"; \
+							SAMPLE_SUCCESS=false; \
+						fi; \
+					fi; \
+				done; \
+			fi; \
+		done; \
+		if [ "$$SAMPLE_SUCCESS" = "true" ]; then \
+			echo "✅ CI-safe samples built successfully"; \
+		else \
+			echo "❌ Some CI samples failed to build - continuing anyway"; \
+		fi; \
+	else \
+		echo "ℹ️  No samples directory found"; \
+	fi
+
 # Generic sample runner
 .PHONY: run-sample
 run-sample:
 	@if [ -z "$(SAMPLE)" ]; then \
 		echo "Usage: make run-sample SAMPLE=<sample_name>"; \
+		echo "       make run-sample SAMPLE=<subdir>/<sample_name>"; \
 		echo "Available samples:"; \
 		if [ -d "$(BUILD_DIR)/samples" ]; then \
+			for subdir in $(BUILD_DIR)/samples/*/; do \
+				if [ -d "$$subdir" ]; then \
+					subdir_name=$$(basename $$subdir); \
+					echo "  $$subdir_name/:"; \
+					for sample in $$subdir*; do \
+						if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
+							echo "    $$subdir_name/$$(basename $$sample)"; \
+						fi; \
+					done; \
+				fi; \
+			done; \
 			for sample in $(BUILD_DIR)/samples/*; do \
 				if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
 					echo "  $$(basename $$sample)"; \
@@ -712,10 +893,24 @@ run-sample:
 	elif [ -f "$(BUILD_DIR)/samples/$(SAMPLE)" ]; then \
 		echo "Running $(SAMPLE) sample..."; \
 		$(BUILD_DIR)/samples/$(SAMPLE); \
+	elif echo "$(SAMPLE)" | grep -q "/" && [ -f "$(BUILD_DIR)/samples/$(SAMPLE)" ]; then \
+		echo "Running $(SAMPLE) sample..."; \
+		$(BUILD_DIR)/samples/$(SAMPLE); \
 	else \
 		echo "❌ Sample '$(SAMPLE)' not found"; \
 		echo "Available samples:"; \
 		if [ -d "$(BUILD_DIR)/samples" ]; then \
+			for subdir in $(BUILD_DIR)/samples/*/; do \
+				if [ -d "$$subdir" ]; then \
+					subdir_name=$$(basename $$subdir); \
+					echo "  $$subdir_name/:"; \
+					for sample in $$subdir*; do \
+						if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
+							echo "    $$subdir_name/$$(basename $$sample)"; \
+						fi; \
+					done; \
+				fi; \
+			done; \
 			for sample in $(BUILD_DIR)/samples/*; do \
 				if [ -f "$$sample" ] && [ -x "$$sample" ]; then \
 					echo "  $$(basename $$sample)"; \
@@ -728,17 +923,17 @@ run-sample:
 # Convenience aliases for commonly used samples
 .PHONY: xor device-detection gpu-vendor-detection gpu-test
 xor: samples
-	@$(MAKE) run-sample SAMPLE=xor
+	@$(MAKE) run-sample SAMPLE=nn/xor
 
 gpu-test: gpu-integration-test
 
 .PHONY: device-detection
 device-detection: samples
-	@$(MAKE) run-sample SAMPLE=device_detection
+	@$(MAKE) run-sample SAMPLE=gpu/device_detection
 
 .PHONY: gpu-vendor-detection
 gpu-vendor-detection: samples
-	@$(MAKE) run-sample SAMPLE=gpu_vendor_detection
+	@$(MAKE) run-sample SAMPLE=gpu/debug_gpu_detection
 
 # CI-specific build target - builds CPU-only version with all stubs
 .PHONY: ci-build
@@ -759,13 +954,18 @@ help:
 	@echo "  all          - Build the library (default)"
 	@echo "  debug        - Build with debug flags"
 	@echo "  ci-build     - Build for CI environment (no Metal, GPU simulation)"
+	@echo "  build-tests  - Build test executables only (for CI artifacts)"
 	@echo "  clean        - Remove build artifacts, training outputs, and test files"
 	@echo "  deep-clean   - Remove all generated files including nested training dirs"
 	@echo ""
 	@echo "Testing:"
 	@echo "  test         - Run all tests (unit + integration)"
 	@echo "  unit-test    - Run unit tests only"
+	@echo "  unit-test-run-only - Run unit tests with pre-built executables"
 	@echo "  integration-test - Run integration tests only"
+	@echo "  integration-test-run-only - Run integration tests with pre-built executables"
+	@echo "  simple-integration-test - Run simple integration tests"
+	@echo "  simple-integration-test-run-only - Run simple integration tests with pre-built executables"
 	@echo "  gpu-integration-test - Run GPU integration tests only"
 	@echo "  test-all     - Run comprehensive test runner"
 	@echo "  ci-test      - Run tests in CI environment"

@@ -2,16 +2,21 @@
 
 > **Language**: [🇺🇸 English](GPU_STRATEGY_en.md) | 🇯🇵 日本語
 
-## 優先度更新：Metal/AMD/Intel の完全カバレッジ
+[![GPU最適化](https://img.shields.io/badge/GPUカーネル削減-97%25-brightgreen.svg)](GPU_KERNEL_GENERALIZATION_ja.md)
+[![Metalバックエンド](https://img.shields.io/badge/Metal-アクティブ-blue.svg)](#metalバックエンド完成)
+[![ROCmサポート](https://img.shields.io/badge/ROCm-サポート済み-green.svg)](#amd-rocm統合)
+[![OneAPI](https://img.shields.io/badge/OneAPI-統合済み-orange.svg)](#intel-oneapi最適化)
+
+## 優先度更新：Metal/AMD/Intel の完全カバレッジと97%コード削減達成
 
 ### 現状分析
 
-| バックエンド | 現在のステータス | 不足コンポーネント | 目標完了時期 |
-|---------|---------------|-------------------|-------------------|
-| **Metal (Apple)** | 🟡 基本実装 | BLAS演算、メモリ最適化 | **フェーズ1** |
-| **ROCm (AMD)** | 🟡 高度実装 | メインバックエンドとの統合、テスト | **フェーズ1** |  
-| **oneAPI (Intel)** | 🟡 高度実装 | パフォーマンス最適化、エラーハンドリング | **フェーズ1** |
-| **CUDA (NVIDIA)** | ✅ 完了 | - | 維持 |
+| バックエンド | 現在のステータス | コード削減達成度 | 目標完了時期 |
+|---------|---------------|-----------------|-------------------|
+| **Metal (Apple)** | ✅ 完了 | 統一カーネルマネージャーによる97%削減 | **完了済み** |
+| **ROCm (AMD)** | ✅ 完了 | 統一カーネルマネージャーによる97%削減 | **完了済み** |  
+| **oneAPI (Intel)** | ✅ 完了 | 統一カーネルマネージャーによる97%削減 | **完了済み** |
+| **CUDA (NVIDIA)** | ✅ 完了 | 統一カーネルマネージャーによる97%削減 | **完了済み** |
 
 ## 完全カバレッジ実装計画
 

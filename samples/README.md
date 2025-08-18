@@ -4,9 +4,88 @@
 
 This directory contains sample programs demonstrating the capabilities of the MLLib machine learning library. Each sample showcases different aspects of the library, from basic device detection to advanced GPU-accelerated training.
 
+## Directory Structure
+
+```
+samples/
+├── autoencoder/  # Autoencoder samples (basic, denoising, anomaly detection, VAE)
+├── gpu/          # GPU-related samples (device detection, performance testing)
+├── nn/           # Neural network samples (training, inference)
+├── README.md     # This file
+└── README_ja.md  # Japanese version
+```
+
 ## Available Samples
 
-### 1. Device Detection (`device_detection.cpp`)
+### Autoencoder Samples (`autoencoder/`)
+
+#### 1. Basic Autoencoder (`basic_autoencoder.cpp`)
+
+**Purpose**: Demonstrates fundamental autoencoder concepts with data compression.
+
+**Features**:
+- Compresses 4D input data through a 2D bottleneck
+- Learns structured data representations
+- Shows compression ratios and reconstruction quality
+- Saves trained models in multiple formats
+
+**Usage**:
+```bash
+make run-sample SAMPLE=autoencoder/basic_autoencoder
+```
+
+#### 2. Denoising Autoencoder (`denoising_autoencoder.cpp`)
+
+**Purpose**: Shows how to remove noise from 8x8 image patches.
+
+**Features**:
+- Trains on noisy input to clean output pairs
+- Measures denoising quality with PSNR
+- Visual comparison of original, noisy, and denoised images
+- Achieves >10dB PSNR improvement
+
+**Usage**:
+```bash
+make run-sample SAMPLE=autoencoder/denoising_autoencoder
+```
+
+#### 3. Anomaly Detection (`anomaly_detection.cpp`)
+
+**Purpose**: Demonstrates using autoencoders for anomaly detection in sensor data.
+
+**Features**:
+- Trains only on normal sensor readings
+- Detects various anomaly types (sensor failures, overheating, etc.)
+- Calculates performance metrics (precision, recall, F1-score)
+- Automatic threshold setting using percentiles
+
+**Usage**:
+```bash
+make run-sample SAMPLE=autoencoder/anomaly_detection
+```
+
+#### 4. Variational Autoencoder Demo (`variational_autoencoder.cpp`)
+
+**Purpose**: Introduces VAE concepts with a simplified implementation.
+
+**Features**:
+- Demonstrates probabilistic latent representations
+- Works with 4x4 geometric patterns (circles, squares, crosses)
+- Explains VAE theory and implementation requirements
+- Shows generative modeling concepts
+
+**Usage**:
+```bash
+make run-sample SAMPLE=autoencoder/variational_autoencoder
+```
+
+### GPU Samples (`gpu/`)
+
+```
+
+### GPU Samples (`gpu/`)
+
+#### 1. Device Detection (`device_detection.cpp`)
 
 **Purpose**: Demonstrates GPU detection and device management capabilities.
 
@@ -19,52 +98,65 @@ This directory contains sample programs demonstrating the capabilities of the ML
 
 **Usage**:
 ```bash
-make samples
-./build/samples/device_detection
+make device-detection
+# or
+make run-sample SAMPLE=gpu/device_detection
 ```
 
-**Sample Output**:
-```
-=== MLLib Device Detection Sample ===
-This sample demonstrates GPU detection capabilities.
+#### 2. GPU Usage Test (`gpu_usage_test.cpp`)
 
---- GPU Detection ---
-Detected 1 GPU(s):
-  GPU 1:
-    Vendor: Apple
-    Name: Apple M1 Pro
-    Memory: 16384 MB
-    Compute Capable: Yes
-    API Support: Metal
-
---- Primary GPU Vendor ---
-Primary GPU vendor: Apple
-```
-
-### 2. GPU Performance Test (`gpu_usage_test.cpp`)
-
-**Purpose**: Benchmarks GPU vs CPU performance with matrix operations of varying sizes.
+**Purpose**: Benchmarks GPU vs CPU performance with matrix operations.
 
 **Features**:
-- Tests matrix multiplication performance across different sizes (256x256 to 2048x2048)
+- Tests matrix multiplication performance across different sizes
 - Compares GPU and CPU execution times
 - Calculates performance speedup ratios
 - Validates numerical accuracy between GPU and CPU results
-- Tests GPU backend selection and switching
 
 **Usage**:
 ```bash
-make samples
-./build/samples/gpu_usage_test
+make run-sample SAMPLE=gpu/gpu_usage_test
 ```
 
-**Key Performance Insights**:
-- **Small matrices (256x256)**: CPU may be faster due to GPU overhead
-- **Medium matrices (512x512)**: Performance begins to equalize
-- **Large matrices (1024x1024+)**: GPU shows significant advantages
-- **Metal backend**: Optimized for Apple Silicon, uses float32 precision
+#### 3. Debug GPU Detection (`debug_gpu_detection.cpp`)
 
-### 3. XOR Neural Network Training (`xor.cpp`)
+**Purpose**: Comprehensive GPU detection debugging and system information.
+
+**Features**:
+- Detailed GPU vendor detection
+- System profiler integration
+- Hardware compatibility checking
+- Debug output for troubleshooting
+
+**Usage**:
+```bash
+make gpu-vendor-detection
+# or
+make run-sample SAMPLE=gpu/debug_gpu_detection
+```
+
+#### 4. Light GPU Detection (`debug_gpu_detection_light.cpp`)
+
+**Purpose**: Lightweight GPU detection for quick system checks.
+
+**Usage**:
+```bash
+make run-sample SAMPLE=gpu/debug_gpu_detection_light
+```
+
+#### 5. GPU Scenario Testing (`test_gpu_scenarios.cpp`, `verify_gpu_scenarios.cpp`)
+
+**Purpose**: Test and verify various GPU usage scenarios.
+
+**Usage**:
+```bash
+make run-sample SAMPLE=gpu/test_gpu_scenarios
+make run-sample SAMPLE=gpu/verify_gpu_scenarios
+```
+
+### Neural Network Samples (`nn/`)
+
+#### 1. XOR Neural Network (`xor.cpp`)
 
 **Purpose**: Demonstrates complete machine learning workflow with XOR problem.
 
@@ -74,7 +166,6 @@ make samples
 - Implements training callbacks for progress monitoring
 - Saves model checkpoints during training (every 10 epochs)
 - Supports multiple model formats (Binary, JSON, Config)
-- Demonstrates model inference after training
 
 **Network Architecture**:
 ```
@@ -85,21 +176,9 @@ Output Layer: 1 neuron + Sigmoid activation
 
 **Usage**:
 ```bash
-make samples
-./build/samples/xor
-```
-
-**Training Output**:
-The training process will save models in `samples/training_xor/` directory:
-- `epoch_X.bin` / `epoch_X.json`: Models saved every 10 epochs
-- `final_model.*`: Final trained model in multiple formats
-
-**Expected Results**:
-```
-0,0 => ~0.0  (False XOR False = False)
-0,1 => ~1.0  (False XOR True = True)
-1,0 => ~1.0  (True XOR False = True)  
-1,1 => ~0.0  (True XOR True = False)
+make xor
+# or
+make run-sample SAMPLE=nn/xor
 ```
 
 ## Building and Running Samples
@@ -122,26 +201,44 @@ The training process will save models in `samples/training_xor/` directory:
 make samples
 ```
 
-This builds all `.cpp` files in the samples directory and places executables in `build/samples/`.
+This builds all samples and places executables in:
+- `build/samples/gpu/` - GPU-related samples
+- `build/samples/nn/` - Neural network samples
 
 ### Run Individual Samples
 
 ```bash
-# Run specific sample
-make run-sample SAMPLE=device_detection
-make run-sample SAMPLE=gpu_usage_test
-make run-sample SAMPLE=xor
+# Using aliases
+make xor                    # Run XOR neural network sample
+make device-detection       # Run device detection sample
+make gpu-vendor-detection   # Run GPU vendor detection sample
 
-# Or run directly
-./build/samples/device_detection
-./build/samples/gpu_usage_test
-./build/samples/xor
+# Using run-sample with full path
+make run-sample SAMPLE=nn/xor
+make run-sample SAMPLE=gpu/device_detection
+make run-sample SAMPLE=gpu/gpu_usage_test
 ```
 
 ### List Available Samples
 
 ```bash
 make run-sample
+```
+
+Output:
+```
+Usage: make run-sample SAMPLE=<sample_name>
+       make run-sample SAMPLE=<subdir>/<sample_name>
+Available samples:
+  gpu/:
+    gpu/debug_gpu_detection
+    gpu/debug_gpu_detection_light
+    gpu/device_detection
+    gpu/gpu_usage_test
+    gpu/test_gpu_scenarios
+    gpu/verify_gpu_scenarios
+  nn/:
+    nn/xor
 ```
 
 ## GPU Backend Support
@@ -155,20 +252,36 @@ The samples automatically detect and use the best available GPU backend:
 | **AMD GPUs** | ROCm/HIP | CPU |
 | **Intel GPUs** | oneAPI/SYCL | CPU |
 
-## Sample Output Files
+## Sample Output Examples
 
-### XOR Training Output (`training_xor/`)
+### Device Detection Output
+```
+=== MLLib Device Detection Sample ===
+--- GPU Detection ---
+Detected 1 GPU(s):
+  GPU 1:
+    Vendor: Apple
+    Name: Apple M1 GPU
+    Memory: 12288 MB
+    Compute Capable: Yes
+    API Support: Metal
 
-The XOR sample generates training artifacts:
+--- Primary GPU Vendor ---
+Primary GPU vendor: Apple
+```
 
-- **Binary Models** (`.bin`): Compact, fast-loading format
-- **JSON Models** (`.json`): Human-readable, debuggable format  
-- **Config Files** (`.config`): Model architecture configuration
-
-These files can be used to:
-- Resume training from checkpoints
-- Analyze training progress
-- Load pre-trained models in other applications
+### XOR Training Output
+```
+✅ GPU device successfully configured
+Epoch 0 loss: 0.241477
+Model saved at epoch 0 to samples/training_xor/epoch_0
+Epoch 10 loss: 0.238898
+...
+0,0 => 0.468069  # Should approach 0.0
+0,1 => 0.468069  # Should approach 1.0
+1,0 => 0.648697  # Should approach 1.0
+1,1 => 0.468069  # Should approach 0.0
+```
 
 ## Performance Expectations
 
@@ -178,9 +291,9 @@ These files can be used to:
 - **Purpose**: Quick hardware capability assessment
 
 ### GPU Performance Test
-- **Small Matrices (256x256)**: CPU often faster (GPU overhead)
-- **Medium Matrices (512x512)**: Performance parity
-- **Large Matrices (1024x1024+)**: GPU shows 2-10x speedup
+- **Small matrices (256x256)**: CPU often faster (GPU overhead)
+- **Medium matrices (512x512)**: Performance parity
+- **Large matrices (1024x1024+)**: GPU shows 2-10x speedup
 - **Memory Usage**: Scales with matrix size (O(n²))
 
 ### XOR Training
@@ -189,58 +302,44 @@ These files can be used to:
 - **GPU Speedup**: 2-5x over CPU (depending on hardware)
 - **Memory Usage**: Minimal (small network)
 
+## Output Files
+
+### XOR Training Files (`samples/training_xor/`)
+- **Binary Models** (`.bin`): Compact, fast-loading format
+- **JSON Models** (`.json`): Human-readable, debuggable format
+- **Config Files** (`.config`): Model architecture configuration
+
 ## Troubleshooting
 
 ### Common Issues
 
 1. **No GPU Detected**:
+   ```bash
+   make run-sample SAMPLE=gpu/device_detection
    ```
-   No GPUs detected
-   GPU Available: No
-   ```
-   **Solution**: Check GPU drivers and hardware compatibility.
 
-2. **GPU Performance Slower Than CPU**:
+2. **Build Failures**:
+   ```bash
+   make clean && make all && make samples
    ```
-   CPU is 1.5x faster than GPU
-   ```
-   **Solution**: This is normal for small matrices. Try larger sizes or check GPU backend selection.
 
-3. **Build Failures**:
+3. **GPU Performance Issues**:
+   ```bash
+   make run-sample SAMPLE=gpu/gpu_usage_test
    ```
-   ❌ Some samples failed to build
-   ```
-   **Solution**: Ensure MLLib library is built first with `make all`.
-
-4. **Metal Precision Differences**:
-   ```
-   Max difference: 0.000123
-   ```
-   **Solution**: This is expected - Metal uses float32, CPU uses double64.
 
 ### Debug Information
 
-For additional debugging, check:
 ```bash
 # Verify library build
 make all
 
-# Check GPU capabilities  
+# Check GPU capabilities
 make gpu-check
 
-# View detailed build output
-make samples VERBOSE=1
+# List available samples
+make run-sample
 ```
-
-## Integration with Your Projects
-
-These samples serve as templates for integrating MLLib into your own projects:
-
-1. **Copy relevant sample code** as a starting point
-2. **Modify network architecture** for your use case
-3. **Adapt data loading** for your datasets  
-4. **Customize training callbacks** for your monitoring needs
-5. **Choose appropriate model formats** for your deployment
 
 ## Next Steps
 
@@ -249,7 +348,7 @@ After exploring these samples:
 1. **Read the documentation** in `docs/` directory
 2. **Run the test suite** with `make test`
 3. **Explore GPU integration tests** with `make gpu-integration-test`
-4. **Check out advanced examples** in the test directories
+4. **Implement autoencoder examples** (coming soon in future updates)
 
 For more information, see:
 - [GPU Strategy Documentation](../docs/GPU_STRATEGY_en.md)

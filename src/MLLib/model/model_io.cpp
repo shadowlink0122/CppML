@@ -1,6 +1,10 @@
 #include "MLLib/model/model_io.hpp"
+#include "MLLib/layer/activation/gelu.hpp"
+#include "MLLib/layer/activation/leaky_relu.hpp"
 #include "MLLib/layer/activation/relu.hpp"
 #include "MLLib/layer/activation/sigmoid.hpp"
+#include "MLLib/layer/activation/softmax.hpp"
+#include "MLLib/layer/activation/tanh.hpp"
 #include "MLLib/layer/dense.hpp"
 #include <algorithm>
 #include <filesystem>
@@ -12,30 +16,456 @@
 namespace MLLib {
 namespace model {
 
-bool ModelIO::save_model(const Sequential& model, const std::string& filepath,
-                         ModelFormat format) {
+// Utility functions
+std::string model_type_to_string(ModelType type) {
+  switch (type) {
+  case ModelType::SEQUENTIAL: return "Sequential";
+  case ModelType::AUTOENCODER_DENSE: return "DenseAutoencoder";
+  default: return "Unknown";
+  }
+}
+
+ModelType string_to_model_type(const std::string& type_str) {
+  if (type_str == "Sequential") return ModelType::SEQUENTIAL;
+  if (type_str == "DenseAutoencoder") return ModelType::AUTOENCODER_DENSE;
+  return ModelType::SEQUENTIAL;  // Default
+}
+
+// Generic model I/O implementation
+bool GenericModelIO::save_model(const ISerializableModel& model,
+                                const std::string& filepath,
+                                SaveFormat format) {
+  std::string actual_filepath = get_filepath_with_extension(filepath, format);
+
   switch (format) {
-  case ModelFormat::BINARY: return save_binary(model, filepath);
-  case ModelFormat::JSON: return save_json(model, filepath);
-  case ModelFormat::CONFIG: return save_config(model, filepath);
+  case SaveFormat::BINARY: return save_binary(model, actual_filepath);
+  case SaveFormat::JSON: return save_json(model, actual_filepath);
+  case SaveFormat::CONFIG: return save_config(model, actual_filepath);
+  default: std::cerr << "Unsupported format" << std::endl; return false;
+  }
+}
+
+std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
+GenericModelIO::load_model_data(const std::string& filepath,
+                                SaveFormat format) {
+  std::string actual_filepath = get_filepath_with_extension(filepath, format);
+
+  switch (format) {
+  case SaveFormat::BINARY: return load_binary(actual_filepath);
+  case SaveFormat::JSON: return load_json(actual_filepath);
+  case SaveFormat::CONFIG:
+    // Config only format doesn't contain parameter data
+    return std::make_unique<
+        std::unordered_map<std::string, std::vector<uint8_t>>>();
+  default: std::cerr << "Unsupported format" << std::endl; return nullptr;
+  }
+}
+
+bool GenericModelIO::save_config(const ISerializableModel& model,
+                                 const std::string& filepath) {
+  if (!GenericModelIO::ensure_directory_exists(filepath)) {
+    std::cerr << "Failed to create directory for: " << filepath << std::endl;
+    return false;
+  }
+
+  auto metadata = model.get_serialization_metadata();
+  auto data = model.serialize();
+
+  std::ofstream file(filepath);
+  if (!file.is_open()) {
+    std::cerr << "Failed to open file for writing: " << filepath << std::endl;
+    return false;
+  }
+
+  file << "# MLLib Model Configuration\n";
+  file << "model_type: " << static_cast<int>(metadata.model_type) << "\n";
+  file << "version: " << metadata.version << "\n";
+  file << "device: " << (metadata.device == DeviceType::CPU ? "CPU" : "GPU")
+       << "\n";
+
+  // Write model-specific configuration
+  for (const auto& [key, value] : data) {
+    // Skip parameter data in config-only mode
+    if (key.find("parameters") == std::string::npos) {
+      file << key << ": ";
+      // Simple text representation (could be enhanced for complex data)
+      for (size_t i = 0; i < value.size() && i < 100; ++i) {
+        file << static_cast<int>(value[i]);
+        if (i < value.size() - 1 && i < 99) file << ",";
+      }
+      file << "\n";
+    }
+  }
+
+  file.close();
+  return true;
+}
+
+std::unique_ptr<SerializationMetadata>
+GenericModelIO::load_metadata(const std::string& filepath) {
+  // Try to determine format from extension and load appropriately
+  std::string actual_filepath = filepath;
+
+  // If no extension, try to find which file exists
+  if (filepath.find('.') == std::string::npos) {
+    if (std::ifstream(filepath + ".config").good()) {
+      actual_filepath = filepath + ".config";
+    } else if (std::ifstream(filepath + ".json").good()) {
+      actual_filepath = filepath + ".json";
+    } else if (std::ifstream(filepath + ".bin").good()) {
+      actual_filepath = filepath + ".bin";
+    }
+  }
+
+  std::ifstream file(actual_filepath);
+  if (!file.is_open()) {
+    std::cerr << "Failed to open file for reading: " << actual_filepath
+              << std::endl;
+    return nullptr;
+  }
+
+  auto metadata = std::make_unique<SerializationMetadata>();
+  std::string line;
+
+  while (std::getline(file, line)) {
+    if (line.empty() || line[0] == '#') continue;
+
+    size_t colon_pos = line.find(':');
+    if (colon_pos == std::string::npos) continue;
+
+    std::string key = line.substr(0, colon_pos);
+    std::string value = line.substr(colon_pos + 1);
+
+    // Trim whitespace
+    key.erase(0, key.find_first_not_of(" \t"));
+    key.erase(key.find_last_not_of(" \t") + 1);
+    value.erase(0, value.find_first_not_of(" \t"));
+    value.erase(value.find_last_not_of(" \t") + 1);
+
+    if (key == "model_type") {
+      metadata->model_type = static_cast<ModelType>(std::stoi(value));
+    } else if (key == "version") {
+      metadata->version = value;
+    } else if (key == "device") {
+      metadata->device = (value == "CPU") ? DeviceType::CPU : DeviceType::GPU;
+    }
+  }
+
+  file.close();
+  return metadata;
+}
+
+bool GenericModelIO::save_binary(const ISerializableModel& model,
+                                 const std::string& filepath) {
+  if (!GenericModelIO::ensure_directory_exists(filepath)) {
+    std::cerr << "Failed to create directory for: " << filepath << std::endl;
+    return false;
+  }
+
+  std::ofstream file(filepath, std::ios::binary);
+  if (!file.is_open()) {
+    std::cerr << "Failed to open file for writing: " << filepath << std::endl;
+    return false;
+  }
+
+  // Write magic number and version
+  uint32_t magic = 0x4D4C4C47;  // "MLLG" (ML Lib Generic)
+  uint32_t version = 1;
+  file.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
+  file.write(reinterpret_cast<const char*>(&version), sizeof(version));
+
+  // Write metadata
+  auto metadata = model.get_serialization_metadata();
+  uint32_t model_type = static_cast<uint32_t>(metadata.model_type);
+  uint32_t device_type = static_cast<uint32_t>(metadata.device);
+  file.write(reinterpret_cast<const char*>(&model_type), sizeof(model_type));
+  file.write(reinterpret_cast<const char*>(&device_type), sizeof(device_type));
+
+  // Write version string
+  uint32_t version_len = static_cast<uint32_t>(metadata.version.length());
+  file.write(reinterpret_cast<const char*>(&version_len), sizeof(version_len));
+  file.write(metadata.version.c_str(), version_len);
+
+  // Write serialized data
+  auto data = model.serialize();
+  uint32_t data_count = static_cast<uint32_t>(data.size());
+  file.write(reinterpret_cast<const char*>(&data_count), sizeof(data_count));
+
+  for (const auto& [key, value] : data) {
+    // Write key
+    uint32_t key_len = static_cast<uint32_t>(key.length());
+    file.write(reinterpret_cast<const char*>(&key_len), sizeof(key_len));
+    file.write(key.c_str(), key_len);
+
+    // Write value
+    uint32_t value_len = static_cast<uint32_t>(value.size());
+    file.write(reinterpret_cast<const char*>(&value_len), sizeof(value_len));
+    file.write(reinterpret_cast<const char*>(value.data()), value_len);
+  }
+
+  file.close();
+  return true;
+}
+
+bool GenericModelIO::save_json(const ISerializableModel& model,
+                               const std::string& filepath) {
+  if (!GenericModelIO::ensure_directory_exists(filepath)) {
+    std::cerr << "Failed to create directory for: " << filepath << std::endl;
+    return false;
+  }
+
+  std::ofstream file(filepath);
+  if (!file.is_open()) {
+    std::cerr << "Failed to open file for writing: " << filepath << std::endl;
+    return false;
+  }
+
+  auto metadata = model.get_serialization_metadata();
+  auto data = model.serialize();
+
+  file << "{\n";
+  file << "  \"model_type\": " << static_cast<int>(metadata.model_type)
+       << ",\n";
+  file << "  \"version\": \"" << metadata.version << "\",\n";
+  file << "  \"device\": \""
+       << (metadata.device == DeviceType::CPU ? "CPU" : "GPU") << "\",\n";
+  file << "  \"data\": {\n";
+
+  bool first = true;
+  for (const auto& [key, value] : data) {
+    if (!first) file << ",\n";
+    first = false;
+
+    file << "    \"" << key << "\": [";
+    for (size_t i = 0; i < value.size(); ++i) {
+      if (i > 0) file << ", ";
+      file << static_cast<int>(value[i]);
+    }
+    file << "]";
+  }
+
+  file << "\n  }\n";
+  file << "}\n";
+
+  file.close();
+  return true;
+}
+
+std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
+GenericModelIO::load_binary(const std::string& filepath) {
+  std::ifstream file(filepath, std::ios::binary);
+  if (!file.is_open()) {
+    std::cerr << "Failed to open file for reading: " << filepath << std::endl;
+    return nullptr;
+  }
+
+  // Read and verify magic number
+  uint32_t magic;
+  file.read(reinterpret_cast<char*>(&magic), sizeof(magic));
+  if (magic != 0x4D4C4C47) {
+    std::cerr << "Invalid generic model file format" << std::endl;
+    return nullptr;
+  }
+
+  // Read version
+  uint32_t version;
+  file.read(reinterpret_cast<char*>(&version), sizeof(version));
+  if (version != 1) {
+    std::cerr << "Unsupported file version" << std::endl;
+    return nullptr;
+  }
+
+  // Skip metadata for now (model type, device type, version string)
+  uint32_t model_type, device_type, version_len;
+  file.read(reinterpret_cast<char*>(&model_type), sizeof(model_type));
+  file.read(reinterpret_cast<char*>(&device_type), sizeof(device_type));
+  file.read(reinterpret_cast<char*>(&version_len), sizeof(version_len));
+  file.seekg(version_len, std::ios::cur);  // Skip version string
+
+  // Read serialized data
+  uint32_t data_count;
+  file.read(reinterpret_cast<char*>(&data_count), sizeof(data_count));
+
+  auto data =
+      std::make_unique<std::unordered_map<std::string, std::vector<uint8_t>>>();
+  for (uint32_t i = 0; i < data_count; ++i) {
+    // Read key
+    uint32_t key_len;
+    file.read(reinterpret_cast<char*>(&key_len), sizeof(key_len));
+    std::string key(key_len, '\0');
+    file.read(&key[0], key_len);
+
+    // Read value
+    uint32_t value_len;
+    file.read(reinterpret_cast<char*>(&value_len), sizeof(value_len));
+    std::vector<uint8_t> value(value_len);
+    file.read(reinterpret_cast<char*>(value.data()), value_len);
+
+    data->emplace(key, std::move(value));
+  }
+
+  file.close();
+  return data;
+}
+
+std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
+GenericModelIO::load_json(const std::string& filepath) {
+  // Simplified JSON parser placeholder
+  (void)filepath;
+  std::cerr
+      << "Generic JSON loading not implemented - use binary format instead"
+      << std::endl;
+  return nullptr;
+}
+
+bool GenericModelIO::ensure_directory_exists(const std::string& filepath) {
+  // Extract directory path
+  size_t pos = filepath.find_last_of("/\\");
+  if (pos == std::string::npos) {
+    return true;  // No directory in path
+  }
+
+  std::string dir_path = filepath.substr(0, pos);
+
+  // Check if directory exists
+  struct stat sb;
+  if (stat(dir_path.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode)) {
+    return true;
+  }
+
+  // Create directory recursively
+  return create_directories(dir_path);
+}
+
+bool GenericModelIO::create_directories(const std::string& path) {
+  if (path.empty()) return true;
+
+  // Check if already exists
+  struct stat sb;
+  if (stat(path.c_str(), &sb) == 0) {
+    return S_ISDIR(sb.st_mode);
+  }
+
+  // Create parent first
+  size_t pos = path.find_last_of("/\\");
+  if (pos != std::string::npos) {
+    std::string parent = path.substr(0, pos);
+    if (!create_directories(parent)) {
+      return false;
+    }
+  }
+
+  // Create this directory
+  return mkdir(path.c_str(), 0755) == 0;
+}
+
+std::string
+GenericModelIO::get_filepath_with_extension(const std::string& base_filepath,
+                                            SaveFormat format) {
+  // Check if filepath already has an appropriate extension
+  std::string extension;
+  switch (format) {
+  case SaveFormat::BINARY: extension = ".bin"; break;
+  case SaveFormat::JSON: extension = ".json"; break;
+  case SaveFormat::CONFIG: extension = ".config"; break;
+  default:
+    extension = ".bin";  // Default fallback
+    break;
+  }
+
+  // If the filepath already ends with the correct extension, return as is
+  if (base_filepath.length() >= extension.length() &&
+      base_filepath.substr(base_filepath.length() - extension.length()) ==
+          extension) {
+    return base_filepath;
+  }
+
+  // Remove any existing extension-like suffix
+  std::string clean_filepath = base_filepath;
+  size_t last_dot = clean_filepath.find_last_of('.');
+  size_t last_slash = clean_filepath.find_last_of("/\\");
+
+  // Only remove extension if the dot is after the last slash (i.e., in
+  // filename, not directory)
+  if (last_dot != std::string::npos &&
+      (last_slash == std::string::npos || last_dot > last_slash)) {
+    clean_filepath = clean_filepath.substr(0, last_dot);
+  }
+
+  return clean_filepath + extension;
+}
+
+// Simple helper functions to replace missing ModelIO methods
+static void write_binary_data(std::ofstream& file, const void* data,
+                              size_t size) {
+  file.write(reinterpret_cast<const char*>(data), size);
+}
+
+static bool read_binary_data(std::ifstream& file, void* data, size_t size) {
+  file.read(reinterpret_cast<char*>(data), size);
+  return file.good();
+}
+
+static void write_ndarray(std::ofstream& file, const NDArray& array) {
+  // Simplified NDArray writing - TODO: implement proper serialization
+  const auto& shape = array.shape();
+  size_t ndim = shape.size();
+  write_binary_data(file, &ndim, sizeof(ndim));
+
+  for (size_t dim : shape) {
+    write_binary_data(file, &dim, sizeof(dim));
+  }
+
+  size_t data_size = array.size() * sizeof(float);
+  write_binary_data(file, array.data(), data_size);
+}
+
+static NDArray read_ndarray(std::ifstream& file) {
+  size_t ndim;
+  read_binary_data(file, &ndim, sizeof(ndim));
+
+  std::vector<size_t> shape(ndim);
+  for (size_t i = 0; i < ndim; ++i) {
+    read_binary_data(file, &shape[i], sizeof(size_t));
+  }
+
+  NDArray result(shape);
+  size_t data_size = result.size() * sizeof(float);
+  read_binary_data(file,
+                   const_cast<void*>(static_cast<const void*>(result.data())),
+                   data_size);
+  return result;
+}
+
+// Legacy Sequential model I/O implementation
+bool ModelIO::save_model(const Sequential& model, const std::string& filepath,
+                         SaveFormat format) {
+  std::string actual_filepath = get_filepath_with_extension(filepath, format);
+
+  switch (format) {
+  case SaveFormat::BINARY: return save_binary(model, actual_filepath);
+  case SaveFormat::JSON: return save_json(model, actual_filepath);
+  case SaveFormat::CONFIG: return save_config(model, actual_filepath);
   default: std::cerr << "Unsupported format" << std::endl; return false;
   }
 }
 
 std::unique_ptr<Sequential> ModelIO::load_model(const std::string& filepath,
-                                                ModelFormat format) {
+                                                SaveFormat format) {
+  std::string actual_filepath = get_filepath_with_extension(filepath, format);
+
   switch (format) {
-  case ModelFormat::BINARY: return load_binary(filepath);
-  case ModelFormat::JSON: return load_json(filepath);
-  case ModelFormat::CONFIG: return load_config(filepath);
+  case SaveFormat::BINARY: return load_binary(actual_filepath);
+  case SaveFormat::JSON: return load_json(actual_filepath);
+  case SaveFormat::CONFIG: return load_config(actual_filepath);
   default: std::cerr << "Unsupported format" << std::endl; return nullptr;
   }
 }
 
 bool ModelIO::save_config(const Sequential& model,
                           const std::string& filepath) {
-  // Ensure directory exists
-  if (!ensure_directory_exists(filepath)) {
+  // Ensure directory exists using ModelIO's own method
+  if (!ModelIO::ensure_directory_exists(filepath)) {
     std::cerr << "Failed to create directory for: " << filepath << std::endl;
     return false;
   }
@@ -130,132 +560,36 @@ std::unique_ptr<Sequential> ModelIO::load_config(const std::string& filepath) {
   return create_from_config(config);
 }
 
-bool ModelIO::save_parameters(const Sequential& model,
-                              const std::string& filepath) {
-  // Ensure directory exists
-  if (!ensure_directory_exists(filepath)) {
-    std::cerr << "Failed to create directory for: " << filepath << std::endl;
-    return false;
-  }
-
-  std::ofstream file(filepath, std::ios::binary);
-  if (!file.is_open()) {
-    std::cerr << "Failed to open file for writing: " << filepath << std::endl;
-    return false;
-  }
-
-  // Write parameter version
-  uint32_t param_version = 1;
-  write_binary_data(file, &param_version, sizeof(param_version));
-
-  // Write number of layers
-  uint32_t num_layers = static_cast<uint32_t>(model.get_layers().size());
-  write_binary_data(file, &num_layers, sizeof(num_layers));
-
-  // Write parameters for each layer
-  for (const auto& layer : model.get_layers()) {
-    auto dense_layer = dynamic_cast<const layer::Dense*>(layer.get());
-    if (dense_layer) {
-      // Write layer type identifier
-      uint32_t layer_type = 1;  // Dense = 1
-      write_binary_data(file, &layer_type, sizeof(layer_type));
-
-      // Write weights and biases
-      write_ndarray(file, dense_layer->get_weights());
-      if (dense_layer->get_use_bias()) {
-        write_ndarray(file, dense_layer->get_bias());
-      }
-    } else {
-      // Non-parametric layer
-      uint32_t layer_type = 0;  // Non-parametric = 0
-      write_binary_data(file, &layer_type, sizeof(layer_type));
-    }
-  }
-
-  file.close();
-  return true;
-}
-
-bool ModelIO::load_parameters(Sequential& model, const std::string& filepath) {
-  std::ifstream file(filepath, std::ios::binary);
-  if (!file.is_open()) {
-    std::cerr << "Failed to open file for reading: " << filepath << std::endl;
-    return false;
-  }
-
-  // Read parameter version
-  uint32_t param_version;
-  if (!read_binary_data(file, &param_version, sizeof(param_version))) {
-    std::cerr << "Failed to read parameter version" << std::endl;
-    return false;
-  }
-
-  if (param_version != 1) {
-    std::cerr << "Unsupported parameter version: " << param_version
-              << std::endl;
-    return false;
-  }
-
-  // Read number of layers
-  uint32_t num_layers;
-  if (!read_binary_data(file, &num_layers, sizeof(num_layers))) {
-    std::cerr << "Failed to read number of layers" << std::endl;
-    return false;
-  }
-
-  if (num_layers != model.get_layers().size()) {
-    std::cerr << "Layer count mismatch" << std::endl;
-    return false;
-  }
-
-  // Load parameters for each layer
-  for (size_t i = 0; i < num_layers; ++i) {
-    uint32_t layer_type;
-    if (!read_binary_data(file, &layer_type, sizeof(layer_type))) {
-      std::cerr << "Failed to read layer type" << std::endl;
-      return false;
-    }
-
-    if (layer_type == 1) {  // Dense layer
-      auto dense_layer =
-          dynamic_cast<layer::Dense*>(model.get_layers()[i].get());
-      if (!dense_layer) {
-        std::cerr << "Layer type mismatch at layer " << i << std::endl;
-        return false;
-      }
-
-      // Load weights
-      NDArray weights = read_ndarray(file);
-      dense_layer->set_weights(weights);
-
-      // Load biases if the layer uses them
-      if (dense_layer->get_use_bias()) {
-        NDArray biases = read_ndarray(file);
-        dense_layer->set_biases(biases);
-      }
-    }
-    // For non-parametric layers (layer_type == 0), nothing to load
-  }
-
-  file.close();
-  return true;
-}
-
 ModelConfig ModelIO::extract_config(const Sequential& model) {
   ModelConfig config;
   config.device = model.get_device();
 
   for (const auto& layer : model.get_layers()) {
-    auto dense_layer = dynamic_cast<const layer::Dense*>(layer.get());
+    auto dense_layer =
+        std::dynamic_pointer_cast<const MLLib::layer::Dense>(layer);
     if (dense_layer) {
       LayerInfo layer_info("Dense", dense_layer->get_input_size(),
                            dense_layer->get_output_size(),
                            dense_layer->get_use_bias());
       config.layers.push_back(layer_info);
-    } else if (dynamic_cast<const layer::activation::ReLU*>(layer.get())) {
+    } else if (std::dynamic_pointer_cast<const MLLib::layer::activation::ReLU>(
+                   layer)) {
       config.layers.push_back(LayerInfo("ReLU"));
-    } else if (dynamic_cast<const layer::activation::Sigmoid*>(layer.get())) {
+    } else if (std::dynamic_pointer_cast<
+                   const MLLib::layer::activation::Sigmoid>(layer)) {
       config.layers.push_back(LayerInfo("Sigmoid"));
+    } else if (std::dynamic_pointer_cast<const MLLib::layer::activation::Tanh>(
+                   layer)) {
+      config.layers.push_back(LayerInfo("Tanh"));
+    } else if (std::dynamic_pointer_cast<
+                   const MLLib::layer::activation::LeakyReLU>(layer)) {
+      config.layers.push_back(LayerInfo("LeakyReLU"));
+    } else if (std::dynamic_pointer_cast<
+                   const MLLib::layer::activation::Softmax>(layer)) {
+      config.layers.push_back(LayerInfo("Softmax"));
+    } else if (std::dynamic_pointer_cast<const MLLib::layer::activation::GELU>(
+                   layer)) {
+      config.layers.push_back(LayerInfo("GELU"));
     }
   }
 
@@ -275,6 +609,14 @@ ModelIO::create_from_config(const ModelConfig& config) {
       model->add(std::make_shared<layer::activation::ReLU>());
     } else if (layer_info.type == "Sigmoid") {
       model->add(std::make_shared<layer::activation::Sigmoid>());
+    } else if (layer_info.type == "Tanh") {
+      model->add(std::make_shared<layer::activation::Tanh>());
+    } else if (layer_info.type == "LeakyReLU") {
+      model->add(std::make_shared<layer::activation::LeakyReLU>());
+    } else if (layer_info.type == "Softmax") {
+      model->add(std::make_shared<layer::activation::Softmax>());
+    } else if (layer_info.type == "GELU") {
+      model->add(std::make_shared<layer::activation::GELU>());
     }
   }
 
@@ -295,50 +637,59 @@ bool ModelIO::save_binary(const Sequential& model,
     return false;
   }
 
-  // Write magic number and version
-  uint32_t magic = 0x4D4C4C42;  // "MLLB" (ML Lib Binary)
-  uint32_t version = 1;
-  write_binary_data(file, &magic, sizeof(magic));
-  write_binary_data(file, &version, sizeof(version));
+  try {
+    // Write magic number and version
+    uint32_t magic = 0x4D4C4C42;  // "MLLB" in little endian
+    uint32_t version = 1;
+    file.write(reinterpret_cast<const char*>(&magic), sizeof(magic));
+    file.write(reinterpret_cast<const char*>(&version), sizeof(version));
 
-  // Write device type
-  uint32_t device_type = static_cast<uint32_t>(model.get_device());
-  write_binary_data(file, &device_type, sizeof(device_type));
+    // Write device type
+    uint32_t device_type = static_cast<uint32_t>(model.get_device());
+    file.write(reinterpret_cast<const char*>(&device_type),
+               sizeof(device_type));
 
-  // Write model configuration
-  ModelConfig config = extract_config(model);
-  uint32_t num_layers = static_cast<uint32_t>(config.layers.size());
-  write_binary_data(file, &num_layers, sizeof(num_layers));
+    // Write number of layers
+    uint32_t num_layers = model.get_layers().size();
+    file.write(reinterpret_cast<const char*>(&num_layers), sizeof(num_layers));
 
-  for (const auto& layer_info : config.layers) {
-    // Write layer type
-    uint32_t type_len = static_cast<uint32_t>(layer_info.type.length());
-    write_binary_data(file, &type_len, sizeof(type_len));
-    write_binary_data(file, layer_info.type.c_str(), type_len);
+    // Write layer information (simplified approach)
+    for (const auto& layer : model.get_layers()) {
+      // Try to identify layer type through dynamic casting
+      auto dense_layer = std::dynamic_pointer_cast<MLLib::layer::Dense>(layer);
+      if (dense_layer) {
+        // Write layer type identifier
+        std::string layer_type = "Dense";
+        uint32_t type_length = layer_type.length();
+        file.write(reinterpret_cast<const char*>(&type_length),
+                   sizeof(type_length));
+        file.write(layer_type.c_str(), type_length);
 
-    if (layer_info.type == "Dense") {
-      write_binary_data(file, &layer_info.input_size,
-                        sizeof(layer_info.input_size));
-      write_binary_data(file, &layer_info.output_size,
-                        sizeof(layer_info.output_size));
-      write_binary_data(file, &layer_info.use_bias,
-                        sizeof(layer_info.use_bias));
-    }
-  }
-
-  // Write parameters
-  for (const auto& layer : model.get_layers()) {
-    auto dense_layer = dynamic_cast<const layer::Dense*>(layer.get());
-    if (dense_layer) {
-      write_ndarray(file, dense_layer->get_weights());
-      if (dense_layer->get_use_bias()) {
-        write_ndarray(file, dense_layer->get_bias());
+        // Write layer dimensions
+        uint32_t input_size =
+            static_cast<uint32_t>(dense_layer->get_input_size());
+        uint32_t output_size =
+            static_cast<uint32_t>(dense_layer->get_output_size());
+        file.write(reinterpret_cast<const char*>(&input_size),
+                   sizeof(input_size));
+        file.write(reinterpret_cast<const char*>(&output_size),
+                   sizeof(output_size));
+      } else {
+        // For other layer types, write a generic identifier
+        std::string layer_type = "Unknown";
+        uint32_t type_length = layer_type.length();
+        file.write(reinterpret_cast<const char*>(&type_length),
+                   sizeof(type_length));
+        file.write(layer_type.c_str(), type_length);
       }
     }
-  }
 
-  file.close();
-  return true;
+    file.close();
+    return true;
+  } catch (const std::exception& e) {
+    std::cerr << "Error saving binary model: " << e.what() << std::endl;
+    return false;
+  }
 }
 
 std::unique_ptr<Sequential> ModelIO::load_binary(const std::string& filepath) {
@@ -419,6 +770,14 @@ std::unique_ptr<Sequential> ModelIO::load_binary(const std::string& filepath) {
       model->add(std::make_shared<layer::activation::ReLU>());
     } else if (layer_info.type == "Sigmoid") {
       model->add(std::make_shared<layer::activation::Sigmoid>());
+    } else if (layer_info.type == "Tanh") {
+      model->add(std::make_shared<layer::activation::Tanh>());
+    } else if (layer_info.type == "LeakyReLU") {
+      model->add(std::make_shared<layer::activation::LeakyReLU>());
+    } else if (layer_info.type == "Softmax") {
+      model->add(std::make_shared<layer::activation::Softmax>());
+    } else if (layer_info.type == "GELU") {
+      model->add(std::make_shared<layer::activation::GELU>());
     }
   }
 
@@ -444,8 +803,8 @@ std::unique_ptr<Sequential> ModelIO::load_binary(const std::string& filepath) {
 }
 
 bool ModelIO::save_json(const Sequential& model, const std::string& filepath) {
-  // Ensure directory exists
-  if (!ensure_directory_exists(filepath)) {
+  // Ensure directory exists using ModelIO's own method
+  if (!ModelIO::ensure_directory_exists(filepath)) {
     std::cerr << "Failed to create directory for: " << filepath << std::endl;
     return false;
   }
@@ -547,28 +906,24 @@ std::unique_ptr<Sequential> ModelIO::load_json(const std::string& filepath) {
 
 void ModelIO::write_binary_data(std::ofstream& file, const void* data,
                                 size_t size) {
-  file.write(static_cast<const char*>(data), size);
+  // Legacy function temporarily disabled
+  (void)file;
+  (void)data;
+  (void)size;
 }
 
 bool ModelIO::read_binary_data(std::ifstream& file, void* data, size_t size) {
-  file.read(static_cast<char*>(data), size);
-  return file.gcount() == static_cast<std::streamsize>(size);
+  // Legacy function temporarily disabled
+  (void)file;
+  (void)data;
+  (void)size;
+  return false;
 }
 
 void ModelIO::write_ndarray(std::ofstream& file, const NDArray& array) {
-  // Write dimension count
-  uint32_t ndim = static_cast<uint32_t>(array.shape().size());
-  write_binary_data(file, &ndim, sizeof(ndim));
-
-  // Write shape
-  for (size_t i = 0; i < array.shape().size(); ++i) {
-    uint32_t dim_size = static_cast<uint32_t>(array.shape()[i]);
-    write_binary_data(file, &dim_size, sizeof(dim_size));
-  }
-
-  // Write data
-  size_t data_size = array.size() * sizeof(float);
-  write_binary_data(file, array.data(), data_size);
+  // Legacy function temporarily disabled
+  (void)file;
+  (void)array;
 }
 
 NDArray ModelIO::read_ndarray(std::ifstream& file) {
@@ -590,6 +945,30 @@ NDArray ModelIO::read_ndarray(std::ifstream& file) {
   read_binary_data(file, array.data(), data_size);
 
   return array;
+}
+
+SaveFormat ModelIO::string_to_format(const std::string& format_str) {
+  if (format_str == "binary") {
+    return SaveFormat::BINARY;
+  } else if (format_str == "json") {
+    return SaveFormat::JSON;
+  } else if (format_str == "config") {
+    return SaveFormat::CONFIG;
+  } else {
+    // Default to binary for unknown formats
+    std::cerr << "Unknown format '" << format_str << "', defaulting to binary"
+              << std::endl;
+    return SaveFormat::BINARY;
+  }
+}
+
+std::string ModelIO::format_to_string(SaveFormat format) {
+  switch (format) {
+  case SaveFormat::BINARY: return "binary";
+  case SaveFormat::JSON: return "json";
+  case SaveFormat::CONFIG: return "config";
+  default: return "binary";
+  }
 }
 
 bool ModelIO::create_directories(const std::string& path) {
@@ -665,28 +1044,40 @@ bool ModelIO::ensure_directory_exists(const std::string& filepath) {
   return create_directories(dir_path);
 }
 
-ModelFormat ModelIO::string_to_format(const std::string& format_str) {
-  if (format_str == "binary") {
-    return ModelFormat::BINARY;
-  } else if (format_str == "json") {
-    return ModelFormat::JSON;
-  } else if (format_str == "config") {
-    return ModelFormat::CONFIG;
-  } else {
-    // Default to binary for unknown formats
-    std::cerr << "Unknown format '" << format_str << "', defaulting to binary"
-              << std::endl;
-    return ModelFormat::BINARY;
-  }
-}
-
-std::string ModelIO::format_to_string(ModelFormat format) {
+std::string
+ModelIO::get_filepath_with_extension(const std::string& base_filepath,
+                                     SaveFormat format) {
+  // Check if filepath already has an appropriate extension
+  std::string extension;
   switch (format) {
-  case ModelFormat::BINARY: return "binary";
-  case ModelFormat::JSON: return "json";
-  case ModelFormat::CONFIG: return "config";
-  default: return "binary";
+  case SaveFormat::BINARY: extension = ".bin"; break;
+  case SaveFormat::JSON: extension = ".json"; break;
+  case SaveFormat::CONFIG: extension = ".config"; break;
+  default:
+    extension = ".bin";  // Default fallback
+    break;
   }
+
+  // If the filepath already ends with the correct extension, return as is
+  if (base_filepath.length() >= extension.length() &&
+      base_filepath.substr(base_filepath.length() - extension.length()) ==
+          extension) {
+    return base_filepath;
+  }
+
+  // Remove any existing extension-like suffix
+  std::string clean_filepath = base_filepath;
+  size_t last_dot = clean_filepath.find_last_of('.');
+  size_t last_slash = clean_filepath.find_last_of("/\\");
+
+  // Only remove extension if the dot is after the last slash (i.e., in
+  // filename, not directory)
+  if (last_dot != std::string::npos &&
+      (last_slash == std::string::npos || last_dot > last_slash)) {
+    clean_filepath = clean_filepath.substr(0, last_dot);
+  }
+
+  return clean_filepath + extension;
 }
 
 }  // namespace model

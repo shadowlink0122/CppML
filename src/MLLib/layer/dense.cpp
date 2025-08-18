@@ -1,5 +1,5 @@
-#include "../../../include/MLLib/layer/dense.hpp"
-#include "../../../include/MLLib/backend/backend.hpp"
+#include "MLLib/layer/dense.hpp"
+#include "MLLib/backend/backend.hpp"
 #include <cmath>
 #include <random>
 

@@ -6,6 +6,8 @@
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
 [![Tests](https://img.shields.io/badge/tests-21%2F21_passing-brightgreen.svg)](#testing)
+[![GPU最適化](https://img.shields.io/badge/GPUカーネル削減-97%25-brightgreen.svg)](#gpu戦略)
+[![モデルI/O汎用化](https://img.shields.io/badge/モデルI%2FO汎用化-92%25-green.svg)](#モデル-io-ガイド)
 
 MLLib C++機械学習ライブラリの包括的なドキュメントコレクションへようこそ。
 

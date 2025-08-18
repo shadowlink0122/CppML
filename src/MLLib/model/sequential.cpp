@@ -1,6 +1,8 @@
 #include "../../../include/MLLib/model/sequential.hpp"
 #include "../../../include/MLLib/layer/dense.hpp"
+#include "../../../include/MLLib/model/model_io.hpp"
 #include <algorithm>
+#include <cstring>
 #include <initializer_list>
 #include <iostream>
 #include <stdexcept>
@@ -8,9 +10,11 @@
 namespace MLLib {
 namespace model {
 
-Sequential::Sequential() : device_(DeviceType::CPU) {}
+Sequential::Sequential()
+    : BaseModel(ModelType::SEQUENTIAL), device_(DeviceType::CPU) {}
 
-Sequential::Sequential(DeviceType device) : device_(device) {
+Sequential::Sequential(DeviceType device)
+    : BaseModel(ModelType::SEQUENTIAL), device_(device) {
   Device::setDeviceWithValidation(device, true);
   device_ = Device::getCurrentDevice();  // Update to actual device (in case of
                                          // fallback)
@@ -207,6 +211,209 @@ std::vector<NDArray*> Sequential::get_all_gradients() {
   }
 
   return all_grads;
+}
+
+// ISerializableModel interface implementation
+SerializationMetadata Sequential::get_serialization_metadata() const {
+  SerializationMetadata metadata;
+  metadata.model_type = ModelType::SEQUENTIAL;
+  metadata.version = "1.0.0";
+  metadata.device = device_;
+  return metadata;
+}
+
+std::unordered_map<std::string, std::vector<uint8_t>>
+Sequential::serialize() const {
+  std::unordered_map<std::string, std::vector<uint8_t>> data;
+
+  // Serialize layer count
+  std::vector<uint8_t> layer_count_data;
+  size_t layer_count = layers_.size();
+  uint8_t* count_bytes = reinterpret_cast<uint8_t*>(&layer_count);
+  layer_count_data.insert(layer_count_data.end(), count_bytes,
+                          count_bytes + sizeof(size_t));
+  data.emplace("layer_count", std::move(layer_count_data));
+
+  // Serialize each layer's configuration and parameters
+  for (size_t i = 0; i < layers_.size(); ++i) {
+    std::string layer_key = "layer_" + std::to_string(i);
+
+    // For now, create placeholder data - would need proper layer serialization
+    std::vector<uint8_t> layer_data;
+
+    // Check layer type and serialize accordingly
+    if (auto dense_layer =
+            dynamic_cast<const layer::Dense*>(layers_[i].get())) {
+      // Store layer type identifier
+      layer_data.push_back(1);  // Dense layer type = 1
+
+      // Store Dense layer configuration
+      size_t input_size = dense_layer->get_input_size();
+      size_t output_size = dense_layer->get_output_size();
+      bool use_bias = dense_layer->get_use_bias();
+
+      uint8_t* input_bytes = reinterpret_cast<uint8_t*>(&input_size);
+      layer_data.insert(layer_data.end(), input_bytes,
+                        input_bytes + sizeof(size_t));
+
+      uint8_t* output_bytes = reinterpret_cast<uint8_t*>(&output_size);
+      layer_data.insert(layer_data.end(), output_bytes,
+                        output_bytes + sizeof(size_t));
+
+      layer_data.push_back(use_bias ? 1 : 0);
+
+      // Serialize weights and biases to the same data buffer
+      const auto& weights = dense_layer->get_weights();
+
+      // Append weights data size
+      size_t weights_size = weights.size() * sizeof(double);
+      uint8_t* size_bytes = reinterpret_cast<uint8_t*>(&weights_size);
+      layer_data.insert(layer_data.end(), size_bytes,
+                        size_bytes + sizeof(size_t));
+
+      // Append weights data
+      const uint8_t* weights_bytes =
+          reinterpret_cast<const uint8_t*>(weights.data());
+      layer_data.insert(layer_data.end(), weights_bytes,
+                        weights_bytes + weights_size);
+
+      // Serialize biases if present
+      if (use_bias) {
+        const auto& bias = dense_layer->get_bias();
+        size_t bias_size = bias.size() * sizeof(double);
+        uint8_t* bias_size_bytes = reinterpret_cast<uint8_t*>(&bias_size);
+        layer_data.insert(layer_data.end(), bias_size_bytes,
+                          bias_size_bytes + sizeof(size_t));
+
+        const uint8_t* bias_bytes =
+            reinterpret_cast<const uint8_t*>(bias.data());
+        layer_data.insert(layer_data.end(), bias_bytes, bias_bytes + bias_size);
+      }
+    } else {
+      // Other layer types (activation, etc.)
+      layer_data.push_back(0);  // Generic layer type = 0
+    }
+
+    data.emplace(layer_key, std::move(layer_data));
+  }
+
+  return data;
+}
+
+std::string Sequential::get_config_string() const {
+  return "Sequential model configuration";  // Placeholder
+}
+
+bool Sequential::set_config_from_string(const std::string& config_str) {
+  (void)config_str;
+  return true;  // Placeholder
+}
+
+bool Sequential::deserialize(
+    const std::unordered_map<std::string, std::vector<uint8_t>>& data) {
+  // Clear existing layers
+  layers_.clear();
+
+  // Find layer count
+  auto count_it = data.find("layer_count");
+  if (count_it == data.end()) {
+    std::cerr << "Layer count not found in serialized data" << std::endl;
+    return false;
+  }
+
+  const auto& count_data = count_it->second;
+  if (count_data.size() < sizeof(size_t)) {
+    std::cerr << "Invalid layer count data size" << std::endl;
+    return false;
+  }
+
+  size_t layer_count = *reinterpret_cast<const size_t*>(count_data.data());
+
+  // Deserialize each layer
+  for (size_t i = 0; i < layer_count; ++i) {
+    std::string layer_key = "layer_" + std::to_string(i);
+    auto layer_it = data.find(layer_key);
+
+    if (layer_it == data.end()) {
+      std::cerr << "Layer " << i << " data not found" << std::endl;
+      return false;
+    }
+
+    const auto& layer_data = layer_it->second;
+    if (layer_data.empty()) {
+      std::cerr << "Empty layer data for layer " << i << std::endl;
+      return false;
+    }
+
+    uint8_t layer_type = layer_data[0];
+
+    if (layer_type == 1) {  // Dense layer
+      if (layer_data.size() < 1 + 2 * sizeof(size_t) + 1) {
+        std::cerr << "Invalid Dense layer data size" << std::endl;
+        return false;
+      }
+
+      size_t offset = 1;
+      size_t input_size = *reinterpret_cast<const size_t*>(&layer_data[offset]);
+      offset += sizeof(size_t);
+
+      size_t output_size =
+          *reinterpret_cast<const size_t*>(&layer_data[offset]);
+      offset += sizeof(size_t);
+
+      bool use_bias = (layer_data[offset] != 0);
+
+      // Create Dense layer
+      auto dense_layer =
+          std::make_shared<layer::Dense>(input_size, output_size, use_bias);
+      layers_.push_back(dense_layer);
+
+      // Deserialize weights and biases
+      size_t expected_size =
+          1 + 2 * sizeof(size_t) + 1 + sizeof(size_t);  // Minimum size
+      if (layer_data.size() >= expected_size) {
+        size_t offset = 1 + 2 * sizeof(size_t) + 1;  // Skip to weights size
+
+        // Read weights size
+        size_t weights_size =
+            *reinterpret_cast<const size_t*>(&layer_data[offset]);
+        offset += sizeof(size_t);
+
+        if (offset + weights_size <= layer_data.size()) {
+          // Create NDArray for weights and copy data
+          size_t weights_count = weights_size / sizeof(double);
+          std::vector<size_t> weights_shape = {input_size, output_size};
+          NDArray weights(weights_shape);
+
+          std::memcpy(weights.data(), &layer_data[offset], weights_size);
+          dense_layer->set_weights(weights);
+          offset += weights_size;
+
+          // Read biases if present
+          if (use_bias && offset + sizeof(size_t) <= layer_data.size()) {
+            size_t bias_size =
+                *reinterpret_cast<const size_t*>(&layer_data[offset]);
+            offset += sizeof(size_t);
+
+            if (offset + bias_size <= layer_data.size()) {
+              std::vector<size_t> bias_shape = {output_size};
+              NDArray bias(bias_shape);
+
+              std::memcpy(bias.data(), &layer_data[offset], bias_size);
+              dense_layer->set_biases(bias);
+            }
+          }
+        }
+      }
+    } else {
+      // Generic layer - would need to identify specific type
+      std::cerr << "Unsupported layer type: " << static_cast<int>(layer_type)
+                << std::endl;
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace model
