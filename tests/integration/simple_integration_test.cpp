@@ -18,7 +18,7 @@ int main() {
     model->add(std::make_unique<layer::Dense>(4, 1));
     model->add(std::make_unique<layer::activation::Sigmoid>());
 
-    printf("✓ Model created successfully\n");
+    printf("✅ Model created successfully\n");
 
     // Test 2: Basic prediction with vector
     printf("Test 2: Prediction with vector...\n");
@@ -26,7 +26,7 @@ int main() {
     std::vector<double> test_input = {0.2, 0.3, 0.4};
     auto prediction = model->predict(test_input);
 
-    printf("✓ Vector prediction completed successfully\n");
+    printf("✅ Vector prediction completed successfully\n");
     printf("Prediction size: %zu\n", prediction.size());
 
     // Test 3: Basic prediction with initializer list
@@ -34,7 +34,7 @@ int main() {
 
     auto prediction2 = model->predict({0.2, 0.3, 0.4});
 
-    printf("✓ Initializer list prediction completed successfully\n");
+    printf("✅ Initializer list prediction completed successfully\n");
     printf("Prediction size: %zu\n", prediction2.size());
 
     printf("\n🎉 Basic integration tests passed (including {} syntax)!\n");

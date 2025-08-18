@@ -79,6 +79,23 @@ This directory contains comprehensive examples demonstrating the MLLib Autoencod
 - Application-specific recommendations
 - Benchmarking methodology
 
+### 6. Model I/O Example (`06_model_io_example.cpp`) 🆕
+- **Purpose**: Demonstrate the new generic model serialization system
+- **Dataset**: Synthetic pattern data
+- **Features**:
+  - GenericModelIO save/load operations
+  - Multiple save formats (BINARY, JSON, CONFIG)
+  - Model consistency validation
+  - Deployment scenario simulation
+  - Serialization metadata handling
+
+**Key Learning Points**:
+- Using the new GenericModelIO architecture
+- Model persistence for production deployment
+- Configuration export/import
+- Cross-format compatibility
+- Production workflow best practices
+
 ## Building and Running
 
 ### Prerequisites
@@ -99,6 +116,7 @@ make samples
 ./03_variational_autoencoder
 ./04_anomaly_detection
 ./05_autoencoder_comparison
+./06_model_io_example          # New model I/O demonstration
 ```
 
 ## Expected Outputs
@@ -140,6 +158,27 @@ config.learning_rate = 0.001;
 config.device = DeviceType::CPU;  // or GPU
 
 auto autoencoder = std::make_unique<DenseAutoencoder>(config);
+```
+
+### Model I/O with GenericModelIO 🆕
+```cpp
+using namespace MLLib::model;
+
+// Save in different formats
+GenericModelIO::save_model(*autoencoder, "model.bin", SaveFormat::BINARY);
+GenericModelIO::save_model(*autoencoder, "model.json", SaveFormat::JSON);
+GenericModelIO::save_model(*autoencoder, "model.cfg", SaveFormat::CONFIG);
+
+// Load model (when fully implemented)
+auto loaded_model = GenericModelIO::load_model<DenseAutoencoder>("model.bin", SaveFormat::BINARY);
+
+// Get model metadata
+auto metadata = autoencoder->get_serialization_metadata();
+std::cout << "Model type: " << model_type_to_string(metadata.model_type) << std::endl;
+
+// Export configuration
+std::string config_str = autoencoder->get_config_string();
+// Use config_str to recreate model architecture
 ```
 
 ## Performance Tips

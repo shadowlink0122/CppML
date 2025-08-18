@@ -85,11 +85,11 @@ MLLib components work together correctly.
 $ make simple-integration-test
 Running simple integration tests...
 Test 1: Basic model creation...
-✓ Model created successfully
+✅ Model created successfully
 Test 2: Prediction with vector...
-✓ Vector prediction completed successfully
+✅ Vector prediction completed successfully
 Test 3: Prediction with initializer list...
-✓ Initializer list prediction completed successfully
+✅ Initializer list prediction completed successfully
 
 🎉 Basic integration tests passed (including {} syntax)!
 ✅ Simple integration tests completed successfully

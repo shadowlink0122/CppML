@@ -510,7 +510,7 @@ unit-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/unit/unit_test_main.cpp" ]; then \
 		echo "Compiling unit test framework..."; \
 		UNIT_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/unit/unit_test_main.cpp"; \
-		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib"; \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$UNIT_FILES -L$(BUILD_DIR) -lMLLib -pthread"; \
 		if [ "$(shell uname)" = "Darwin" ]; then \
 			echo "Building with Metal support for unit tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
@@ -591,7 +591,7 @@ integration-test: $(LIB_TARGET)
 	@if [ -f "$(TEST_DIR)/integration/integration_test_main.cpp" ]; then \
 		echo "Compiling integration test framework..."; \
 		INTEGRATION_FILES="$(TEST_DIR)/common/test_utils.cpp $(TEST_DIR)/integration/integration_test_main.cpp"; \
-		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(LIB_TARGET)"; \
+		COMPILE_CMD="$(CXX) $(CXXFLAGS) $(INCLUDE_FLAGS) $$INTEGRATION_FILES $(LIB_TARGET) -pthread"; \
 		if [ "$(shell uname)" = "Darwin" ]; then \
 			echo "Building with Metal support for integration tests..."; \
 			COMPILE_CMD="$$COMPILE_CMD -framework Metal -framework Foundation -framework MetalPerformanceShaders"; \
@@ -685,7 +685,7 @@ samples: $(LIB_TARGET)
 							fi; \
 						fi; \
 						if $$SAMPLE_COMPILE_CMD -o $(BUILD_DIR)/samples/$$subdir/$$name; then \
-							echo "✓ Built sample: $$relative_path"; \
+							echo "✅ Built sample: $$relative_path"; \
 						else \
 							echo "❌ Failed to build sample: $$relative_path"; \
 							SAMPLE_SUCCESS=false; \

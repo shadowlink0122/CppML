@@ -37,10 +37,10 @@ int main() {
       try {
         // バイナリ形式で保存
         MLLib::model::ModelIO::save_model(model, model_path + ".bin",
-                                          MLLib::model::ModelFormat::BINARY);
+                                          MLLib::model::SaveFormat::BINARY);
         // JSON形式でも保存（デバッグ用）
         MLLib::model::ModelIO::save_model(model, model_path + ".json",
-                                          MLLib::model::ModelFormat::JSON);
+                                          MLLib::model::SaveFormat::JSON);
         printf("Model saved at epoch %d to %s\n", epoch, model_path.c_str());
       } catch (const std::exception& e) {
         printf("Failed to save model at epoch %d: %s\n", epoch, e.what());
@@ -63,11 +63,11 @@ int main() {
 
   try {
     MLLib::model::ModelIO::save_model(model, final_model_path + ".bin",
-                                      MLLib::model::ModelFormat::BINARY);
+                                      MLLib::model::SaveFormat::BINARY);
     MLLib::model::ModelIO::save_model(model, final_model_path + ".json",
-                                      MLLib::model::ModelFormat::JSON);
+                                      MLLib::model::SaveFormat::JSON);
     MLLib::model::ModelIO::save_model(model, final_model_path + ".config",
-                                      MLLib::model::ModelFormat::CONFIG);
+                                      MLLib::model::SaveFormat::CONFIG);
     printf("Final model saved to %s\n", final_model_path.c_str());
   } catch (const std::exception& e) {
     printf("Failed to save final model: %s\n", e.what());

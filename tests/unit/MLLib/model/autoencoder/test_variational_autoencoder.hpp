@@ -33,7 +33,7 @@ void test_vae_config() {
   custom_config.kl_anneal_start = 0.0;
   custom_config.kl_anneal_rate = 0.001;
 
-  printf("✓ VAE configuration tests passed\n");
+  printf("✅ VAE configuration tests passed\n");
 }
 
 /**
@@ -60,7 +60,7 @@ void test_vae_construction() {
   assert(config_vae.get_latent_dim() == 8);
   assert(config_vae.get_vae_config().kl_weight == 0.5);
 
-  printf("✓ VAE construction tests passed\n");
+  printf("✅ VAE construction tests passed\n");
 }
 
 /**
@@ -95,7 +95,7 @@ void test_vae_forward() {
   assert(reconstructed.shape()[0] == 2);
   assert(reconstructed.shape()[1] == 8);
 
-  printf("✓ VAE forward pass tests passed\n");
+  printf("✅ VAE forward pass tests passed\n");
 }
 
 /**
@@ -122,7 +122,7 @@ void test_vae_sampling() {
     assert(data.shape()[1] == 6);
   }
 
-  printf("✓ VAE sampling and generation tests passed\n");
+  printf("✅ VAE sampling and generation tests passed\n");
 }
 
 /**
@@ -155,7 +155,7 @@ void test_vae_interpolation() {
     assert(point.shape()[1] == 4);
   }
 
-  printf("✓ VAE interpolation tests passed\n");
+  printf("✅ VAE interpolation tests passed\n");
 }
 
 /**
@@ -187,7 +187,7 @@ void test_vae_loss() {
 
   printf("Total VAE loss: %.4f\n", total_loss);
 
-  printf("✓ VAE loss calculation tests passed\n");
+  printf("✅ VAE loss calculation tests passed\n");
 }
 
 /**
@@ -218,7 +218,7 @@ void test_kl_annealing() {
   assert(weight_epoch_0 <= weight_epoch_50);
   assert(weight_epoch_50 <= weight_epoch_100);
 
-  printf("✓ KL annealing tests passed\n");
+  printf("✅ KL annealing tests passed\n");
 }
 
 /**
@@ -244,7 +244,7 @@ void test_vae_factory() {
   assert(image_vae->get_input_dim() == 28 * 28 * 1);  // Flattened image
   assert(image_vae->get_latent_dim() == 64);
 
-  printf("✓ VAE factory method tests passed\n");
+  printf("✅ VAE factory method tests passed\n");
 }
 
 /**
@@ -294,7 +294,7 @@ void test_vae_training() {
   printf("Training - Initial error: %.4f, Final error: %.4f\n", initial_error,
          final_error);
 
-  printf("✓ VAE training tests passed\n");
+  printf("✅ VAE training tests passed\n");
 }
 
 /**
@@ -322,7 +322,7 @@ void test_vae_config_updates() {
   assert(updated_config.use_kl_annealing == true);
   assert(updated_config.kl_anneal_rate == 0.002);
 
-  printf("✓ VAE configuration update tests passed\n");
+  printf("✅ VAE configuration update tests passed\n");
 }
 
 /**

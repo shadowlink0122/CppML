@@ -692,6 +692,9 @@ int main() {
     // Re-enabling CrossPlatformCompatibilityTest with simplified implementation
     compat_suite.addTest(
         std::make_unique<MLLib::test::CrossPlatformCompatibilityTest>());
+    // Extended activation layer ModelIO tests
+    compat_suite.addTest(
+        std::make_unique<MLLib::test::ExtendedActivationLayerModelIOTest>());
 
     bool suite_result = compat_suite.runAll();
     all_tests_passed &= suite_result;

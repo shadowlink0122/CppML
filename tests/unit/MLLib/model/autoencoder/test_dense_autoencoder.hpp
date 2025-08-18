@@ -31,7 +31,7 @@ void test_dense_autoencoder_construction() {
   assert(config_autoencoder.get_input_dim() == 20);
   assert(config_autoencoder.get_latent_dim() == 8);
 
-  printf("✓ Dense autoencoder construction tests passed\n");
+  printf("✅ Dense autoencoder construction tests passed\n");
 }
 
 /**
@@ -61,7 +61,7 @@ void test_dense_autoencoder_forward() {
   assert(reconstructed.shape()[0] == 3);
   assert(reconstructed.shape()[1] == 8);
 
-  printf("✓ Dense autoencoder forward pass tests passed\n");
+  printf("✅ Dense autoencoder forward pass tests passed\n");
 }
 
 /**
@@ -83,7 +83,7 @@ void test_dense_autoencoder_factory() {
   assert(deep_ae->get_input_dim() == 64);
   assert(deep_ae->get_latent_dim() == 16);
 
-  printf("✓ Dense autoencoder factory method tests passed\n");
+  printf("✅ Dense autoencoder factory method tests passed\n");
 }
 
 /**
@@ -137,7 +137,7 @@ void test_dense_autoencoder_training() {
   assert(test_output.shape()[0] == 1);
   assert(test_output.shape()[1] == 4);
 
-  printf("✓ Dense autoencoder training tests passed\n");
+  printf("✅ Dense autoencoder training tests passed\n");
 }
 
 /**
@@ -171,7 +171,7 @@ void test_dense_autoencoder_compression() {
 
   assert(compression_ratio == 4.0);  // Expected 4:1 compression
 
-  printf("✓ Dense autoencoder compression tests passed\n");
+  printf("✅ Dense autoencoder compression tests passed\n");
 }
 
 /**
@@ -201,7 +201,7 @@ void test_dense_autoencoder_architectures() {
   NDArray wide_output = wide.reconstruct(wide_input);
   assert(wide_output.shape()[1] == 8);
 
-  printf("✓ Dense autoencoder architecture tests passed\n");
+  printf("✅ Dense autoencoder architecture tests passed\n");
 }
 
 /**
@@ -231,7 +231,7 @@ void test_dense_autoencoder_metrics() {
   printf("Error metrics - MSE: %.4f, MAE: %.4f, RMSE: %.4f\n", mse_error,
          mae_error, rmse_error);
 
-  printf("✓ Dense autoencoder metrics tests passed\n");
+  printf("✅ Dense autoencoder metrics tests passed\n");
 }
 
 /**

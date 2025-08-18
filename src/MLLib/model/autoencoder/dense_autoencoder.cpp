@@ -3,6 +3,7 @@
 #include "MLLib/layer/dense.hpp"
 #include "MLLib/model/autoencoder/dense.hpp"
 #include <algorithm>
+#include <cmath>
 
 namespace MLLib {
 namespace model {

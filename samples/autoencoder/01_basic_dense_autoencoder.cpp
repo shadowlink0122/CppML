@@ -113,9 +113,8 @@ int main() {
 
     // Test on a few samples
     for (int i = 0; i < std::min(5, static_cast<int>(test_data.size())); ++i) {
-      const auto& original = test_data[i];
-
       // In real implementation:
+      // const auto& original = test_data[i];
       // auto reconstructed = autoencoder->reconstruct(original);
       // auto encoded = autoencoder->encode(original);
 
@@ -132,14 +131,31 @@ int main() {
 
     printf("Average reconstruction error: %.6f\n", avg_reconstruction_error);
 
-    // 7. Save model (optional)
-    printf("\n7. Saving trained model...\n");
+    // 7. Save model using new GenericModelIO
+    printf("\n7. Saving trained model using GenericModelIO...\n");
     std::string model_path = "basic_dense_autoencoder";
 
-    // In real implementation:
-    // autoencoder->save(model_path);
+    try {
+      // Save in different formats using the new generic architecture
+      bool binary_success = model::GenericModelIO::save_model(*autoencoder, 
+                                                             model_path + ".bin", 
+                                                             model::SaveFormat::BINARY);
+      printf("Binary save: %s\n", binary_success ? "✅ Success" : "✗ Failed");
 
-    printf("Model saved to: %s.{bin,json}\n", model_path.c_str());
+      bool json_success = model::GenericModelIO::save_model(*autoencoder, 
+                                                           model_path + ".json", 
+                                                           model::SaveFormat::JSON);
+      printf("JSON save: %s\n", json_success ? "✅ Success" : "✗ Failed");
+
+      // Also demonstrate the new ISerializableModel interface
+      auto metadata = autoencoder->get_serialization_metadata();
+      printf("Model metadata:\n");
+      printf("  Type: %s\n", model::model_type_to_string(metadata.model_type).c_str());
+      printf("  Version: %s\n", metadata.version.c_str());
+
+    } catch (const std::exception& e) {
+      printf("Model saving: %s\n", e.what());
+    }
 
     printf("\n=== Basic Dense Autoencoder Example Completed Successfully! ===\n");
 

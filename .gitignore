@@ -4,6 +4,9 @@
 # Build directory
 build/
 
+# Model directory
+saved_models/
+
 # Training output directories
 samples/training_xor/
 samples/training_format_test/

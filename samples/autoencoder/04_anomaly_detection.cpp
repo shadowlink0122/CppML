@@ -171,7 +171,7 @@ int main() {
     printf("\nTesting on anomalous samples:\n");
     for (int i = 0; i < 5 && i < (int)anomalous_test_data.size(); ++i) {
       double error = 0.25 + 0.08 * (rand() % 100) / 100.0;
-      const char* result = (error > threshold) ? "ANOMALY ✓" : "NORMAL";
+      const char* result = (error > threshold) ? "ANOMALY ✅" : "NORMAL";
       printf("  Sample %d: error=%.6f -> %s\n", i + 1, error, result);
     }
 

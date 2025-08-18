@@ -36,7 +36,7 @@ void test_autoencoder_config() {
   assert(denoising_config.latent_dim == 64);
   assert(denoising_config.noise_factor == 0.2);
 
-  printf("✓ Autoencoder configuration tests passed\n");
+  printf("✅ Autoencoder configuration tests passed\n");
 }
 
 /**
@@ -48,19 +48,19 @@ void test_base_autoencoder() {
   try {
     // Test basic config creation first
     auto config = model::autoencoder::AutoencoderConfig::basic(10, 5);
-    printf("✓ Config created successfully\n");
+    printf("✅ Config created successfully\n");
 
     // Test simple autoencoder creation
     auto autoencoder =
         std::make_unique<model::autoencoder::DenseAutoencoder>(config);
-    printf("✓ Autoencoder created successfully\n");
+    printf("✅ Autoencoder created successfully\n");
 
     // Test dimensions
     assert(autoencoder->get_input_dim() == 10);
     assert(autoencoder->get_latent_dim() == 5);
     assert(autoencoder->get_type() ==
            model::autoencoder::AutoencoderType::BASIC);
-    printf("✓ Basic properties verified\n");
+    printf("✅ Basic properties verified\n");
 
     // Test forward pass with safer approach
     try {
@@ -70,22 +70,22 @@ void test_base_autoencoder() {
       NDArray encoded = autoencoder->encode(input);
       assert(encoded.shape()[0] == 1);
       assert(encoded.shape()[1] == 5);
-      printf("✓ Encoding test passed\n");
+      printf("✅ Encoding test passed\n");
 
       NDArray decoded = autoencoder->decode(encoded);
       assert(decoded.shape()[0] == 1);
       assert(decoded.shape()[1] == 10);
-      printf("✓ Decoding test passed\n");
+      printf("✅ Decoding test passed\n");
 
       NDArray reconstructed = autoencoder->reconstruct(input);
       assert(reconstructed.shape()[0] == 1);
       assert(reconstructed.shape()[1] == 10);
-      printf("✓ Reconstruction test passed\n");
+      printf("✅ Reconstruction test passed\n");
     } catch (const std::exception& e) {
       printf("⚠️ Forward pass tests skipped due to: %s\n", e.what());
     }
 
-    printf("✓ Base autoencoder tests passed\n");
+    printf("✅ Base autoencoder tests passed\n");
   } catch (const std::exception& e) {
     printf("❌ Base autoencoder test failed: %s\n", e.what());
   }
@@ -116,9 +116,9 @@ void test_autoencoder_training() {
     optimizer::Adam optimizer(0.01);
 
     // Skip actual training for now, just test setup
-    printf("✓ Training setup completed\n");
+    printf("✅ Training setup completed\n");
     // autoencoder->train(training_data, loss, optimizer, 1, 2);
-    printf("✓ Autoencoder training test passed\n");
+    printf("✅ Autoencoder training test passed\n");
   } catch (const std::exception& e) {
     printf("❌ Autoencoder training test failed: %s\n", e.what());
   }
@@ -144,7 +144,7 @@ void test_noise_addition() {
     assert(reconstructed.shape()[0] == 2);
     assert(reconstructed.shape()[1] == 10);
 
-    printf("✓ Noise addition test passed\n");
+    printf("✅ Noise addition test passed\n");
   } catch (const std::exception& e) {
     printf("❌ Noise addition test failed: %s\n", e.what());
   }
@@ -169,14 +169,14 @@ void test_model_save_load() {
     // Test basic reconstruction without saving (to avoid segfault)
     try {
       NDArray original_output = autoencoder->reconstruct(input);
-      printf("✓ Autoencoder created and reconstruction tested\n");
+      printf("✅ Autoencoder created and reconstruction tested\n");
     } catch (const std::exception& e) {
       printf("⚠️ Reconstruction test skipped: %s\n", e.what());
     }
 
     // Skip file save operations for now to avoid segmentation fault
     printf(
-        "✓ Model save/load test passed (basic functionality verified, file I/O skipped for safety)\n");
+        "✅ Model save/load test passed (basic functionality verified, file I/O skipped for safety)\n");
   } catch (const std::exception& e) {
     printf("❌ Model save/load test failed: %s\n", e.what());
   }

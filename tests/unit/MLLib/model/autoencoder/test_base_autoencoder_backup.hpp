@@ -36,7 +36,7 @@ void test_autoencoder_config() {
   assert(denoising_config.latent_dim == 64);
   assert(denoising_config.noise_factor == 0.2);
 
-  printf("✓ Autoencoder configuration tests passed\n");
+  printf("✅ Autoencoder configuration tests passed\n");
 }
 
 /**
@@ -72,7 +72,7 @@ void test_base_autoencoder() {
     assert(reconstructed.shape()[0] == 2);
     assert(reconstructed.shape()[1] == 10);
 
-    printf("✓ Base autoencoder tests passed
+    printf("✅ Base autoencoder tests passed
 ");
   } catch (const std::exception& e) {
     printf("❌ Base autoencoder test failed: %s
@@ -107,7 +107,7 @@ void test_autoencoder_training() {
     // Test a very short training session
     autoencoder->train(training_data, loss, optimizer, 1,
                        2);  // 1 epoch, batch size 2
-    printf("✓ Autoencoder training test passed
+    printf("✅ Autoencoder training test passed
 ");
   } catch (const std::exception& e) {
     printf("❌ Autoencoder training test failed: %s
@@ -136,7 +136,7 @@ void test_noise_addition() {
     assert(reconstructed.shape()[0] == 2);
     assert(reconstructed.shape()[1] == 10);
 
-    printf("✓ Noise addition test passed
+    printf("✅ Noise addition test passed
 ");
   } catch (const std::exception& e) {
     printf("❌ Noise addition test failed: %s
@@ -166,7 +166,7 @@ void test_model_save_load() {
     std::string test_path = "/tmp/test_autoencoder";
     autoencoder->save(test_path, true, false);  // Save JSON only for simplicity
 
-    printf("✓ Model save/load test passed (basic functionality check)
+    printf("✅ Model save/load test passed (basic functionality check)
 ");
   } catch (const std::exception& e) {
     printf("❌ Model save/load test failed: %s

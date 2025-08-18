@@ -101,6 +101,11 @@ int main() {
     printf("  Latent dimension: %d\n", latent_dim);
     printf("  Noise factor: %.1f\n", noise_factor);
     printf("  Note: Using simplified implementation for demonstration\n");
+    
+    // Create the autoencoder with basic configuration
+    auto config = AutoencoderConfig::denoising(input_size, latent_dim, noise_factor);
+    auto autoencoder = std::make_unique<DenseAutoencoder>(config);
+    
     printf("Denoising autoencoder created:\n");
     printf("  Input size: %d (28x28)\n", input_size);
     printf("  Latent dimension: %d\n", latent_dim);
@@ -168,12 +173,34 @@ int main() {
       printf("  %s: %.1f dB PSNR\n", test.first.c_str(), test.second);
     }
 
-    // 7. Save model
-    printf("\n7. Saving denoising model...\n");
+    // 7. Save model using GenericModelIO
+    printf("\n7. Saving denoising model using GenericModelIO...\n");
     std::string model_path = "denoising_autoencoder_28x28";
 
-    // autoencoder->save(model_path);
-    printf("Model saved to: %s.{bin,json}\n", model_path.c_str());
+    try {
+      // Save using new generic model I/O system
+      bool binary_save = model::GenericModelIO::save_model(*autoencoder, 
+                                                          model_path + ".bin", 
+                                                          model::SaveFormat::BINARY);
+      printf("Binary model save: %s\n", binary_save ? "✅ Success" : "✗ Failed");
+
+      // Export configuration for model recreation
+      std::string config_save_path = model_path; // Let GenericModelIO add the .config extension
+      bool config_save = model::GenericModelIO::save_model(*autoencoder, 
+                                                          config_save_path, 
+                                                          model::SaveFormat::CONFIG);
+      printf("Config save: %s\n", config_save ? "✅ Success" : "✗ Failed");
+
+      // Display serialization metadata
+      auto metadata = autoencoder->get_serialization_metadata();
+      printf("Model metadata:\n");
+      printf("  Type: Denoising Autoencoder (%s)\n", 
+             model::model_type_to_string(metadata.model_type).c_str());
+      printf("  Saved for future deployment\n");
+
+    } catch (const std::exception& e) {
+      printf("Model saving error: %s\n", e.what());
+    }
 
     printf("\n=== Denoising Autoencoder Example Completed Successfully! ===\n");
 

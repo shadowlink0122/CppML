@@ -173,19 +173,19 @@ int main() {
     printf("----------------------------------------------------------------------\n");
     printf("Consider these factors when choosing an autoencoder:\n\n");
     
-    printf("✓ Data characteristics:\n");
+    printf("✅ Data characteristics:\n");
     printf("  • Clean data → Dense AE\n");
     printf("  • Noisy data → Denoising AE\n");
     printf("  • Need generative capability → VAE\n");
     printf("  • Outlier detection task → Anomaly Detector\n\n");
     
-    printf("✓ Performance requirements:\n");
+    printf("✅ Performance requirements:\n");
     printf("  • Fast inference → Dense AE\n");
     printf("  • Low memory → Dense AE\n");
     printf("  • Best reconstruction → Denoising AE\n");
     printf("  • Probabilistic output → VAE\n\n");
     
-    printf("✓ Application domain:\n");
+    printf("✅ Application domain:\n");
     printf("  • Image processing → Denoising AE\n");
     printf("  • Time series → Dense AE or Anomaly Detector\n");
     printf("  • Creative applications → VAE\n");

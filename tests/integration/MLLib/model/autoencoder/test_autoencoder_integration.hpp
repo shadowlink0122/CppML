@@ -65,7 +65,7 @@ void test_autoencoder_polymorphism() {
            static_cast<int>(ae->get_type()), error);
   }
 
-  printf("✓ Autoencoder polymorphism tests passed\n");
+  printf("✅ Autoencoder polymorphism tests passed\n");
 }
 
 /**
@@ -143,7 +143,7 @@ void test_autoencoder_comparison() {
            result.training_time_ms, result.reconstruction_error);
   }
 
-  printf("✓ Autoencoder comparison tests passed\n");
+  printf("✅ Autoencoder comparison tests passed\n");
 }
 
 /**
@@ -233,7 +233,7 @@ void test_autoencoder_workflow() {
   printf("  Anomaly detected: %s (score: %.4f, threshold: %.4f)\n",
          is_anomaly ? "Yes" : "No", anomaly_score, detector.get_threshold());
 
-  printf("✓ Autoencoder workflow integration tests passed\n");
+  printf("✅ Autoencoder workflow integration tests passed\n");
 }
 
 /**
@@ -316,7 +316,7 @@ void test_multimodal_data() {
   assert(denoised_image.shape()[1] == image_dim);
   assert(fused_reconstruction.shape()[1] == total_dim);
 
-  printf("✓ Multi-modal data handling tests passed\n");
+  printf("✅ Multi-modal data handling tests passed\n");
 }
 
 /**
@@ -376,7 +376,7 @@ void test_performance_scaling() {
            avg_error);
   }
 
-  printf("✓ Performance scaling tests passed\n");
+  printf("✅ Performance scaling tests passed\n");
 }
 
 /**
@@ -431,7 +431,7 @@ void test_autoencoder_robustness() {
     printf("    Noise level %.1f: error=%.4f\n", noise, error);
   }
 
-  printf("✓ Autoencoder robustness tests passed\n");
+  printf("✅ Autoencoder robustness tests passed\n");
 }
 
 /**

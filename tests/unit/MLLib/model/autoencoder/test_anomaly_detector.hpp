@@ -42,7 +42,7 @@ void test_anomaly_config() {
   assert(custom_config.adaptive_threshold == true);
   assert(custom_config.window_size == 50);
 
-  printf("✓ Anomaly detection configuration tests passed\n");
+  printf("✅ Anomaly detection configuration tests passed\n");
 }
 
 /**
@@ -72,7 +72,7 @@ void test_anomaly_detector_construction() {
   assert(config_detector.get_anomaly_config().threshold_percentile == 90.0);
   assert(config_detector.get_anomaly_config().error_metric == "mae");
 
-  printf("✓ Anomaly detector construction tests passed\n");
+  printf("✅ Anomaly detector construction tests passed\n");
 }
 
 /**
@@ -122,7 +122,7 @@ void test_threshold_calculation() {
 
   printf("Calculated threshold: %.4f\n", threshold);
 
-  printf("✓ Threshold calculation tests passed\n");
+  printf("✅ Threshold calculation tests passed\n");
 }
 
 /**
@@ -168,7 +168,7 @@ void test_training_on_normal() {
   printf("Training on normal data - Initial error: %.4f, Final error: %.4f\n",
          initial_error, final_error);
 
-  printf("✓ Training on normal data tests passed\n");
+  printf("✅ Training on normal data tests passed\n");
 }
 
 /**
@@ -245,7 +245,7 @@ void test_anomaly_detection() {
       "Detection results - Precision: %.3f, Recall: %.3f, F1: %.3f, Accuracy: %.3f\n",
       results.precision, results.recall, results.f1_score, results.accuracy);
 
-  printf("✓ Anomaly detection tests passed\n");
+  printf("✅ Anomaly detection tests passed\n");
 }
 
 /**
@@ -275,7 +275,7 @@ void test_manual_threshold() {
   printf("Manual threshold (%.2f) - Normal error: %.4f, Anomaly error: %.4f\n",
          manual_threshold, normal_error, anomaly_error);
 
-  printf("✓ Manual threshold tests passed\n");
+  printf("✅ Manual threshold tests passed\n");
 }
 
 /**
@@ -313,7 +313,7 @@ void test_error_metrics() {
 
   printf("Error metrics - MSE: %.4f, MAE: %.4f\n", mse_error, mae_error);
 
-  printf("✓ Error metrics tests passed\n");
+  printf("✅ Error metrics tests passed\n");
 }
 
 /**
@@ -338,7 +338,7 @@ void test_factory_methods() {
   assert(ts_detector->get_latent_dim() == 8);
   assert(ts_detector->get_anomaly_config().threshold_percentile == 90.0);
 
-  printf("✓ Factory method tests passed\n");
+  printf("✅ Factory method tests passed\n");
 }
 
 /**
@@ -370,7 +370,7 @@ void test_anomaly_config_updates() {
   assert(updated_config.adaptive_threshold == true);
   assert(updated_config.window_size == 50);
 
-  printf("✓ Anomaly detection configuration update tests passed\n");
+  printf("✅ Anomaly detection configuration update tests passed\n");
 }
 
 /**
@@ -416,7 +416,7 @@ void test_performance_metrics() {
          results.true_positives, results.false_positives,
          results.true_negatives, results.false_negatives);
 
-  printf("✓ Performance metrics calculation tests passed\n");
+  printf("✅ Performance metrics calculation tests passed\n");
 }
 
 /**
@@ -452,7 +452,7 @@ void test_save_load() {
     double diff = std::abs(original_error - loaded_error);
     assert(diff < 1e-6);
 
-    printf("✓ Anomaly detector save/load successful\n");
+    printf("✅ Anomaly detector save/load successful\n");
   } else {
     printf(
         "⚠ Anomaly detector save/load skipped (file I/O may not be implemented)\n");

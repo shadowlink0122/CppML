@@ -39,7 +39,7 @@ void test_denoising_config() {
   assert(custom_config.dropout_rate == 0.3);
   assert(custom_config.validate_on_clean == false);
 
-  printf("✓ Denoising autoencoder configuration tests passed\n");
+  printf("✅ Denoising autoencoder configuration tests passed\n");
 }
 
 /**
@@ -70,7 +70,7 @@ void test_denoising_construction() {
   assert(config_denoiser.get_denoising_config().noise_type ==
          model::autoencoder::NoiseType::DROPOUT);
 
-  printf("✓ Denoising autoencoder construction tests passed\n");
+  printf("✅ Denoising autoencoder construction tests passed\n");
 }
 
 /**
@@ -113,7 +113,7 @@ void test_noise_types() {
   assert(uniform_output.shape()[0] == 2);
   assert(uniform_output.shape()[1] == 8);
 
-  printf("✓ Different noise types tests passed\n");
+  printf("✅ Different noise types tests passed\n");
 }
 
 /**
@@ -154,7 +154,7 @@ void test_denoising() {
 
   printf("Denoising error: %.4f\n", error);
 
-  printf("✓ Denoising functionality tests passed\n");
+  printf("✅ Denoising functionality tests passed\n");
 }
 
 /**
@@ -199,7 +199,7 @@ void test_denoising_metrics() {
   printf("Denoising metrics - MSE: %.4f, PSNR: %.2f dB, SSIM: %.4f\n",
          metrics["MSE"], metrics["PSNR"], metrics["SSIM"]);
 
-  printf("✓ Denoising metrics evaluation tests passed\n");
+  printf("✅ Denoising metrics evaluation tests passed\n");
 }
 
 /**
@@ -246,7 +246,7 @@ void test_denoising_training() {
   printf("Denoising training - Initial error: %.4f, Final error: %.4f\n",
          initial_error, final_error);
 
-  printf("✓ Denoising training tests passed\n");
+  printf("✅ Denoising training tests passed\n");
 }
 
 /**
@@ -277,7 +277,7 @@ void test_denoising_config_updates() {
   assert(updated_config.dropout_rate == 0.3);
   assert(updated_config.validate_on_clean == false);
 
-  printf("✓ Denoising configuration update tests passed\n");
+  printf("✅ Denoising configuration update tests passed\n");
 }
 
 /**
@@ -306,7 +306,7 @@ void test_image_denoising_factory() {
   assert(color_denoiser->get_input_dim() == 16 * 16 * 3);
   assert(color_denoiser->get_latent_dim() == 32);
 
-  printf("✓ Image denoising factory method tests passed\n");
+  printf("✅ Image denoising factory method tests passed\n");
 }
 
 /**
@@ -342,7 +342,7 @@ void test_noise_levels() {
   assert(med_noise_output.shape()[1] == 6);
   assert(high_noise_output.shape()[1] == 6);
 
-  printf("✓ Different noise level tests passed\n");
+  printf("✅ Different noise level tests passed\n");
 }
 
 /**

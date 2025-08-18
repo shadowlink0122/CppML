@@ -1,6 +1,9 @@
 #include "MLLib/model/model_io.hpp"
+#include "MLLib/layer/activation/gelu.hpp"
+#include "MLLib/layer/activation/leaky_relu.hpp"
 #include "MLLib/layer/activation/relu.hpp"
 #include "MLLib/layer/activation/sigmoid.hpp"
+#include "MLLib/layer/activation/softmax.hpp"
 #include "MLLib/layer/activation/tanh.hpp"
 #include "MLLib/layer/dense.hpp"
 #include <algorithm>
@@ -578,6 +581,15 @@ ModelConfig ModelIO::extract_config(const Sequential& model) {
     } else if (std::dynamic_pointer_cast<const MLLib::layer::activation::Tanh>(
                    layer)) {
       config.layers.push_back(LayerInfo("Tanh"));
+    } else if (std::dynamic_pointer_cast<
+                   const MLLib::layer::activation::LeakyReLU>(layer)) {
+      config.layers.push_back(LayerInfo("LeakyReLU"));
+    } else if (std::dynamic_pointer_cast<
+                   const MLLib::layer::activation::Softmax>(layer)) {
+      config.layers.push_back(LayerInfo("Softmax"));
+    } else if (std::dynamic_pointer_cast<const MLLib::layer::activation::GELU>(
+                   layer)) {
+      config.layers.push_back(LayerInfo("GELU"));
     }
   }
 
@@ -599,6 +611,12 @@ ModelIO::create_from_config(const ModelConfig& config) {
       model->add(std::make_shared<layer::activation::Sigmoid>());
     } else if (layer_info.type == "Tanh") {
       model->add(std::make_shared<layer::activation::Tanh>());
+    } else if (layer_info.type == "LeakyReLU") {
+      model->add(std::make_shared<layer::activation::LeakyReLU>());
+    } else if (layer_info.type == "Softmax") {
+      model->add(std::make_shared<layer::activation::Softmax>());
+    } else if (layer_info.type == "GELU") {
+      model->add(std::make_shared<layer::activation::GELU>());
     }
   }
 
@@ -752,6 +770,14 @@ std::unique_ptr<Sequential> ModelIO::load_binary(const std::string& filepath) {
       model->add(std::make_shared<layer::activation::ReLU>());
     } else if (layer_info.type == "Sigmoid") {
       model->add(std::make_shared<layer::activation::Sigmoid>());
+    } else if (layer_info.type == "Tanh") {
+      model->add(std::make_shared<layer::activation::Tanh>());
+    } else if (layer_info.type == "LeakyReLU") {
+      model->add(std::make_shared<layer::activation::LeakyReLU>());
+    } else if (layer_info.type == "Softmax") {
+      model->add(std::make_shared<layer::activation::Softmax>());
+    } else if (layer_info.type == "GELU") {
+      model->add(std::make_shared<layer::activation::GELU>());
     }
   }
 

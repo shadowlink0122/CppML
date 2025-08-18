@@ -163,7 +163,7 @@ int main() {
     MLLib::test::autoencoder::test_autoencoder_training();
     MLLib::test::autoencoder::test_noise_addition();
     MLLib::test::autoencoder::test_model_save_load();
-    printf("✓ All autoencoder tests completed\n");
+    printf("✅ All autoencoder tests completed\n");
   } catch (const std::exception& e) {
     printf("❌ Autoencoder tests failed: %s\n", e.what());
   }
