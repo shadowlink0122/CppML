@@ -82,7 +82,8 @@ protected:
           "Regression pipeline should complete");
 
       assertTrue(training_stable, "Training should be numerically stable");
-      assertTrue(final_loss < 10.0, "Final loss should be reasonable");  // Added loss check
+      assertTrue(final_loss < 10.0,
+                 "Final loss should be reasonable");  // Added loss check
 
       // Test model on new data
       std::vector<double> test_input = {0.5, 0.3};
@@ -102,7 +103,7 @@ protected:
       for (int i = 0; i < 40; ++i) {
         double x1 = (i % 20) * 0.05;
         double x2 = (i / 20) * 0.05 + (i % 3) * 0.005;  // Reduced noise
-        double label = (x1 + x2 > 0.4) ? 1.0 : 0.0;  // Easier separation
+        double label = (x1 + x2 > 0.4) ? 1.0 : 0.0;     // Easier separation
 
         if (i < 30) {  // Training data
           train_X.push_back({x1, x2});
@@ -166,7 +167,8 @@ protected:
       }
 
       double accuracy = static_cast<double>(correct_predictions) / val_X.size();
-      assertTrue(accuracy > 0.5, "Model should achieve reasonable accuracy (>50%)");
+      assertTrue(accuracy > 0.5,
+                 "Model should achieve reasonable accuracy (>50%)");
     }
   }
 };
