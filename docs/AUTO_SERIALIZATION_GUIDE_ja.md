@@ -1,78 +1,82 @@
-# Model I/O 自動シリアライゼーション ガイド
+# GenericModelIO 統一シリアライゼーション ガイド
 
 ## 概要
 
-MLLib v2.0では、GPUカーネル管理システムと同様に、Model I/Oシステムも完全に汎用化され、97%のボイラープレートコードを削減する自動シリアライゼーション機能を提供します。
+MLLib v1.0では、GenericModelIOシステムにより、全モデルタイプで統一されたシリアライゼーション機能を提供します。型安全なテンプレートベースインターフェースで、76個のユニットテストにより品質保証されています。
 
-## 🚀 新機能の特徴
+## 🚀 主要機能
 
-### 1. **完全自動シリアライゼーション**
-- 1行のマクロで全機能を有効化
-- 型安全な自動フィールド検出
-- エラー処理の完全自動化
+### 1. **統一インターフェース**
+- 全モデルタイプで同一API
+- 型安全なテンプレート読み込み
+- 自動ディレクトリ作成対応
 
-### 2. **ゼロボイラープレート**
-- 手動serialize/deserialize実装不要
-- 自動型変換とメモリ管理
-- プラットフォーム非依存バイナリ形式
+### 2. **高性能**
+- バイナリ形式による高速処理
+- 大規模モデル対応（2048×2048）
+- 1e-10レベルの高精度保存
 
-### 3. **拡張性**
-- 新しいモデルタイプの瞬間対応
-- カスタムフィールドタイプのサポート
-- プラグイン型アーキテクチャ
+### 3. **完全対応モデル**
+- Sequential（8種類の活性化関数）
+- DenseAutoencoder（複雑アーキテクチャ）
+- 大規模ネットワーク（420万パラメータ）
 
-## 📊 従来実装との比較
+## 📊 現在の実装状況
 
-| 項目 | 従来の実装 | 新しい自動実装 |
-|------|------------|----------------|
-| **新モデル追加** | 100+行の手動実装 | 1行のマクロ |
-| **フィールド追加** | 各serialize/deserializeを修正 | 1行の登録 |
-| **型安全性** | 手動キャスト（危険） | 完全自動（安全） |
-| **エラー処理** | 手動実装 | 完全自動 |
-| **保守性** | 各モデルで重複コード | 中央集約管理 |
+| 機能 | 実装状況 | テスト状況 |
+|------|----------|------------|
+| **BINARY保存・読み込み** | ✅ 完了 | ✅ 76/76テスト通過 |
+| **JSON保存・読み込み** | ✅ 完了 | ✅ 完全対応 |
+| **CONFIG保存・読み込み** | ✅ 完了 | ✅ 完全対応 |
+| **大規模モデル対応** | ✅ 完了 | ✅ 2048×2048検証済み |
+| **型安全読み込み** | ✅ 完了 | ✅ テンプレート対応 |
 
 ## 🎯 使用方法
 
-### 新しいモデルクラスの作成
+### DenseAutoencoderの例
 
 ```cpp
-#include "MLLib/model/serialization_manager.hpp"
+#include "MLLib.hpp"
+using namespace MLLib::model;
+using namespace MLLib::model::autoencoder;
 
-class CustomModel : public AutoSerializableModel<CustomModel> {
-public:
-    CustomModel() : learning_rate_(0.01), epochs_(100) {
-        registerFields();  // 自動登録を有効化
-    }
-    
-    // 1行で自動シリアライゼーションを有効化！
-    ENABLE_AUTO_SERIALIZATION(CustomModel);
-    
-private:
-    // これらのフィールドが自動でシリアライズされる
-    double learning_rate_;
-    int epochs_;
-    std::vector<double> weights_;
-    std::shared_ptr<SomeLayer> layer_;
-    
-    // フィールド登録（自動呼び出し）
-    static void _register_fields() {
-        REGISTER_SERIALIZABLE_FIELD(CustomModel, learning_rate_);
-        REGISTER_SERIALIZABLE_FIELD(CustomModel, epochs_);
-        REGISTER_SERIALIZABLE_FIELD(CustomModel, weights_);
-        REGISTER_SERIALIZABLE_FIELD(CustomModel, layer_);
-    }
-};
+// 1. モデル作成・設定
+auto autoencoder = std::make_unique<DenseAutoencoder>();
+// ... モデルの設定・学習 ...
+
+// 2. 統一インターフェースで保存
+GenericModelIO::save_model(*autoencoder, "models/autoencoder.bin", SaveFormat::BINARY);
+GenericModelIO::save_model(*autoencoder, "models/autoencoder.json", SaveFormat::JSON);
+
+// 3. 型安全な読み込み
+auto loaded_autoencoder = GenericModelIO::load_model<DenseAutoencoder>(
+    "models/autoencoder.bin", SaveFormat::BINARY);
 ```
 
-### 保存・読み込み
+### Sequentialモデルの例
 
 ```cpp
-// 保存（完全自動）
-CustomModel model;
-GenericModelIO::save_model(model, "my_model", SaveFormat::BINARY);
+// 1. 複雑なSequentialモデル作成
+auto model = std::make_unique<Sequential>();
+model->add(std::make_shared<layer::Dense>(784, 256));
+model->add(std::make_shared<layer::activation::ReLU>());
+model->add(std::make_shared<layer::Dense>(256, 128));
+model->add(std::make_shared<layer::activation::LeakyReLU>(0.01));  // パラメータ付き
+model->add(std::make_shared<layer::Dense>(128, 10));
+model->add(std::make_shared<layer::activation::Softmax>());
 
-// 読み込み（完全自動、型安全）
-auto loaded = GenericModelIO::load_model<CustomModel>("my_model", SaveFormat::BINARY);
+// 2. 保存（自動ディレクトリ作成）
+GenericModelIO::save_model(*model, "models/mnist/classifier.bin", SaveFormat::BINARY);
+
+// 3. 読み込みと検証
+auto loaded_model = GenericModelIO::load_model<Sequential>(
+    "models/mnist/classifier.bin", SaveFormat::BINARY);
+
+// 4. パラメータ完全保存の確認
+NDArray test_input({1, 784});
+auto original_output = model->predict(test_input);
+auto loaded_output = loaded_model->predict(test_input);
+// 差異 < 1e-10 レベルで一致
 ```
 
 ## 🏗️ アーキテクチャ詳細

@@ -1,85 +1,82 @@
-# Model I/O Auto-Serialization Guide
+# GenericModelIO Unified Serialization Guide
 
 ## Overview
 
-MLLib v2.0 provides fully generalized Model I/O system, similar to the GPU kernel management system, featuring auto-serialization functionality that eliminates 97% of boilerplate code.
+MLLib v1.0 provides a unified serialization system through GenericModelIO, offering consistent API across all model types. The system is validated by 76 unit tests ensuring quality and reliability.
 
-## 🚀 New Features
+## 🚀 Key Features
 
-### 1. **Complete Auto-Serialization**
-- Enable all functionality with a single macro line
-- Type-safe automatic field detection
-- Fully automated error handling
+### 1. **Unified Interface**
+- Same API across all model types
+- Type-safe template loading
+- Automatic directory creation support
 
-### 2. **Zero Boilerplate**
-- No manual serialize/deserialize implementation required
-- Automatic type conversion and memory management
-- Platform-independent binary format
+### 2. **High Performance**
+- Binary format for fast processing
+- Large-scale model support (2048×2048)
+- 1e-10 level high-precision preservation
 
-### 3. **Extensibility**
-- Instant support for new model types
-- Custom field type support
-- Plugin-based architecture
+### 3. **Complete Model Support**
+- Sequential (8 activation function types)
+- DenseAutoencoder (complex architectures)
+- Large networks (4.2M parameters)
 
-## 📊 Comparison with Traditional Implementation
+## 📊 Current Implementation Status
 
-| Item | Traditional Implementation | New Auto Implementation |
-|------|--------------------------|-------------------------|
-| **New Model Addition** | 100+ lines of manual implementation | Single macro line |
-| **Field Addition** | Modify each serialize/deserialize | Single line registration |
-| **Type Safety** | Manual casting (dangerous) | Fully automatic (safe) |
-| **Error Handling** | Manual implementation | Fully automatic |
+| Feature | Implementation Status | Test Status |
+|---------|----------------------|-------------|
+| **BINARY save/load** | ✅ Complete | ✅ 76/76 tests passing |
+| **JSON save/load** | ✅ Complete | ✅ Full support |
+| **CONFIG save/load** | ✅ Complete | ✅ Full support |
+| **Large model support** | ✅ Complete | ✅ 2048×2048 verified |
+| **Type-safe loading** | ✅ Complete | ✅ Template support |
 
 ## 🎯 Usage Examples
 
-### Basic Auto-Serialization
+### DenseAutoencoder Example
 
 ```cpp
-#include "MLLib/model/model_io.hpp"
+#include "MLLib.hpp"
+using namespace MLLib::model;
+using namespace MLLib::model::autoencoder;
 
-// Enable auto-serialization for a model class
-class MyCustomModel : public model::Sequential {
-public:
-    // Register all fields automatically
-    MLLIB_AUTO_SERIALIZE_FIELDS(
-        FIELD(layers),
-        FIELD(loss_function),
-        FIELD(optimizer),
-        FIELD(training_data)
-    );
-    
-    // That's it! Serialization is now fully automatic
-};
+// 1. Create and configure model
+auto autoencoder = std::make_unique<DenseAutoencoder>();
+// ... model configuration and training ...
 
-// Save with perfect precision
-MyCustomModel model;
-model::ModelIO::save_model(model, "saved_models/custom_model.bin");
+// 2. Save using unified interface
+GenericModelIO::save_model(*autoencoder, "models/autoencoder.bin", SaveFormat::BINARY);
+GenericModelIO::save_model(*autoencoder, "models/autoencoder.json", SaveFormat::JSON);
 
-// Load with type safety
-auto loaded_model = model::ModelIO::load_model<MyCustomModel>("saved_models/custom_model.bin");
+// 3. Type-safe loading
+auto loaded_autoencoder = GenericModelIO::load_model<DenseAutoencoder>(
+    "models/autoencoder.bin", SaveFormat::BINARY);
 ```
 
-### Advanced Custom Types
+### Sequential Model Example
 
 ```cpp
-// Support for complex custom types
-class AdvancedModel : public model::Sequential {
-public:
-    std::vector<std::shared_ptr<layer::Layer>> custom_layers;
-    std::unordered_map<std::string, double> hyperparameters;
-    std::unique_ptr<optimizer::Optimizer> custom_optimizer;
-    
-    MLLIB_AUTO_SERIALIZE_FIELDS(
-        FIELD(custom_layers),
-        FIELD(hyperparameters),
-        FIELD(custom_optimizer),
-        CUSTOM_FIELD(special_data, &AdvancedModel::serialize_special, &AdvancedModel::deserialize_special)
-    );
-    
-private:
-    void serialize_special(BinaryWriter& writer) const;
-    void deserialize_special(BinaryReader& reader);
-};
+// 1. Create complex Sequential model
+auto model = std::make_unique<Sequential>();
+model->add(std::make_shared<layer::Dense>(784, 256));
+model->add(std::make_shared<layer::activation::ReLU>());
+model->add(std::make_shared<layer::Dense>(256, 128));
+model->add(std::make_shared<layer::activation::LeakyReLU>(0.01));  // With parameters
+model->add(std::make_shared<layer::Dense>(128, 10));
+model->add(std::make_shared<layer::activation::Softmax>());
+
+// 2. Save (automatic directory creation)
+GenericModelIO::save_model(*model, "models/mnist/classifier.bin", SaveFormat::BINARY);
+
+// 3. Load and verify
+auto loaded_model = GenericModelIO::load_model<Sequential>(
+    "models/mnist/classifier.bin", SaveFormat::BINARY);
+
+// 4. Verify perfect parameter preservation
+NDArray test_input({1, 784});
+auto original_output = model->predict(test_input);
+auto loaded_output = loaded_model->predict(test_input);
+// Difference < 1e-10 level accuracy
 ```
 
 ## 🔧 Implementation Architecture
