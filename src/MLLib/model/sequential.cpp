@@ -1,4 +1,12 @@
 #include "../../../include/MLLib/model/sequential.hpp"
+#include "../../../include/MLLib/layer/activation/elu.hpp"
+#include "../../../include/MLLib/layer/activation/gelu.hpp"
+#include "../../../include/MLLib/layer/activation/leaky_relu.hpp"
+#include "../../../include/MLLib/layer/activation/relu.hpp"
+#include "../../../include/MLLib/layer/activation/sigmoid.hpp"
+#include "../../../include/MLLib/layer/activation/softmax.hpp"
+#include "../../../include/MLLib/layer/activation/swish.hpp"
+#include "../../../include/MLLib/layer/activation/tanh.hpp"
 #include "../../../include/MLLib/layer/dense.hpp"
 #include "../../../include/MLLib/model/model_io.hpp"
 #include <algorithm>
@@ -6,6 +14,7 @@
 #include <initializer_list>
 #include <iostream>
 #include <stdexcept>
+#include <typeinfo>
 
 namespace MLLib {
 namespace model {
@@ -290,8 +299,56 @@ Sequential::serialize() const {
         layer_data.insert(layer_data.end(), bias_bytes, bias_bytes + bias_size);
       }
     } else {
-      // Other layer types (activation, etc.)
-      layer_data.push_back(0);  // Generic layer type = 0
+      // Activation layer types
+      layer_data.push_back(0);  // Activation layer type = 0
+
+      // Identify activation type and store identifier
+      uint8_t activation_type = 0;
+
+      // Use typeid to identify activation layer type
+      if (typeid(*layers_[i]) == typeid(layer::activation::ReLU)) {
+        activation_type = 1;
+      } else if (typeid(*layers_[i]) == typeid(layer::activation::Sigmoid)) {
+        activation_type = 2;
+      } else if (typeid(*layers_[i]) == typeid(layer::activation::Tanh)) {
+        activation_type = 3;
+      } else if (typeid(*layers_[i]) == typeid(layer::activation::LeakyReLU)) {
+        activation_type = 4;
+        // Store LeakyReLU parameter (alpha)
+        auto leaky_relu =
+            dynamic_cast<const layer::activation::LeakyReLU*>(layers_[i].get());
+        if (leaky_relu) {
+          double alpha = leaky_relu->get_alpha();
+          const uint8_t* alpha_bytes = reinterpret_cast<const uint8_t*>(&alpha);
+          layer_data.insert(layer_data.end(), alpha_bytes,
+                            alpha_bytes + sizeof(double));
+        }
+      } else if (typeid(*layers_[i]) == typeid(layer::activation::ELU)) {
+        activation_type = 5;
+        // Store ELU parameter (alpha)
+        auto elu =
+            dynamic_cast<const layer::activation::ELU*>(layers_[i].get());
+        if (elu) {
+          double alpha = elu->get_alpha();
+          const uint8_t* alpha_bytes = reinterpret_cast<const uint8_t*>(&alpha);
+          layer_data.insert(layer_data.end(), alpha_bytes,
+                            alpha_bytes + sizeof(double));
+        }
+      } else if (typeid(*layers_[i]) == typeid(layer::activation::Swish)) {
+        activation_type = 6;
+      } else if (typeid(*layers_[i]) == typeid(layer::activation::GELU)) {
+        activation_type = 7;
+      } else if (typeid(*layers_[i]) == typeid(layer::activation::Softmax)) {
+        activation_type = 8;
+      } else {
+        // Unknown activation type - use 0 as fallback
+        activation_type = 0;
+        std::cerr
+            << "Warning: Unknown activation layer type, using generic fallback"
+            << std::endl;
+      }
+
+      layer_data.push_back(activation_type);
     }
 
     data.emplace(layer_key, std::move(layer_data));
@@ -404,6 +461,69 @@ bool Sequential::deserialize(
             }
           }
         }
+      }
+    } else if (layer_type == 0) {
+      // Activation layer - identify by name or specific identifier
+      if (layer_data.size() < 2) {
+        std::cerr << "Invalid activation layer data size" << std::endl;
+        return false;
+      }
+
+      uint8_t activation_type = layer_data[1];  // Activation identifier
+
+      std::shared_ptr<layer::BaseLayer> activation_layer;
+      switch (activation_type) {
+      case 1:  // ReLU
+        activation_layer = std::make_shared<layer::activation::ReLU>();
+        break;
+      case 2:  // Sigmoid
+        activation_layer = std::make_shared<layer::activation::Sigmoid>();
+        break;
+      case 3:  // Tanh
+        activation_layer = std::make_shared<layer::activation::Tanh>();
+        break;
+      case 4:  // LeakyReLU
+        if (layer_data.size() >= 2 + sizeof(double)) {
+          double alpha = *reinterpret_cast<const double*>(&layer_data[2]);
+          activation_layer =
+              std::make_shared<layer::activation::LeakyReLU>(alpha);
+        } else {
+          activation_layer = std::make_shared<layer::activation::LeakyReLU>();
+        }
+        break;
+      case 5:  // ELU
+        if (layer_data.size() >= 2 + sizeof(double)) {
+          double alpha = *reinterpret_cast<const double*>(&layer_data[2]);
+          activation_layer = std::make_shared<layer::activation::ELU>(alpha);
+        } else {
+          activation_layer = std::make_shared<layer::activation::ELU>();
+        }
+        break;
+      case 6:  // Swish
+        activation_layer = std::make_shared<layer::activation::Swish>();
+        break;
+      case 7:  // GELU
+        activation_layer = std::make_shared<layer::activation::GELU>();
+        break;
+      case 8:  // Softmax
+        activation_layer = std::make_shared<layer::activation::Softmax>();
+        break;
+      case 0:  // Unknown type - try to create a ReLU as fallback
+        std::cerr << "Warning: Unknown activation type, using ReLU as fallback"
+                  << std::endl;
+        activation_layer = std::make_shared<layer::activation::ReLU>();
+        break;
+      default:
+        std::cerr << "Unsupported activation type: "
+                  << static_cast<int>(activation_type) << std::endl;
+        return false;
+      }
+
+      if (activation_layer) {
+        layers_.push_back(activation_layer);
+      } else {
+        std::cerr << "Failed to create activation layer" << std::endl;
+        return false;
       }
     } else {
       // Generic layer - would need to identify specific type

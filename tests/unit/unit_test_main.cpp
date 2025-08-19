@@ -8,8 +8,11 @@
 #include "MLLib/layer/activation/test_swish.hpp"
 #include "MLLib/layer/test_dense.hpp"
 #include "MLLib/model/autoencoder/test_base_autoencoder.hpp"
+#include "MLLib/model/test_autoencoder_model_io.hpp"
+#include "MLLib/model/test_large_sequential_model_io.hpp"
 #include "MLLib/model/test_model_io.hpp"
 #include "MLLib/model/test_sequential.hpp"
+#include "MLLib/model/test_sequential_model_io.hpp"
 #include "MLLib/optimizer/test_adadelta.hpp"
 #include "MLLib/optimizer/test_adagrad.hpp"
 #include "MLLib/optimizer/test_adam.hpp"
@@ -146,6 +149,29 @@ int main() {
   runTest(std::make_unique<ModelParameterTest>());
   runTest(std::make_unique<ModelIOErrorTest>());
   runTest(std::make_unique<ModelIOFileHandlingTest>());
+
+  // Autoencoder Model I/O tests
+  printf("\n--- Autoencoder Model I/O Tests ---\n");
+  runTest(std::make_unique<DenseAutoencoderSaveLoadTest>());
+  runTest(std::make_unique<AutoencoderComplexArchitectureTest>());
+  runTest(std::make_unique<AutoencoderMultiFormatTest>());
+  runTest(std::make_unique<AutoencoderParameterValidationTest>());
+  runTest(std::make_unique<AutoencoderErrorHandlingTest>());
+  runTest(std::make_unique<AutoencoderBatchProcessingTest>());
+
+  // Sequential Model I/O tests
+  printf("\n--- Sequential Model I/O Tests ---\n");
+  runTest(std::make_unique<SequentialModelIOTest>());
+  runTest(std::make_unique<ComplexSequentialModelTest>());
+  runTest(std::make_unique<SequentialModelBatchProcessingTest>());
+  runTest(std::make_unique<SequentialModelErrorHandlingTest>());
+  runTest(std::make_unique<SequentialModelMetadataTest>());
+  runTest(std::make_unique<MultiModelTypeComparisonTest>());
+
+  // Large Sequential Model I/O tests
+  printf("\n--- Large Sequential Model I/O Tests ---\n");
+  runTest(std::make_unique<LargeSequentialModelTest>());
+  runTest(std::make_unique<VeryLargeSequentialModelTest>());
 
   // Print final summary
   printf("\n");
