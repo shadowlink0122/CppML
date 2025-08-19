@@ -15,7 +15,9 @@
 #include "MLLib/layer/test_layer_integration.hpp"
 #include "MLLib/loss/test_loss_integration.hpp"
 #include "MLLib/model/autoencoder/test_autoencoder_integration.hpp"
+#include "MLLib/model/test_autoencoder_integration.hpp"
 #include "MLLib/model/test_model_integration.hpp"
+#include "MLLib/model/test_sequential_integration.hpp"
 #include "MLLib/optimizer/test_optimizer_activation_integration.hpp"
 #include "MLLib/optimizer/test_optimizer_integration.hpp"
 #include "MLLib/util/io/test_io_integration.hpp"
@@ -642,6 +644,33 @@ int main() {
     model_suite.addTest(std::make_unique<ModelIOIntegrationTest>());
 
     bool suite_result = model_suite.runAll();
+    all_tests_passed &= suite_result;
+  }
+
+  // Autoencoder integration tests
+  {
+    TestSuite autoencoder_suite("Autoencoder Integration Tests");
+    autoencoder_suite.addTest(
+        std::make_unique<AutoencoderProductionWorkflowIntegrationTest>());
+    autoencoder_suite.addTest(
+        std::make_unique<AutoencoderRobustnessIntegrationTest>());
+    autoencoder_suite.addTest(
+        std::make_unique<AutoencoderConcurrentAccessIntegrationTest>());
+
+    bool suite_result = autoencoder_suite.runAll();
+    all_tests_passed &= suite_result;
+  }
+
+  // Sequential model integration tests
+  {
+    TestSuite sequential_suite("Sequential Model Integration Tests");
+    sequential_suite.addTest(
+        std::make_unique<SequentialModelProductionWorkflowTest>());
+    sequential_suite.addTest(std::make_unique<SequentialModelRobustnessTest>());
+    sequential_suite.addTest(
+        std::make_unique<SequentialModelConcurrentAccessTest>());
+
+    bool suite_result = sequential_suite.runAll();
     all_tests_passed &= suite_result;
   }
 

@@ -9,11 +9,16 @@ namespace MLLib {
 namespace model {
 namespace autoencoder {
 
-DenseAutoencoder::DenseAutoencoder() : BaseAutoencoder(AutoencoderConfig()) {
-  // Default configuration for deserialization
-  config_.encoder_dims = {1};  // Will be updated during deserialization
+DenseAutoencoder::DenseAutoencoder() : BaseAutoencoder() {
+  // Create a minimal valid configuration for deserialization
+  config_.encoder_dims = {1, 1};  // Will be updated during deserialization
+  config_.decoder_dims = {1, 1};
   config_.latent_dim = 1;
   config_.device = DeviceType::CPU;
+  config_.noise_factor = 0.0;
+  config_.sparsity_penalty = 0.0;
+  config_.use_batch_norm = false;
+  // Don't initialize() here - will be called after deserialization
 }
 
 DenseAutoencoder::DenseAutoencoder(const AutoencoderConfig& config)

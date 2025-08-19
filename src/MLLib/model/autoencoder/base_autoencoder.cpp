@@ -9,6 +9,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <random>
 
 namespace MLLib {
@@ -259,12 +260,115 @@ BaseAutoencoder::serialize_impl() const {
       static_cast<uint8_t>(config_.use_batch_norm ? 1 : 0)};
   data["config_device"] = {static_cast<uint8_t>(config_.device)};
 
-  // Serialize encoder parameters (simplified - would need proper NDArray
-  // serialization)
-  data["encoder_parameters"] = std::vector<uint8_t>();
+  // Serialize encoder parameters
+  auto encoder_layers = encoder_->get_layers();
+  for (size_t i = 0; i < encoder_layers.size(); ++i) {
+    auto dense_layer =
+        std::dynamic_pointer_cast<layer::Dense>(encoder_layers[i]);
+    if (dense_layer) {
+      // Serialize weights
+      const auto& weights = dense_layer->get_weights();
+      std::string weights_key = "encoder_weights_" + std::to_string(i);
+      std::vector<uint8_t> weights_data;
+
+      // Store shape information
+      auto shape = weights.shape();
+      weights_data.push_back(static_cast<uint8_t>(shape.size()));
+      for (size_t dim : shape) {
+        const uint8_t* dim_bytes = reinterpret_cast<const uint8_t*>(&dim);
+        weights_data.insert(weights_data.end(), dim_bytes,
+                            dim_bytes + sizeof(size_t));
+      }
+
+      // Store weight data
+      const double* weight_ptr = weights.data();
+      size_t weight_count = weights.size();
+      const uint8_t* weight_bytes =
+          reinterpret_cast<const uint8_t*>(weight_ptr);
+      weights_data.insert(weights_data.end(), weight_bytes,
+                          weight_bytes + weight_count * sizeof(double));
+      data[weights_key] = std::move(weights_data);
+
+      // Serialize bias if it exists
+      if (dense_layer->get_use_bias()) {
+        const auto& bias = dense_layer->get_bias();
+        std::string bias_key = "encoder_bias_" + std::to_string(i);
+        std::vector<uint8_t> bias_data;
+
+        // Store shape information
+        auto bias_shape = bias.shape();
+        bias_data.push_back(static_cast<uint8_t>(bias_shape.size()));
+        for (size_t dim : bias_shape) {
+          const uint8_t* dim_bytes = reinterpret_cast<const uint8_t*>(&dim);
+          bias_data.insert(bias_data.end(), dim_bytes,
+                           dim_bytes + sizeof(size_t));
+        }
+
+        // Store bias data
+        const double* bias_ptr = bias.data();
+        size_t bias_count = bias.size();
+        const uint8_t* bias_bytes = reinterpret_cast<const uint8_t*>(bias_ptr);
+        bias_data.insert(bias_data.end(), bias_bytes,
+                         bias_bytes + bias_count * sizeof(double));
+        data[bias_key] = std::move(bias_data);
+      }
+    }
+  }
 
   // Serialize decoder parameters
-  data["decoder_parameters"] = std::vector<uint8_t>();
+  auto decoder_layers = decoder_->get_layers();
+  for (size_t i = 0; i < decoder_layers.size(); ++i) {
+    auto dense_layer =
+        std::dynamic_pointer_cast<layer::Dense>(decoder_layers[i]);
+    if (dense_layer) {
+      // Serialize weights
+      const auto& weights = dense_layer->get_weights();
+      std::string weights_key = "decoder_weights_" + std::to_string(i);
+      std::vector<uint8_t> weights_data;
+
+      // Store shape information
+      auto shape = weights.shape();
+      weights_data.push_back(static_cast<uint8_t>(shape.size()));
+      for (size_t dim : shape) {
+        const uint8_t* dim_bytes = reinterpret_cast<const uint8_t*>(&dim);
+        weights_data.insert(weights_data.end(), dim_bytes,
+                            dim_bytes + sizeof(size_t));
+      }
+
+      // Store weight data
+      const double* weight_ptr = weights.data();
+      size_t weight_count = weights.size();
+      const uint8_t* weight_bytes =
+          reinterpret_cast<const uint8_t*>(weight_ptr);
+      weights_data.insert(weights_data.end(), weight_bytes,
+                          weight_bytes + weight_count * sizeof(double));
+      data[weights_key] = std::move(weights_data);
+
+      // Serialize bias if it exists
+      if (dense_layer->get_use_bias()) {
+        const auto& bias = dense_layer->get_bias();
+        std::string bias_key = "decoder_bias_" + std::to_string(i);
+        std::vector<uint8_t> bias_data;
+
+        // Store shape information
+        auto bias_shape = bias.shape();
+        bias_data.push_back(static_cast<uint8_t>(bias_shape.size()));
+        for (size_t dim : bias_shape) {
+          const uint8_t* dim_bytes = reinterpret_cast<const uint8_t*>(&dim);
+          bias_data.insert(bias_data.end(), dim_bytes,
+                           dim_bytes + sizeof(size_t));
+        }
+
+        // Store bias data
+        const double* bias_ptr = bias.data();
+        size_t bias_count = bias.size();
+        const uint8_t* bias_bytes = reinterpret_cast<const uint8_t*>(bias_ptr);
+        bias_data.insert(bias_data.end(), bias_bytes,
+                         bias_bytes + bias_count * sizeof(double));
+        data[bias_key] = std::move(bias_data);
+      }
+    }
+  }
 
   return std::make_unique<
       std::unordered_map<std::string, std::vector<uint8_t>>>(std::move(data));
@@ -349,8 +453,137 @@ bool BaseAutoencoder::deserialize_impl(
   // Reinitialize models with new configuration
   initialize();
 
-  // Deserialize parameters (placeholder)
-  // Would deserialize encoder and decoder parameters here
+  // Deserialize parameters
+  auto encoder_layers = encoder_->get_layers();
+  for (size_t i = 0; i < encoder_layers.size(); ++i) {
+    auto dense_layer =
+        std::dynamic_pointer_cast<layer::Dense>(encoder_layers[i]);
+    if (dense_layer) {
+      // Deserialize weights
+      std::string weights_key = "encoder_weights_" + std::to_string(i);
+      auto weights_it = data.find(weights_key);
+      if (weights_it != data.end()) {
+        const auto& weights_data = weights_it->second;
+        size_t offset = 0;
+
+        // Read shape information
+        if (offset >= weights_data.size()) continue;
+        size_t shape_size = weights_data[offset++];
+        std::vector<size_t> shape(shape_size);
+        for (size_t j = 0; j < shape_size; ++j) {
+          if (offset + sizeof(size_t) > weights_data.size()) break;
+          std::memcpy(&shape[j], &weights_data[offset], sizeof(size_t));
+          offset += sizeof(size_t);
+        }
+
+        // Create NDArray and copy weight data
+        if (shape.size() >= 2 && offset < weights_data.size()) {
+          NDArray weights(shape);
+          size_t data_size = weights.size() * sizeof(double);
+          if (offset + data_size <= weights_data.size()) {
+            std::memcpy(weights.data(), &weights_data[offset], data_size);
+            dense_layer->set_weights(weights);
+          }
+        }
+      }
+
+      // Deserialize bias
+      if (dense_layer->get_use_bias()) {
+        std::string bias_key = "encoder_bias_" + std::to_string(i);
+        auto bias_it = data.find(bias_key);
+        if (bias_it != data.end()) {
+          const auto& bias_data = bias_it->second;
+          size_t offset = 0;
+
+          // Read shape information
+          if (offset >= bias_data.size()) continue;
+          size_t shape_size = bias_data[offset++];
+          std::vector<size_t> shape(shape_size);
+          for (size_t j = 0; j < shape_size; ++j) {
+            if (offset + sizeof(size_t) > bias_data.size()) break;
+            std::memcpy(&shape[j], &bias_data[offset], sizeof(size_t));
+            offset += sizeof(size_t);
+          }
+
+          // Create NDArray and copy bias data
+          if (shape.size() >= 1 && offset < bias_data.size()) {
+            NDArray bias(shape);
+            size_t data_size = bias.size() * sizeof(double);
+            if (offset + data_size <= bias_data.size()) {
+              std::memcpy(bias.data(), &bias_data[offset], data_size);
+              dense_layer->set_biases(bias);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Deserialize decoder parameters
+  auto decoder_layers = decoder_->get_layers();
+  for (size_t i = 0; i < decoder_layers.size(); ++i) {
+    auto dense_layer =
+        std::dynamic_pointer_cast<layer::Dense>(decoder_layers[i]);
+    if (dense_layer) {
+      // Deserialize weights
+      std::string weights_key = "decoder_weights_" + std::to_string(i);
+      auto weights_it = data.find(weights_key);
+      if (weights_it != data.end()) {
+        const auto& weights_data = weights_it->second;
+        size_t offset = 0;
+
+        // Read shape information
+        if (offset >= weights_data.size()) continue;
+        size_t shape_size = weights_data[offset++];
+        std::vector<size_t> shape(shape_size);
+        for (size_t j = 0; j < shape_size; ++j) {
+          if (offset + sizeof(size_t) > weights_data.size()) break;
+          std::memcpy(&shape[j], &weights_data[offset], sizeof(size_t));
+          offset += sizeof(size_t);
+        }
+
+        // Create NDArray and copy weight data
+        if (shape.size() >= 2 && offset < weights_data.size()) {
+          NDArray weights(shape);
+          size_t data_size = weights.size() * sizeof(double);
+          if (offset + data_size <= weights_data.size()) {
+            std::memcpy(weights.data(), &weights_data[offset], data_size);
+            dense_layer->set_weights(weights);
+          }
+        }
+      }
+
+      // Deserialize bias
+      if (dense_layer->get_use_bias()) {
+        std::string bias_key = "decoder_bias_" + std::to_string(i);
+        auto bias_it = data.find(bias_key);
+        if (bias_it != data.end()) {
+          const auto& bias_data = bias_it->second;
+          size_t offset = 0;
+
+          // Read shape information
+          if (offset >= bias_data.size()) continue;
+          size_t shape_size = bias_data[offset++];
+          std::vector<size_t> shape(shape_size);
+          for (size_t j = 0; j < shape_size; ++j) {
+            if (offset + sizeof(size_t) > bias_data.size()) break;
+            std::memcpy(&shape[j], &bias_data[offset], sizeof(size_t));
+            offset += sizeof(size_t);
+          }
+
+          // Create NDArray and copy bias data
+          if (shape.size() >= 1 && offset < bias_data.size()) {
+            NDArray bias(shape);
+            size_t data_size = bias.size() * sizeof(double);
+            if (offset + data_size <= bias_data.size()) {
+              std::memcpy(bias.data(), &bias_data[offset], data_size);
+              dense_layer->set_biases(bias);
+            }
+          }
+        }
+      }
+    }
+  }
 
   return true;
 }

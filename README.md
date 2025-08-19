@@ -24,7 +24,7 @@ A modern C++17 machine learning library designed for neural network training and
 - **📁 Auto Directory**: Automatic directory creation with `mkdir -p` functionality
 - **🔧 Type Safety**: Enum-based format specification for improved reliability
 - **⚡ Performance**: Optimized C++17 implementation with NDArray backend
-- **🧪 Testing**: Comprehensive unit (21/21) and integration tests (3429/3429 assertions)
+- **🧪 Testing**: Comprehensive unit (76/76) and integration tests (3429/3429 assertions)
 - **🖥️ GPU Testing**: 145 GPU-specific assertions with fallback validation
 - **🔄 Cross-platform**: Linux, macOS, Windows support
 - **📊 Benchmarking**: Real-time performance metrics and execution time tracking
@@ -44,7 +44,7 @@ git clone https://github.com/shadowlink0122/CppML.git
 cd CppML
 make                         # Build the library
 make test                    # Run all tests (unit + integration)
-make unit-test               # Run unit tests (21/21 passing)
+make unit-test               # Run unit tests (76/76 passing)
 make integration-test        # Run integration tests (3429/3429 assertions)
 make simple-integration-test # Run simple integration tests
 
@@ -136,7 +136,7 @@ MLLib includes a comprehensive testing framework with performance monitoring:
 
 ### Test Coverage
 
-- **Unit Tests**: 21/21 tests passing across all components
+- **Unit Tests**: 76/76 tests passing across all components
 - **Integration Tests**: End-to-end workflows and complex scenarios
 - **Performance Tests**: Execution time monitoring and benchmarking
 - **Error Handling**: Comprehensive error condition testing
@@ -195,7 +195,7 @@ make simple-integration-test   # Simple integration tests (basic functionality)
 ```bash
 # Run all tests
 make test                     # Complete test suite (Unit + Integration)
-make unit-test                # Run unit tests (21/21 passing)
+make unit-test                # Run unit tests (76/76 passing)
 make integration-test         # Comprehensive integration tests (3429/3429 assertions)
 make simple-integration-test  # Simple integration tests (basic functionality)
 
@@ -432,7 +432,7 @@ Format Validation → Linting → Static Analysis
 
 ### Test Coverage
 
-- **Unit Tests**: 21/21 passing (100%)
+- **Unit Tests**: 76/76 passing (100%)
 - **Integration Tests**: 3429/3429 assertions passing (100%)
 - **Simple Integration Tests**: Basic functionality verification
 - **CI Requirements**: 100% deterministic test success rate
@@ -482,7 +482,7 @@ CppML/
 ## 🛠️ Roadmap
 
 ### Completed ✅
-- [x] Comprehensive unit testing framework (21/21 tests)
+- [x] Comprehensive unit testing framework (76/76 tests)
 - [x] Integration testing with performance monitoring
 - [x] Execution time measurement and benchmarking
 - [x] Dense layers with activation functions (ReLU, Sigmoid, Tanh)

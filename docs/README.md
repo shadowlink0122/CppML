@@ -5,7 +5,7 @@
 [![CI](https://github.com/shadowlink0122/CppML/workflows/CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/ci.yml)
 [![Extended CI](https://github.com/shadowlink0122/CppML/workflows/Extended%20CI/badge.svg)](https://github.com/shadowlink0122/CppML/actions/workflows/extended-ci.yml)
 [![Code Quality](https://img.shields.io/badge/code%20style-K%26R-blue.svg)](https://en.wikipedia.org/wiki/Indentation_style#K&R_style)
-[![Tests](https://img.shields.io/badge/tests-21%2F21_passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-76%2F76_passing-brightgreen.svg)](#testing)
 [![GPU Optimization](https://img.shields.io/badge/GPU_kernel_reduction-97%25-brightgreen.svg)](#gpu-strategy)
 [![Model I/O Generalization](https://img.shields.io/badge/Model_I%2FO_generalization-92%25-green.svg)](#model-io-guides)
 
@@ -63,7 +63,7 @@ Welcome to the comprehensive documentation collection for MLLib C++ machine lear
 
 - **📊 [How to Run Tests](TESTING_en.md)** - Unit and integration test execution
 - **⏱️ [Performance Monitoring](TESTING_en.md#performance-monitoring)** - Runtime measurement features
-- **✅ [Test Coverage](TESTING_en.md#test-coverage)** - 21/21 test passing status
+- **✅ [Test Coverage](TESTING_en.md#test-coverage)** - 76/76 test passing status
 
 ### 💾 Model Operations
 
@@ -150,7 +150,7 @@ make unit-test             # Run all unit tests
 
 ### 🔍 Quality Assurance
 
-- **🧪 Tests**: 21/21 tests passing (with runtime monitoring)
+- **🧪 Tests**: 76/76 tests passing (with runtime monitoring)
 - **📊 Coverage**: Comprehensive unit and integration tests
 - **🔧 Static Analysis**: cppcheck, clang-tidy support
 - **📝 Code Style**: K&R style formatting
