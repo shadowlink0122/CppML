@@ -249,10 +249,10 @@ struct GPUDetectionCache {
   bool amd_available = false;
   bool intel_available = false;
   std::string system_profiler_output;
-  
+
   void initialize() {
     if (initialized) return;
-    
+
 #ifdef __APPLE__
     // Get system profiler output once
     FILE* pipe = popen("system_profiler SPDisplaysDataType 2>/dev/null", "r");
@@ -262,18 +262,19 @@ struct GPUDetectionCache {
         system_profiler_output += buffer;
       }
       pclose(pipe);
-      
+
       // Check for different GPU vendors in cached output
       std::string lower_output = system_profiler_output;
-      std::transform(lower_output.begin(), lower_output.end(), lower_output.begin(), ::tolower);
-      
+      std::transform(lower_output.begin(), lower_output.end(),
+                     lower_output.begin(), ::tolower);
+
       nvidia_available = (lower_output.find("nvidia") != std::string::npos ||
-                         lower_output.find("geforce") != std::string::npos ||
-                         lower_output.find("quadro") != std::string::npos);
-      
+                          lower_output.find("geforce") != std::string::npos ||
+                          lower_output.find("quadro") != std::string::npos);
+
       amd_available = (lower_output.find("amd") != std::string::npos ||
-                      lower_output.find("radeon") != std::string::npos);
-      
+                       lower_output.find("radeon") != std::string::npos);
+
       intel_available = (lower_output.find("intel") != std::string::npos);
     }
 #endif

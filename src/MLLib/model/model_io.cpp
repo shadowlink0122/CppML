@@ -261,7 +261,8 @@ bool GenericModelIO::save_json(const ISerializableModel& model,
   (void)model;
   (void)filepath;
   std::cerr << "JSON saving requires MLLIB_JSON_SUPPORT=1" << std::endl;
-  std::cerr << "Install nlohmann/json and rebuild with: make json-support" << std::endl;
+  std::cerr << "Install nlohmann/json and rebuild with: make json-support"
+            << std::endl;
   return false;
 #endif
 }
@@ -920,13 +921,14 @@ std::unique_ptr<Sequential> ModelIO::load_json(const std::string& filepath) {
     if (j.contains("layers")) {
       for (const auto& layer_json : j["layers"]) {
         std::string type = layer_json["type"];
-        
+
         if (type == "Dense") {
           int input_size = layer_json["input_size"];
           int output_size = layer_json["output_size"];
           bool use_bias = layer_json.value("use_bias", true);
-          
-          auto dense_layer = std::make_shared<layer::Dense>(input_size, output_size, use_bias);
+
+          auto dense_layer =
+              std::make_shared<layer::Dense>(input_size, output_size, use_bias);
           model->add(dense_layer);
         } else if (type == "ReLU") {
           model->add(std::make_shared<layer::activation::ReLU>());
@@ -944,24 +946,26 @@ std::unique_ptr<Sequential> ModelIO::load_json(const std::string& filepath) {
     if (j.contains("parameters")) {
       const auto& params = j["parameters"];
       const auto& layers = model->get_layers();
-      
+
       for (const auto& [layer_key, layer_params] : params.items()) {
         // Extract layer index from key (e.g., "layer_0" -> 0)
         std::string prefix = "layer_";
         if (layer_key.substr(0, prefix.length()) == prefix) {
           size_t layer_idx = std::stoul(layer_key.substr(prefix.length()));
-          
+
           if (layer_idx < layers.size()) {
-            auto dense_layer = dynamic_cast<layer::Dense*>(layers[layer_idx].get());
+            auto dense_layer =
+                dynamic_cast<layer::Dense*>(layers[layer_idx].get());
             if (dense_layer && layer_params.contains("weights")) {
               // Load weights
               const auto& weights_json = layer_params["weights"];
-              if (weights_json.contains("shape") && weights_json.contains("data")) {
+              if (weights_json.contains("shape") &&
+                  weights_json.contains("data")) {
                 std::vector<size_t> shape;
                 for (int dim : weights_json["shape"]) {
                   shape.push_back(static_cast<size_t>(dim));
                 }
-                
+
                 NDArray weights(shape);
                 const auto& data = weights_json["data"];
                 for (size_t i = 0; i < data.size() && i < weights.size(); ++i) {
@@ -969,19 +973,22 @@ std::unique_ptr<Sequential> ModelIO::load_json(const std::string& filepath) {
                 }
                 dense_layer->set_weights(weights);
               }
-              
+
               // Load biases if present
-              if (dense_layer->get_use_bias() && layer_params.contains("biases")) {
+              if (dense_layer->get_use_bias() &&
+                  layer_params.contains("biases")) {
                 const auto& biases_json = layer_params["biases"];
-                if (biases_json.contains("shape") && biases_json.contains("data")) {
+                if (biases_json.contains("shape") &&
+                    biases_json.contains("data")) {
                   std::vector<size_t> shape;
                   for (int dim : biases_json["shape"]) {
                     shape.push_back(static_cast<size_t>(dim));
                   }
-                  
+
                   NDArray biases(shape);
                   const auto& data = biases_json["data"];
-                  for (size_t i = 0; i < data.size() && i < biases.size(); ++i) {
+                  for (size_t i = 0; i < data.size() && i < biases.size();
+                       ++i) {
                     biases.data()[i] = data[i].get<double>();
                   }
                   dense_layer->set_biases(biases);
@@ -1005,7 +1012,8 @@ std::unique_ptr<Sequential> ModelIO::load_json(const std::string& filepath) {
 #else
   (void)filepath;
   std::cerr << "JSON loading requires MLLIB_JSON_SUPPORT=1" << std::endl;
-  std::cerr << "Install nlohmann/json and rebuild with: make json-support" << std::endl;
+  std::cerr << "Install nlohmann/json and rebuild with: make json-support"
+            << std::endl;
   return nullptr;
 #endif
 }
@@ -1200,7 +1208,7 @@ GenericModelIO::load_json_sequential(const std::string& filepath) {
   // Delegate to ModelIO::load_json
   return ModelIO::load_json(filepath);
 }
-#endif // MLLIB_JSON_SUPPORT
+#endif  // MLLIB_JSON_SUPPORT
 
 }  // namespace model
 }  // namespace MLLib

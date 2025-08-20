@@ -221,8 +221,8 @@ protected:
                                           SaveFormat::BINARY),
                "Generic save with custom extension should succeed");
 
-    // Note: GenericModelIO JSON functionality requires more complex implementation
-    // For now we skip direct JSON testing with GenericModelIO
+    // Note: GenericModelIO JSON functionality requires more complex
+    // implementation For now we skip direct JSON testing with GenericModelIO
 
     // Note: Legacy ModelIO save operations currently not fully implemented
     // We test the interface but don't assert success for unimplemented

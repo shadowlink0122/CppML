@@ -1,8 +1,8 @@
 #ifndef MLLIB_TEST_MODEL_INTEGRATION_HPP
 #define MLLIB_TEST_MODEL_INTEGRATION_HPP
 
-#include "../../../common/test_utils.hpp"
 #include "../../../../include/MLLib.hpp"
+#include "../../../common/test_utils.hpp"
 
 namespace MLLib {
 namespace test {
@@ -13,7 +13,8 @@ namespace test {
  */
 class SequentialModelIntegrationTest : public TestCase {
 public:
-  SequentialModelIntegrationTest() : TestCase("SequentialModelIntegrationTest") {}
+  SequentialModelIntegrationTest()
+      : TestCase("SequentialModelIntegrationTest") {}
 
 protected:
   void test() override {

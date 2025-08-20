@@ -14,7 +14,8 @@ namespace test {
  */
 class SequentialModelIntegrationTest : public TestCase {
 public:
-  SequentialModelIntegrationTest() : TestCase("SequentialModelIntegrationTest") {}
+  SequentialModelIntegrationTest()
+      : TestCase("SequentialModelIntegrationTest") {}
 
 protected:
   void test() override {
@@ -103,7 +104,7 @@ protected:
     // Test load
     auto loaded_model = ModelIO::load_model(model_path);
     assertTrue(loaded_model != nullptr, "Model load should succeed");
-    assertTrue(loaded_model->num_layers() == original_model.num_layers(), 
+    assertTrue(loaded_model->num_layers() == original_model.num_layers(),
                "Loaded model should have same layer count");
 
     removeDirectory(temp_dir);
