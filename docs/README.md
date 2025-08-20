@@ -169,7 +169,7 @@ make unit-test             # Run all unit tests
 
 ## 📄 License
 
-This project is released under the [MIT License](../LICENSE).
+This project is released under the [BSD 3-Clause License with Commercial Use Restriction](../LICENSE).
 
 ---
 
