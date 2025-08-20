@@ -224,7 +224,7 @@ CPPCHECK = cppcheck
 
 # Default target
 .PHONY: all
-all: $(LIB_TARGET)
+all: setup-deps $(LIB_TARGET)
 
 # Create build directory
 $(BUILD_DIR):
