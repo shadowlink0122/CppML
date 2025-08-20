@@ -11,6 +11,11 @@ INCLUDE_DIR = include
 BUILD_DIR = build
 TEST_DIR = tests
 SAMPLE_DIR = samples
+THIRD_PARTY_DIR = $(INCLUDE_DIR)/MLLib/third_party
+
+# Dependencies
+JSON_HPP = $(THIRD_PARTY_DIR)/json.hpp
+JSON_URL = https://github.com/nlohmann/json/releases/download/v3.11.3/json.hpp
 
 # GPU vendor detection and flags
 ROCM_AVAILABLE := $(shell which rocm-smi 2>/dev/null && echo true || echo false)
@@ -1010,5 +1015,63 @@ help:
 	@echo "  make xor                 - Run XOR sample (auto GPU detection)"
 	@echo "  make test                - Run tests with runtime GPU detection"
 	@echo ""
+	@echo "Dependencies:"
+	@echo "  setup-deps   - Download and setup all dependencies automatically"
+	@echo "  deps-check   - Check status of dependencies"
+	@echo "  minimal      - Build without JSON loading support (no dependencies)"
+	@echo "  json-support - Build with full JSON I/O support"
+	@echo ""
 	@echo "Misc:"
 	@echo "  help         - Show this help message"
+
+# Dependencies management
+.PHONY: setup-deps deps-check deps-install minimal json-support
+
+# Check if dependencies are available
+deps-check:
+	@echo "🔍 Checking dependencies..."
+	@printf "  curl/wget: "
+	@command -v curl >/dev/null 2>&1 && echo "✅ curl available" || \
+	 (command -v wget >/dev/null 2>&1 && echo "✅ wget available" || echo "❌ neither curl nor wget found")
+	@printf "  JSON library: "
+	@[ -f "$(JSON_HPP)" ] && echo "✅ $(JSON_HPP) exists" || echo "❌ $(JSON_HPP) missing"
+
+# Install missing dependencies
+deps-install: setup-deps
+
+# Setup dependencies automatically
+setup-deps: $(JSON_HPP)
+	@echo "✅ All dependencies ready"
+
+$(JSON_HPP):
+	@echo "📥 Downloading nlohmann/json..."
+	@mkdir -p $(THIRD_PARTY_DIR)
+	@if command -v curl >/dev/null 2>&1; then \
+		curl -L -s "$(JSON_URL)" -o "$(JSON_HPP)" || \
+		curl -L -s "https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp" -o "$(JSON_HPP)"; \
+	elif command -v wget >/dev/null 2>&1; then \
+		wget -q "$(JSON_URL)" -O "$(JSON_HPP)" || \
+		wget -q "https://raw.githubusercontent.com/nlohmann/json/develop/single_include/nlohmann/json.hpp" -O "$(JSON_HPP)"; \
+	else \
+		echo "❌ Error: curl or wget required for automatic dependency download"; \
+		echo "Please install curl or wget, or manually download:"; \
+		echo "  $(JSON_URL)"; \
+		echo "  to $(JSON_HPP)"; \
+		false; \
+	fi
+	@echo "✅ JSON dependency ready"
+
+# Build with JSON support (default)
+json-support: setup-deps all
+	@echo "✅ Built with JSON support"
+
+# Build without JSON support
+minimal:
+	@echo "🔨 Building minimal version (no JSON loading)..."
+	$(MAKE) all MINIMAL_BUILD=1
+	@echo "✅ Minimal build complete (JSON saving supported, loading requires dependencies)"
+
+# Add JSON support flag when building normally
+ifndef MINIMAL_BUILD
+    CXXFLAGS += -DMLLIB_JSON_SUPPORT=1
+endif

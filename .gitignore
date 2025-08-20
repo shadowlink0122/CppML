@@ -4,6 +4,9 @@
 # Build directory
 build/
 
+# third_party
+third_party/
+
 # Model directory
 saved_models/
 
