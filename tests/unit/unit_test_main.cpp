@@ -9,6 +9,7 @@
 #include "MLLib/layer/test_dense.hpp"
 #include "MLLib/model/autoencoder/test_base_autoencoder.hpp"
 #include "MLLib/model/test_autoencoder_model_io.hpp"
+#include "MLLib/model/test_json_io.hpp"
 #include "MLLib/model/test_large_sequential_model_io.hpp"
 #include "MLLib/model/test_model_io.hpp"
 #include "MLLib/model/test_sequential.hpp"
@@ -167,6 +168,12 @@ int main() {
   runTest(std::make_unique<SequentialModelErrorHandlingTest>());
   runTest(std::make_unique<SequentialModelMetadataTest>());
   runTest(std::make_unique<MultiModelTypeComparisonTest>());
+
+  // JSON I/O tests
+  printf("\n--- JSON I/O Tests ---\n");
+  runTest(std::make_unique<SequentialModelIOJSONTest>());
+  runTest(std::make_unique<JSONErrorHandlingTest>());
+  runTest(std::make_unique<JSONBatchProcessingTest>());
 
   // Large Sequential Model I/O tests
   printf("\n--- Large Sequential Model I/O Tests ---\n");

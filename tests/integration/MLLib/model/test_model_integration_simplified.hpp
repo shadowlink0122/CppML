@@ -1,8 +1,9 @@
 #ifndef MLLIB_TEST_MODEL_INTEGRATION_HPP
 #define MLLIB_TEST_MODEL_INTEGRATION_HPP
 
-#include "../../../../include/MLLib.hpp"
-#include "../../../common/test_utils.hpp"
+#include "../../common/test_case.hpp"
+#include "../../common/test_utils.hpp"
+#include "MLLib.hpp"
 
 namespace MLLib {
 namespace test {
@@ -84,8 +85,29 @@ public:
 
 protected:
   void test() override {
-    // Temporarily skip this test due to segmentation fault
-    printf("Model I/O integration test SKIPPED (under investigation)\n");
+    using namespace MLLib::model;
+    using namespace MLLib::layer;
+
+    Sequential original_model;
+    original_model.add(std::make_shared<Dense>(2, 3));
+    original_model.add(std::make_shared<activation::ReLU>());
+    original_model.add(std::make_shared<Dense>(3, 1));
+
+    std::string temp_dir = createTempDirectory();
+    std::string model_path = temp_dir + "/test_model.bin";
+
+    // Test save
+    bool save_success = ModelIO::save_model(original_model, model_path);
+    assertTrue(save_success, "Model save should succeed");
+    assertTrue(fileExists(model_path), "Model file should exist after save");
+
+    // Test load
+    auto loaded_model = ModelIO::load_model(model_path);
+    assertTrue(loaded_model != nullptr, "Model load should succeed");
+    assertTrue(loaded_model->num_layers() == original_model.num_layers(),
+               "Loaded model should have same layer count");
+
+    removeDirectory(temp_dir);
   }
 };
 

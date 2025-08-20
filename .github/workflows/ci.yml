@@ -64,13 +64,20 @@ jobs:
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build and run unit tests
       run: |
         echo "🏗️ Building library and running unit tests..."
         make clean
+        make setup-deps
         make
         make unit-test
-        echo "✅ Unit tests completed (21/21 tests passing)"
+        echo "✅ Unit tests completed"
 
   # Parallel Integration Tests  
   integration-tests:
@@ -87,14 +94,21 @@ jobs:
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build and run integration tests
       run: |
         echo "🏗️ Building library and running integration tests..."
         make clean
+        make setup-deps
         make
         make simple-integration-test
         make integration-test
-        echo "✅ Integration tests completed (3429/3429 assertions passing)"
+        echo "✅ Integration tests completed"
 
   # Parallel Sample Tests
   sample-tests:
@@ -111,10 +125,17 @@ jobs:
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build and test samples
       run: |
         echo "🏗️ Building library and testing sample programs..."
         make clean
+        make setup-deps
         make
         make samples-ci
         make xor

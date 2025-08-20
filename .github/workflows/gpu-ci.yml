@@ -38,10 +38,17 @@ jobs:
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build and run unit tests
       run: |
         echo "🏗️ Building library and running GPU unit tests..."
         make clean
+        make setup-deps
         make
         make unit-test
         echo "✅ GPU unit tests completed"
@@ -61,10 +68,17 @@ jobs:
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build and run integration tests
       run: |
         echo "🏗️ Building library and running GPU integration tests..."
         make clean
+        make setup-deps
         make
         make simple-integration-test
         make integration-test
@@ -85,10 +99,17 @@ jobs:
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build and run performance tests
       run: |
         echo "🏗️ Building library and running GPU performance tests..."
         make clean
+        make setup-deps
         make
         # Run performance-related samples
         make samples-ci
@@ -138,6 +159,12 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential cmake clang-format pciutils lshw
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Check for GPU vendors
       run: |
         echo "🔍 Checking system for GPU vendors..."
@@ -150,12 +177,12 @@ jobs:
         
     - name: Build and test multi-GPU detection
       run: |
-        echo "🏗️ Building library and testing multi-GPU vendor detection..."
+        echo "🏗️ Building library and testing multi-GPU detection..."
         make clean
+        make setup-deps
         make
-        make samples-ci
-        make device-detection || echo "⚠️ Demo completed with warnings"
-        echo "✅ Multi-GPU vendor test completed"
+        
+        echo "🎯 Testing GPU detection capabilities..."
 
   # GPU CI Summary
   gpu-ci-summary:

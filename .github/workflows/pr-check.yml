@@ -115,15 +115,21 @@ jobs:
         sudo apt-get update -q
         sudo apt-get install -y build-essential make
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build and test
       id: test
       run: |
         echo "🏗️ Building library..."
-        make clean && make
+        make clean && make setup-deps && make
         
         echo "🧪 Running unit tests..."
         if make unit-test; then
-          echo "status=✅ All tests passed (21/21)" >> $GITHUB_OUTPUT
+          echo "status=✅ All tests passed" >> $GITHUB_OUTPUT
           echo "passed=true" >> $GITHUB_OUTPUT
         else
           echo "status=❌ Tests failed" >> $GITHUB_OUTPUT

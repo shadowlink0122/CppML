@@ -108,10 +108,17 @@ jobs:
         sudo apt-get update -q
         sudo apt-get install -y build-essential make
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build library
       run: |
         echo "🏗️ Building library..."
         make clean
+        make setup-deps
         make
         
     - name: Run unit tests with performance monitoring
@@ -193,6 +200,12 @@ jobs:
         sudo apt-get update -q
         sudo apt-get install -y build-essential make
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Manual build for CodeQL
       run: |
         echo "🔒 Building project for security analysis..."
@@ -209,6 +222,7 @@ jobs:
         
         # Clean and build with explicit compiler invocation
         make clean
+        make setup-deps
         
         echo "Starting build process..."
         make all CXX=g++ VERBOSE=1

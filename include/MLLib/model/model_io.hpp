@@ -84,6 +84,46 @@ public:
   static std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
   load_model_data(const std::string& filepath, SaveFormat format);
 
+#ifdef MLLIB_JSON_SUPPORT
+  /**
+   * @brief Save model to JSON format using nlohmann/json
+   * @param model Model to save
+   * @param filepath File path to save to (should end with .json)
+   * @return true if successful, false otherwise
+   */
+  static bool save_json(const ISerializableModel& model,
+                        const std::string& filepath);
+
+  /**
+   * @brief Load model from JSON format using nlohmann/json
+   * @param filepath File path to load from
+   * @return Model instance or nullptr if failed
+   * @note Template parameter T should implement ISerializableModel
+   */
+  template <typename T>
+  static std::unique_ptr<T> load_json(const std::string& filepath) {
+    // Special handling for Sequential models
+    if constexpr (std::is_same_v<T, Sequential>) {
+      auto sequential_ptr = load_json_sequential(filepath);
+      return std::unique_ptr<T>(static_cast<T*>(sequential_ptr.release()));
+    } else {
+      static_assert(std::is_base_of<ISerializableModel, T>::value,
+                    "T must inherit from ISerializableModel");
+
+      try {
+        auto data = load_json_internal(filepath);
+        if (!data) return nullptr;
+
+        auto model = std::make_unique<T>();
+        bool success = model->deserialize_from_data(*data);
+        return success ? std::move(model) : nullptr;
+      } catch (const std::exception&) {
+        return nullptr;
+      }
+    }
+  }
+#endif  // MLLIB_JSON_SUPPORT
+
 private:
   static bool create_directories(const std::string& path);
 
@@ -114,14 +154,18 @@ private:
   static std::unique_ptr<SerializationMetadata>
   load_metadata(const std::string& filepath);
 
+private:
   static bool save_binary(const ISerializableModel& model,
                           const std::string& filepath);
-  static bool save_json(const ISerializableModel& model,
-                        const std::string& filepath);
   static std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
   load_binary(const std::string& filepath);
+
+#ifdef MLLIB_JSON_SUPPORT
   static std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
-  load_json(const std::string& filepath);
+  load_json_internal(const std::string& filepath);
+  static std::unique_ptr<Sequential>
+  load_json_sequential(const std::string& filepath);
+#endif
 
   // Utility functions made public for ModelIO compatibility
   static bool ensure_directory_exists(const std::string& filepath);
@@ -199,6 +243,21 @@ public:
    */
   static std::unique_ptr<Sequential> load_config(const std::string& filepath);
 
+  /**
+   * @brief Save Sequential model to JSON format (legacy)
+   * @param model Model to save
+   * @param filepath File path to save to (should end with .json)
+   * @return true if successful, false otherwise
+   */
+  static bool save_json(const Sequential& model, const std::string& filepath);
+
+  /**
+   * @brief Load Sequential model from JSON format (legacy)
+   * @param filepath File path to load from
+   * @return Model instance or nullptr if failed
+   */
+  static std::unique_ptr<Sequential> load_json(const std::string& filepath);
+
   // Utility methods
   static SaveFormat string_to_format(const std::string& format_str);
   static std::string format_to_string(SaveFormat format);
@@ -210,8 +269,6 @@ private:
 
   static bool save_binary(const Sequential& model, const std::string& filepath);
   static std::unique_ptr<Sequential> load_binary(const std::string& filepath);
-  static bool save_json(const Sequential& model, const std::string& filepath);
-  static std::unique_ptr<Sequential> load_json(const std::string& filepath);
 
   // Legacy helper functions
   static void write_binary_data(std::ofstream& file, const void* data,

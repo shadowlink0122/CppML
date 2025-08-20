@@ -42,8 +42,15 @@ A modern C++17 machine learning library designed for neural network training and
 ```bash
 git clone https://github.com/shadowlink0122/CppML.git
 cd CppML
-make                         # Build the library
+make                         # Build with automatic dependency management
 make test                    # Run all tests (unit + integration)
+
+# Alternative build options:
+make setup-deps              # Download dependencies only
+make minimal                 # Build without JSON loading (no dependencies)
+make json-support            # Build with full JSON I/O support
+make deps-check              # Check dependency status
+
 make unit-test               # Run unit tests (76/76 passing)
 make integration-test        # Run integration tests (3429/3429 assertions)
 make simple-integration-test # Run simple integration tests
@@ -58,6 +65,33 @@ make xor                     # Run XOR neural network example
 make device-detection        # Run GPU device detection sample
 make gpu-vendor-detection    # Run GPU vendor detection sample
 ```
+
+### 🌍 Cross-Platform Support
+
+MLLib automatically manages dependencies across all platforms:
+
+#### Quick Start (All Platforms)
+```bash
+git clone https://github.com/shadowlink0122/CppML.git
+cd CppML
+make          # Automatically downloads dependencies and builds
+make test     # Full test suite
+```
+
+#### Platform-Specific Notes
+- **Linux**: Requires `curl` or `wget` (usually pre-installed)
+- **macOS**: Uses built-in `curl` (no additional setup)  
+- **Windows**: Works with Git Bash, MSYS2, or WSL
+
+#### Offline/Corporate Environments
+```bash
+# Download dependencies manually:
+tools/setup-deps.sh        # Cross-platform setup script
+# Or minimal build without dependencies:
+make minimal               # JSON saving supported, loading disabled
+```
+
+See [Dependencies Setup Guide](docs/DEPENDENCIES_SETUP.md) for detailed instructions.
 
 ### Basic Usage
 
