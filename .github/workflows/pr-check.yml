@@ -125,7 +125,7 @@ jobs:
       id: test
       run: |
         echo "🏗️ Building library..."
-        make clean && make
+        make clean && make setup-deps && make
         
         echo "🧪 Running unit tests..."
         if make unit-test; then

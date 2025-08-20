@@ -118,6 +118,7 @@ jobs:
       run: |
         echo "🏗️ Building library..."
         make clean
+        make setup-deps
         make
         
     - name: Run unit tests with performance monitoring
@@ -221,6 +222,7 @@ jobs:
         
         # Clean and build with explicit compiler invocation
         make clean
+        make setup-deps
         
         echo "Starting build process..."
         make all CXX=g++ VERBOSE=1
