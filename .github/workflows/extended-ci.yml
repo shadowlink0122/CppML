@@ -108,6 +108,12 @@ jobs:
         sudo apt-get update -q
         sudo apt-get install -y build-essential make
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build library
       run: |
         echo "🏗️ Building library..."
@@ -192,6 +198,12 @@ jobs:
       run: |
         sudo apt-get update -q
         sudo apt-get install -y build-essential make
+        
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
         
     - name: Manual build for CodeQL
       run: |

@@ -38,6 +38,12 @@ jobs:
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
         
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
+        
     - name: Build and run unit tests
       run: |
         echo "🏗️ Building library and running GPU unit tests..."
@@ -60,6 +66,12 @@ jobs:
         sudo apt-get update -q
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
+        
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
         
     - name: Build and run integration tests
       run: |
@@ -84,6 +96,12 @@ jobs:
         sudo apt-get update -q
         sudo apt-get install -y build-essential make clang
         echo "✅ Build tools installed"
+        
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
         
     - name: Build and run performance tests
       run: |
@@ -137,6 +155,12 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential cmake clang-format pciutils lshw
+        
+    - name: Setup dependencies
+      run: |
+        echo "📦 Setting up dependencies..."
+        make setup-deps
+        echo "✅ Dependencies installed"
         
     - name: Check for GPU vendors
       run: |

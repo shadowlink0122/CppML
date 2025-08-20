@@ -145,7 +145,7 @@ endif
 # Find source files
 CPP_FILES = $(shell find $(SRC_DIR) -name "*.cpp" 2>/dev/null || true)
 MM_FILES = $(shell find $(SRC_DIR) -name "*.mm" 2>/dev/null || true)
-HPP_FILES = $(shell find $(INCLUDE_DIR) -name "*.hpp" 2>/dev/null || true)
+HPP_FILES = $(shell find $(INCLUDE_DIR) -name "*.hpp" -not -path "*/third_party/*" 2>/dev/null || true)
 SRC_HPP_FILES = $(shell find $(SRC_DIR) -name "*.hpp" 2>/dev/null || true)
 TEST_FILES = $(shell find $(TEST_DIR) -name "*.cpp" 2>/dev/null || true)
 TEST_HPP_FILES = $(shell find $(TEST_DIR) -name "*.hpp" 2>/dev/null || true)
@@ -301,6 +301,13 @@ clean:
 	done
 	@echo "Removing test temporary files..."
 	@find . -name "mllib_test_*" -delete 2>/dev/null || true
+	@echo "Removing third-party dependencies..."
+	@if [ -d "$(THIRD_PARTY_DIR)" ]; then \
+		echo "Removing third-party directory: $(THIRD_PARTY_DIR)"; \
+		rm -rf $(THIRD_PARTY_DIR); \
+	else \
+		echo "Third-party directory $(THIRD_PARTY_DIR) does not exist"; \
+	fi
 	@echo "✅ Clean completed"
 
 # Deep clean - remove all generated files
@@ -428,7 +435,7 @@ lint:
 				'echo "Checking {}..."; $(CLANG_TIDY) {} -- $(CXXFLAGS) $(INCLUDE_FLAGS) || true'; \
 		fi; \
 		if [ -n "$(HPP_FILES)" ]; then \
-			find $(INCLUDE_DIR) -name "*.hpp" | grep -v metal_backend.hpp | xargs -n 1 -P $(shell nproc 2>/dev/null || echo 4) -I {} sh -c \
+			find $(INCLUDE_DIR) -name "*.hpp" -not -path "*/third_party/*" | grep -v metal_backend.hpp | xargs -n 1 -P $(shell nproc 2>/dev/null || echo 4) -I {} sh -c \
 				'echo "Checking {}..."; $(CLANG_TIDY) {} -- $(CXXFLAGS) $(INCLUDE_FLAGS) || true'; \
 		fi; \
 		echo "✅ Lint checks completed"; \
@@ -445,6 +452,7 @@ check:
 			-I$(INCLUDE_DIR) \
 			--suppress=missingIncludeSystem \
 			--suppress=unusedFunction \
+			-i $(THIRD_PARTY_DIR) \
 			$(SRC_DIR) $(INCLUDE_DIR) 2>/dev/null; \
 		echo "✅ Static analysis completed"; \
 	else \
