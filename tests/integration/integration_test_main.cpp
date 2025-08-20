@@ -642,6 +642,8 @@ int main() {
     model_suite.addTest(std::make_unique<TrainingIntegrationTest>());
     // Re-enabling ModelIOIntegrationTest to debug and fix
     model_suite.addTest(std::make_unique<ModelIOIntegrationTest>());
+    // JSON I/O integration tests
+    model_suite.addTest(std::make_unique<JSONModelIOIntegrationTest>());
 
     bool suite_result = model_suite.runAll();
     all_tests_passed &= suite_result;

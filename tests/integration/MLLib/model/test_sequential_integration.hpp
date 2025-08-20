@@ -106,7 +106,7 @@ protected:
           double save_time_ms = duration.count() / 1000.0;
 
           if (!save_success) {
-            printf("    ❌ Save failed for sample %d\n", sample);
+            printf("    ❌ Save failed for sample %zu\n", sample);
             continue;
           }
 
@@ -121,7 +121,7 @@ protected:
           double load_time_ms = duration.count() / 1000.0;
 
           if (loaded_model == nullptr) {
-            printf("    ❌ Load failed for sample %d\n", sample);
+            printf("    ❌ Load failed for sample %zu\n", sample);
             continue;
           }
 
@@ -152,7 +152,7 @@ protected:
                                               std::to_string(sample),
                                           total_time});
           } else {
-            printf("    ❌ Output mismatch for sample %d\n", sample);
+            printf("    ❌ Output mismatch for sample %zu\n", sample);
           }
         }
       }

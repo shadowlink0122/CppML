@@ -9,6 +9,10 @@
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
+#ifdef MLLIB_JSON_SUPPORT
+#include "MLLib/third_party/json.hpp"
+using json = nlohmann::json;
+#endif
 #include <memory>
 #include <sstream>
 #include <sys/stat.h>
@@ -52,7 +56,9 @@ GenericModelIO::load_model_data(const std::string& filepath,
 
   switch (format) {
   case SaveFormat::BINARY: return load_binary(actual_filepath);
-  case SaveFormat::JSON: return load_json(actual_filepath);
+#ifdef MLLIB_JSON_SUPPORT
+  case SaveFormat::JSON: return load_json_internal(actual_filepath);
+#endif
   case SaveFormat::CONFIG:
     // Config only format doesn't contain parameter data
     return std::make_unique<
@@ -209,46 +215,55 @@ bool GenericModelIO::save_binary(const ISerializableModel& model,
 
 bool GenericModelIO::save_json(const ISerializableModel& model,
                                const std::string& filepath) {
+#ifdef MLLIB_JSON_SUPPORT
   if (!GenericModelIO::ensure_directory_exists(filepath)) {
     std::cerr << "Failed to create directory for: " << filepath << std::endl;
     return false;
   }
 
-  std::ofstream file(filepath);
-  if (!file.is_open()) {
-    std::cerr << "Failed to open file for writing: " << filepath << std::endl;
+  try {
+    auto metadata = model.get_serialization_metadata();
+    auto data = model.serialize();
+
+    json j;
+    j["model_type"] = static_cast<int>(metadata.model_type);
+    j["version"] = metadata.version;
+    j["device"] = (metadata.device == DeviceType::CPU ? "CPU" : "GPU");
+
+    json data_obj;
+    for (const auto& [key, value] : data) {
+      json array;
+      for (uint8_t byte : value) {
+        array.push_back(static_cast<int>(byte));
+      }
+      data_obj[key] = array;
+    }
+    j["data"] = data_obj;
+
+    std::ofstream file(filepath);
+    if (!file.is_open()) {
+      std::cerr << "Failed to open file for writing: " << filepath << std::endl;
+      return false;
+    }
+
+    file << j.dump(2);  // Pretty print with 2 spaces indentation
+    file.close();
+    return true;
+
+  } catch (const json::exception& e) {
+    std::cerr << "JSON serialization error: " << e.what() << std::endl;
+    return false;
+  } catch (const std::exception& e) {
+    std::cerr << "Error saving JSON file: " << e.what() << std::endl;
     return false;
   }
-
-  auto metadata = model.get_serialization_metadata();
-  auto data = model.serialize();
-
-  file << "{\n";
-  file << "  \"model_type\": " << static_cast<int>(metadata.model_type)
-       << ",\n";
-  file << "  \"version\": \"" << metadata.version << "\",\n";
-  file << "  \"device\": \""
-       << (metadata.device == DeviceType::CPU ? "CPU" : "GPU") << "\",\n";
-  file << "  \"data\": {\n";
-
-  bool first = true;
-  for (const auto& [key, value] : data) {
-    if (!first) file << ",\n";
-    first = false;
-
-    file << "    \"" << key << "\": [";
-    for (size_t i = 0; i < value.size(); ++i) {
-      if (i > 0) file << ", ";
-      file << static_cast<int>(value[i]);
-    }
-    file << "]";
-  }
-
-  file << "\n  }\n";
-  file << "}\n";
-
-  file.close();
-  return true;
+#else
+  (void)model;
+  (void)filepath;
+  std::cerr << "JSON saving requires MLLIB_JSON_SUPPORT=1" << std::endl;
+  std::cerr << "Install nlohmann/json and rebuild with: make json-support" << std::endl;
+  return false;
+#endif
 }
 
 std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
@@ -306,16 +321,6 @@ GenericModelIO::load_binary(const std::string& filepath) {
 
   file.close();
   return data;
-}
-
-std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
-GenericModelIO::load_json(const std::string& filepath) {
-  // Simplified JSON parser placeholder
-  (void)filepath;
-  std::cerr
-      << "Generic JSON loading not implemented - use binary format instead"
-      << std::endl;
-  return nullptr;
 }
 
 bool GenericModelIO::ensure_directory_exists(const std::string& filepath) {
@@ -896,12 +901,113 @@ bool ModelIO::save_json(const Sequential& model, const std::string& filepath) {
 }
 
 std::unique_ptr<Sequential> ModelIO::load_json(const std::string& filepath) {
-  // Note: This is a simplified JSON parser for demonstration
-  // In a real implementation, you would use a proper JSON library
-  (void)filepath;  // Suppress unused parameter warning
-  std::cerr << "JSON loading not fully implemented - use binary format instead"
-            << std::endl;
+#ifdef MLLIB_JSON_SUPPORT
+  std::ifstream file(filepath);
+  if (!file.is_open()) {
+    std::cerr << "Failed to open JSON file: " << filepath << std::endl;
+    return nullptr;
+  }
+
+  try {
+    json j;
+    file >> j;
+    file.close();
+
+    // Create model
+    auto model = std::make_unique<Sequential>();
+
+    // Parse layers
+    if (j.contains("layers")) {
+      for (const auto& layer_json : j["layers"]) {
+        std::string type = layer_json["type"];
+        
+        if (type == "Dense") {
+          int input_size = layer_json["input_size"];
+          int output_size = layer_json["output_size"];
+          bool use_bias = layer_json.value("use_bias", true);
+          
+          auto dense_layer = std::make_shared<layer::Dense>(input_size, output_size, use_bias);
+          model->add(dense_layer);
+        } else if (type == "ReLU") {
+          model->add(std::make_shared<layer::activation::ReLU>());
+        } else if (type == "Sigmoid") {
+          model->add(std::make_shared<layer::activation::Sigmoid>());
+        } else if (type == "Tanh") {
+          model->add(std::make_shared<layer::activation::Tanh>());
+        } else {
+          std::cerr << "Warning: Unknown layer type: " << type << std::endl;
+        }
+      }
+    }
+
+    // Load parameters if available
+    if (j.contains("parameters")) {
+      const auto& params = j["parameters"];
+      const auto& layers = model->get_layers();
+      
+      for (const auto& [layer_key, layer_params] : params.items()) {
+        // Extract layer index from key (e.g., "layer_0" -> 0)
+        std::string prefix = "layer_";
+        if (layer_key.substr(0, prefix.length()) == prefix) {
+          size_t layer_idx = std::stoul(layer_key.substr(prefix.length()));
+          
+          if (layer_idx < layers.size()) {
+            auto dense_layer = dynamic_cast<layer::Dense*>(layers[layer_idx].get());
+            if (dense_layer && layer_params.contains("weights")) {
+              // Load weights
+              const auto& weights_json = layer_params["weights"];
+              if (weights_json.contains("shape") && weights_json.contains("data")) {
+                std::vector<size_t> shape;
+                for (int dim : weights_json["shape"]) {
+                  shape.push_back(static_cast<size_t>(dim));
+                }
+                
+                NDArray weights(shape);
+                const auto& data = weights_json["data"];
+                for (size_t i = 0; i < data.size() && i < weights.size(); ++i) {
+                  weights.data()[i] = data[i].get<double>();
+                }
+                dense_layer->set_weights(weights);
+              }
+              
+              // Load biases if present
+              if (dense_layer->get_use_bias() && layer_params.contains("biases")) {
+                const auto& biases_json = layer_params["biases"];
+                if (biases_json.contains("shape") && biases_json.contains("data")) {
+                  std::vector<size_t> shape;
+                  for (int dim : biases_json["shape"]) {
+                    shape.push_back(static_cast<size_t>(dim));
+                  }
+                  
+                  NDArray biases(shape);
+                  const auto& data = biases_json["data"];
+                  for (size_t i = 0; i < data.size() && i < biases.size(); ++i) {
+                    biases.data()[i] = data[i].get<double>();
+                  }
+                  dense_layer->set_biases(biases);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return model;
+
+  } catch (const json::exception& e) {
+    std::cerr << "JSON parsing error: " << e.what() << std::endl;
+    return nullptr;
+  } catch (const std::exception& e) {
+    std::cerr << "Error loading JSON file: " << e.what() << std::endl;
+    return nullptr;
+  }
+#else
+  (void)filepath;
+  std::cerr << "JSON loading requires MLLIB_JSON_SUPPORT=1" << std::endl;
+  std::cerr << "Install nlohmann/json and rebuild with: make json-support" << std::endl;
   return nullptr;
+#endif
 }
 
 void ModelIO::write_binary_data(std::ofstream& file, const void* data,
@@ -1079,6 +1185,22 @@ ModelIO::get_filepath_with_extension(const std::string& base_filepath,
 
   return clean_filepath + extension;
 }
+
+#ifdef MLLIB_JSON_SUPPORT
+// GenericModelIO JSON helper methods
+std::unique_ptr<std::unordered_map<std::string, std::vector<uint8_t>>>
+GenericModelIO::load_json_internal(const std::string& filepath) {
+  // This would implement JSON parsing to binary data format
+  // For now, return nullptr as placeholder
+  return nullptr;
+}
+
+std::unique_ptr<Sequential>
+GenericModelIO::load_json_sequential(const std::string& filepath) {
+  // Delegate to ModelIO::load_json
+  return ModelIO::load_json(filepath);
+}
+#endif // MLLIB_JSON_SUPPORT
 
 }  // namespace model
 }  // namespace MLLib

@@ -1,4 +1,5 @@
 #include "../../../include/MLLib/device/device.hpp"
+#include <algorithm>
 #include <cctype>
 #include <cstdio>
 #include <cstdlib>
@@ -238,30 +239,54 @@ const char* Device::getDeviceTypeString(DeviceType device) {
   }
 }
 
-// Helper functions for GPU vendor detection
+// Helper functions for GPU vendor detection with caching
 namespace {
 
-bool checkNVIDIAGPU() {
+// Cache for GPU detection results
+struct GPUDetectionCache {
+  bool initialized = false;
+  bool nvidia_available = false;
+  bool amd_available = false;
+  bool intel_available = false;
+  std::string system_profiler_output;
+  
+  void initialize() {
+    if (initialized) return;
+    
 #ifdef __APPLE__
-  // Check for NVIDIA GPU on Mac via system_profiler
-  FILE* pipe = popen(
-      "system_profiler SPDisplaysDataType | grep -i 'Chipset Model' | grep -i 'nvidia\\|geforce\\|quadro' 2>/dev/null",
-      "r");
-  if (pipe) {
-    char buffer[256];
-    std::string result;
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-      result += buffer;
+    // Get system profiler output once
+    FILE* pipe = popen("system_profiler SPDisplaysDataType 2>/dev/null", "r");
+    if (pipe) {
+      char buffer[4096];
+      while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        system_profiler_output += buffer;
+      }
+      pclose(pipe);
+      
+      // Check for different GPU vendors in cached output
+      std::string lower_output = system_profiler_output;
+      std::transform(lower_output.begin(), lower_output.end(), lower_output.begin(), ::tolower);
+      
+      nvidia_available = (lower_output.find("nvidia") != std::string::npos ||
+                         lower_output.find("geforce") != std::string::npos ||
+                         lower_output.find("quadro") != std::string::npos);
+      
+      amd_available = (lower_output.find("amd") != std::string::npos ||
+                      lower_output.find("radeon") != std::string::npos);
+      
+      intel_available = (lower_output.find("intel") != std::string::npos);
     }
-    pclose(pipe);
-
-    if (!result.empty() &&
-        (result.find("NVIDIA") != std::string::npos ||
-         result.find("GeForce") != std::string::npos ||
-         result.find("Quadro") != std::string::npos)) {
-      return true;
-    }
+#endif
+    initialized = true;
   }
+};
+
+static GPUDetectionCache gpu_cache;
+
+bool checkNVIDIAGPU() {
+  gpu_cache.initialize();
+#ifdef __APPLE__
+  return gpu_cache.nvidia_available;
 #endif
 
 #ifdef __linux__
@@ -356,25 +381,9 @@ std::string detectNVIDIAGPUName() {
 }
 
 bool checkAMDGPU() {
+  gpu_cache.initialize();
 #ifdef __APPLE__
-  // Check for AMD GPU on Mac via system_profiler
-  FILE* pipe = popen(
-      "system_profiler SPDisplaysDataType | grep -i 'Chipset Model' | grep -i 'AMD\\|Radeon' 2>/dev/null",
-      "r");
-  if (pipe) {
-    char buffer[256];
-    std::string result;
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-      result += buffer;
-    }
-    pclose(pipe);
-
-    if (!result.empty() &&
-        (result.find("AMD") != std::string::npos ||
-         result.find("Radeon") != std::string::npos)) {
-      return true;
-    }
-  }
+  return gpu_cache.amd_available;
 #endif
 
 #ifdef __linux__
@@ -455,23 +464,9 @@ std::string detectAMDGPUName() {
 }
 
 bool checkIntelGPU() {
+  gpu_cache.initialize();
 #ifdef __APPLE__
-  // Check for Intel GPU on Mac via system_profiler
-  FILE* pipe = popen(
-      "system_profiler SPDisplaysDataType | grep -i 'Chipset Model' | grep -i 'Intel' 2>/dev/null",
-      "r");
-  if (pipe) {
-    char buffer[256];
-    std::string result;
-    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-      result += buffer;
-    }
-    pclose(pipe);
-
-    if (!result.empty() && result.find("Intel") != std::string::npos) {
-      return true;
-    }
-  }
+  return gpu_cache.intel_available;
 #endif
 
 #ifdef __linux__

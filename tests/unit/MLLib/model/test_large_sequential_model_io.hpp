@@ -46,7 +46,7 @@ protected:
       auto creation_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(creation_time -
                                                                 start_time);
-      printf("    Model creation time: %ldms\n", creation_duration.count());
+      printf("    Model creation time: %lldms\n", creation_duration.count());
 
       // Test with random input
       NDArray medium_input({1, 512});
@@ -64,7 +64,7 @@ protected:
       auto predict_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(predict_end -
                                                                 predict_start);
-      printf("    Prediction time: %ldms\n", predict_duration.count());
+      printf("    Prediction time: %lldms\n", predict_duration.count());
 
       // Save model
       std::string medium_path = temp_dir + "/medium_sequential";
@@ -78,7 +78,7 @@ protected:
                                                                 save_start);
 
       assertTrue(save_success, "Medium scale model should save successfully");
-      printf("    Save time: %ldms\n", save_duration.count());
+      printf("    Save time: %lldms\n", save_duration.count());
 
       // Check file size
       size_t medium_file_size =
@@ -100,7 +100,7 @@ protected:
 
       assertTrue(loaded_medium != nullptr,
                  "Medium scale model should load successfully");
-      printf("    Load time: %ldms\n", load_duration.count());
+      printf("    Load time: %lldms\n", load_duration.count());
 
       // Test loaded model
       auto loaded_predict_start = std::chrono::high_resolution_clock::now();
@@ -109,7 +109,7 @@ protected:
       auto loaded_predict_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(
               loaded_predict_end - loaded_predict_start);
-      printf("    Loaded model prediction time: %ldms\n",
+      printf("    Loaded model prediction time: %lldms\n",
              loaded_predict_duration.count());
 
       // Verify outputs match
@@ -141,7 +141,7 @@ protected:
       auto creation_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(creation_time -
                                                                 start_time);
-      printf("    Model creation time: %ldms\n", creation_duration.count());
+      printf("    Model creation time: %lldms\n", creation_duration.count());
 
       // Test with random input
       NDArray large_input({1, 1024});
@@ -159,7 +159,7 @@ protected:
       auto predict_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(predict_end -
                                                                 predict_start);
-      printf("    Prediction time: %ldms\n", predict_duration.count());
+      printf("    Prediction time: %lldms\n", predict_duration.count());
 
       // Save model
       std::string large_path = temp_dir + "/large_sequential";
@@ -173,7 +173,7 @@ protected:
                                                                 save_start);
 
       assertTrue(save_success, "Large scale model should save successfully");
-      printf("    Save time: %ldms\n", save_duration.count());
+      printf("    Save time: %lldms\n", save_duration.count());
 
       // Check file size
       size_t large_file_size = std::filesystem::file_size(large_path + ".bin");
@@ -194,7 +194,7 @@ protected:
 
       assertTrue(loaded_large != nullptr,
                  "Large scale model should load successfully");
-      printf("    Load time: %ldms\n", load_duration.count());
+      printf("    Load time: %lldms\n", load_duration.count());
 
       // Test loaded model
       auto loaded_predict_start = std::chrono::high_resolution_clock::now();
@@ -203,7 +203,7 @@ protected:
       auto loaded_predict_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(
               loaded_predict_end - loaded_predict_start);
-      printf("    Loaded model prediction time: %ldms\n",
+      printf("    Loaded model prediction time: %lldms\n",
              loaded_predict_duration.count());
 
       // Verify outputs match
@@ -235,7 +235,7 @@ protected:
       auto creation_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(creation_time -
                                                                 start_time);
-      printf("    Model creation time: %ldms\n", creation_duration.count());
+      printf("    Model creation time: %lldms\n", creation_duration.count());
 
       // Test with random input
       NDArray xlarge_input({1, 2048});
@@ -253,7 +253,7 @@ protected:
       auto predict_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(predict_end -
                                                                 predict_start);
-      printf("    Prediction time: %ldms\n", predict_duration.count());
+      printf("    Prediction time: %lldms\n", predict_duration.count());
 
       // Save model
       std::string xlarge_path = temp_dir + "/xlarge_sequential";
@@ -268,7 +268,7 @@ protected:
 
       assertTrue(save_success,
                  "Extra large scale model should save successfully");
-      printf("    Save time: %ldms\n", save_duration.count());
+      printf("    Save time: %lldms\n", save_duration.count());
 
       // Check file size
       size_t xlarge_file_size =
@@ -290,7 +290,7 @@ protected:
 
       assertTrue(loaded_xlarge != nullptr,
                  "Extra large scale model should load successfully");
-      printf("    Load time: %ldms\n", load_duration.count());
+      printf("    Load time: %lldms\n", load_duration.count());
 
       // Test loaded model
       auto loaded_predict_start = std::chrono::high_resolution_clock::now();
@@ -299,7 +299,7 @@ protected:
       auto loaded_predict_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(
               loaded_predict_end - loaded_predict_start);
-      printf("    Loaded model prediction time: %ldms\n",
+      printf("    Loaded model prediction time: %lldms\n",
              loaded_predict_duration.count());
 
       // Verify outputs match
@@ -352,7 +352,7 @@ protected:
       auto creation_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(creation_time -
                                                                 start_time);
-      printf("    Model creation time: %ldms\n", creation_duration.count());
+      printf("    Model creation time: %lldms\n", creation_duration.count());
 
       // Calculate expected parameters
       size_t expected_weights = 2048 * 2048;
@@ -382,7 +382,7 @@ protected:
       auto predict_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(predict_end -
                                                                 predict_start);
-      printf("    Prediction time: %ldms\n", predict_duration.count());
+      printf("    Prediction time: %lldms\n", predict_duration.count());
 
       assertTrue(very_large_original_output.size() == 2048,
                  "Output size should be 2048");
@@ -402,7 +402,7 @@ protected:
 
       assertTrue(save_success,
                  "Very large scale model (2048x2048) should save successfully");
-      printf("    Save time: %ldms\n", save_duration.count());
+      printf("    Save time: %lldms\n", save_duration.count());
 
       // Check file size
       size_t very_large_file_size =
@@ -430,7 +430,7 @@ protected:
 
       assertTrue(loaded_very_large != nullptr,
                  "Very large scale model should load successfully");
-      printf("    Load time: %ldms\n", load_duration.count());
+      printf("    Load time: %lldms\n", load_duration.count());
 
       // Test loaded model
       printf("    Testing loaded model forward pass...\n");
@@ -441,7 +441,7 @@ protected:
       auto loaded_predict_duration =
           std::chrono::duration_cast<std::chrono::milliseconds>(
               loaded_predict_end - loaded_predict_start);
-      printf("    Loaded model prediction time: %ldms\n",
+      printf("    Loaded model prediction time: %lldms\n",
              loaded_predict_duration.count());
 
       assertTrue(very_large_loaded_output.size() == 2048,
@@ -475,9 +475,9 @@ protected:
       printf("      - Model size: 2048x2048 (%.1fM parameters)\n",
              total_params / 1000000.0);
       printf("      - File size: %.2f MB\n", actual_size_mb);
-      printf("      - Save time: %ldms\n", save_duration.count());
-      printf("      - Load time: %ldms\n", load_duration.count());
-      printf("      - Forward pass time: %ldms\n", predict_duration.count());
+      printf("      - Save time: %lldms\n", save_duration.count());
+      printf("      - Load time: %lldms\n", load_duration.count());
+      printf("      - Forward pass time: %lldms\n", predict_duration.count());
 
       printf(
           "    ✅ Very large Sequential model (2048x2048) test completed successfully\n");
